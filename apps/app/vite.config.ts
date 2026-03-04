@@ -69,7 +69,6 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/messaging', 'firebase/storage'],
           'vendor-query': ['@tanstack/react-query'],
-          'vendor-maps': ['@react-google-maps/api'],
         }
       }
     }
