@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1e547a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Aliados" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Aliados — El profesional que necesitás, cuando lo necesitás</title>
+    <meta name="description" content="Conectamos clientes con profesionales de confianza en Rosario. Electricistas, plomeros, cerrajeros y más. Rápido, seguro y sin complicaciones." />
+  </head>
+  <body>
+    <script>
+      // Aplicar dark mode ANTES de que React hidrate — evita flash blanco
+      try {
+        var t = localStorage.getItem('aliados-theme');
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      } catch(e) {}
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

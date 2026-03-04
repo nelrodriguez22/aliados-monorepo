@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap");
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  /* ── Fonts ── */
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-body:    "DM Sans", sans-serif;
+
+  /* ── Brand (light) ── */
+  --color-brand-50:  #e6f0f5;
+  --color-brand-100: #b3d4e3;
+  --color-brand-200: #80b8d1;
+  --color-brand-300: #4d9cbf;
+  --color-brand-400: #267faa;
+  --color-brand-500: #0a6490;
+  --color-brand-600: #054060;
+  --color-brand-700: #043350;
+  --color-brand-800: #032640;
+  --color-brand-900: #021a30;
+
+  /* ── Dark palette ── */
+  --color-dark-bg:             #0f1117;
+  --color-dark-surface:        #161b27;
+  --color-dark-elevated:       #1e2535;
+  --color-dark-border:         #1e2535;
+  --color-dark-border-strong:  #2a3347;
+  --color-dark-text:           #e8eaf0;
+  --color-dark-text-secondary: #7a8499;
+  --color-dark-brand:          #1a8abf;
+  --color-dark-brand-hover:    #1e9fd6;
+}
+
+/* ── Base typography ── */
+html {
+  overflow-y: scroll;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+/* ── Dark mode base transitions ── */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* ── Dark mode global ── */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}

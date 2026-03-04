@@ -1,0 +1,7 @@
+echo "🔍 Verificando TypeScript antes de push..."
+npx tsc --noEmit -p tsconfig.app.json
+if [ $? -ne 0 ]; then
+  echo "❌ Errores de TypeScript encontrados. Fix antes de pushear."
+  exit 1
+fi
+echo "✅ TypeScript OK"

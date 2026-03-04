@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "aliados-web-22"
+  },
+  "targets": {
+    "aliados-web-22": {
+      "hosting": {
+        "landing": ["aliados-landing"],
+        "app":     ["aliados-app-22"]
+      }
+    }
+  }
+}
