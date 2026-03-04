@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 # Mac
 .DS_Store
 **/.DS_Store
+
+# Vite/PWA build output in public
+public/assets/
+public/index.html
+public/sw.js
+public/workbox-*.js
+public/registerSW.js
+public/manifest.webmanifest
