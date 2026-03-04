@@ -1,17 +1,13 @@
 {
-  "hosting": [
-    {
-      "target": "app",
-      "public": "apps/app/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        { "source": "**", "destination": "/index.html" }
-      ]
-    },
-    {
-      "target": "landing",
-      "public": "apps/landing/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  "projects": {
+    "default": "aliados-web-22"
+  },
+  "targets": {
+    "aliados-web-22": {
+      "hosting": {
+        "landing": ["aliados-landing"],
+        "app": ["aliados-app-22"]
+      }
     }
-  ]
+  }
 }
