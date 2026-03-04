@@ -2,9 +2,9 @@ import { tw } from "@/shared/styles/design-system";
 
 export function Footer() {
   return (
-    <footer className={`border-t px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4
+    <footer className={`border-t px-4 sm:px-8 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-3
       ${tw.dividerLight} bg-white/80 dark:bg-dark-surface/80 backdrop-blur-xl`}>
-      <p className={`text-xs ${tw.text.faint}`}>
+      <p className={`text-xs text-center sm:text-left ${tw.text.faint}`}>
         © 2026 Aliados. Todos los derechos reservados.
       </p>
       <div className={`flex gap-5 text-xs font-medium ${tw.text.faint}`}>

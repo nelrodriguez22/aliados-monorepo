@@ -122,14 +122,16 @@ export function ClientProposal() {
         <div className="mx-auto max-w-md">
 
           {/* Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
               <div className="mt-1.5">
                 <Badge variant="info">Pendiente de respuesta</Badge>
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>← Volver</Button>
+            <Button variant="outline" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)} className="shrink-0 text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
+              ← Volver
+            </Button>
           </div>
 
           <div className="space-y-3">

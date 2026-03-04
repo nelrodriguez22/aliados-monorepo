@@ -11,7 +11,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label="Cambiar tema"
       className={`
-        relative flex h-7 w-[52px] shrink-0 cursor-pointer items-center rounded-full border-none p-0
+        relative flex h-7 w-13 shrink-0 cursor-pointer items-center rounded-full border-none p-0
         transition-colors duration-300
         ${isDark ? 'bg-brand-500 dark:bg-dark-brand' : 'bg-slate-200'}
       `}
@@ -19,8 +19,8 @@ export function ThemeToggle() {
       {/* Thumb */}
       <span
         className={`
-          absolute top-[3px] left-[3px]
-          flex h-[22px] w-[22px] items-center justify-center
+          absolute top-0.75 left-0.75
+          flex h-5.5 w-5.5 items-center justify-center
           rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.15)]
           transition-transform duration-300
           ${isDark

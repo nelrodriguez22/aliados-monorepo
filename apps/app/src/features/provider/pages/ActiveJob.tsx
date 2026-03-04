@@ -188,10 +188,12 @@ export function ActiveJob() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Button variant="primary" className="text-xs gap-1.5">
-                    <Navigation className="h-3.5 w-3.5" />
+                <Button variant="primary" className="text-xs px-3 py-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Navigation className="h-3.5 w-3.5 shrink-0" />
                     Navegar
-                  </Button>
+                  </span>
+                </Button>
                 </a>
               </div>
               <div className="aspect-video overflow-hidden rounded-xl bg-slate-100 dark:bg-dark-elevated">

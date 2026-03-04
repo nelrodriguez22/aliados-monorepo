@@ -97,7 +97,7 @@ export function JobTracking() {
   };
   const { title, subtitle } = getTitle();
 
-  // Detalles del servicio — reutilizado en EN_COLA y EN_CURSO
+  // ── Detalles del servicio ──
   const DetallesServicio = () => (
     <Card>
       <h3 className={`mb-4 text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
@@ -143,35 +143,42 @@ export function JobTracking() {
     </Card>
   );
 
-  // Card del proveedor — reutilizado
+  // ── Card del proveedor ──
+  // Avatar + info en fila, tiempo en fila separada abajo
   const ProveedorCard = ({ size = 'md' }: { size?: 'md' | 'lg' }) => (
     <Card>
-      <div className="flex items-center gap-4">
-        <div className={`flex shrink-0 items-center justify-center rounded-full font-bold text-brand-600 dark:text-dark-brand ${tw.iconBg.brand}
-          ${size === 'lg' ? 'h-16 w-16 text-xl' : 'h-12 w-12 text-base'}`}>
-          {getInitials(trabajo.proveedorNombre)}
+      <div className="flex flex-col gap-3">
+        {/* Fila: avatar + info */}
+        <div className="flex items-center gap-3">
+          <div className={`flex shrink-0 items-center justify-center rounded-full font-bold text-brand-600 dark:text-dark-brand ${tw.iconBg.brand}
+            ${size === 'lg'
+              ? 'h-12 w-12 min-[425px]:h-16 min-[425px]:w-16 text-base min-[425px]:text-xl'
+              : 'h-10 w-10 min-[425px]:h-12 min-[425px]:w-12 text-sm min-[425px]:text-base'
+            }`}>
+            {getInitials(trabajo.proveedorNombre)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className={`font-bold truncate ${size === 'lg' ? 'text-base min-[425px]:text-xl' : 'text-sm min-[425px]:text-base'} ${tw.text.primary}`}>
+              {trabajo.proveedorNombre}
+            </h2>
+            <p className={`text-xs min-[375px]:text-sm ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
+            {trabajo.proveedorPromedioCalificacion > 0 && (
+              <div className="mt-1 flex items-center gap-0.5">
+                {[1,2,3,4,5].map((s) => (
+                  <span key={s} className={`text-xs ${s <= Math.round(trabajo.proveedorPromedioCalificacion) ? 'text-amber-400' : 'text-slate-200 dark:text-dark-border'}`}>★</span>
+                ))}
+                <span className={`text-xs ml-0.5 ${tw.text.muted}`}>({trabajo.proveedorPromedioCalificacion.toFixed(1)})</span>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className={`font-bold truncate ${size === 'lg' ? 'text-xl' : 'text-base'} ${tw.text.primary}`}>
-            {trabajo.proveedorNombre}
-          </h2>
-          <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
-          {trabajo.proveedorPromedioCalificacion > 0 && (
-            <div className="mt-1 flex items-center gap-1">
-              {[1,2,3,4,5].map((s) => (
-                <span key={s} className={`text-xs ${s <= Math.round(trabajo.proveedorPromedioCalificacion) ? 'text-amber-400' : 'text-slate-200 dark:text-dark-border'}`}>★</span>
-              ))}
-              <span className={`text-xs ml-0.5 ${tw.text.muted}`}>({trabajo.proveedorPromedioCalificacion.toFixed(1)})</span>
-            </div>
-          )}
-        </div>
+
+        {/* Tiempo estimado — fila separada, alineada a la derecha */}
         {trabajo.tiempoEstimadoMinutos > 0 && (
-          <div className="shrink-0 text-right">
-            <div className={`flex items-center gap-1 ${tw.text.muted}`}>
-              <Clock className="h-3.5 w-3.5" />
-              <span className="text-xs">Tiempo est.</span>
-            </div>
-            <p className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-lg'} text-brand-600 dark:text-dark-brand`}>
+          <div className={`flex items-center justify-end gap-1.5 border-t pt-3 ${tw.dividerLight}`}>
+            <Clock className={`h-3.5 w-3.5 ${tw.text.muted}`} />
+            <span className={`text-xs ${tw.text.muted}`}>Tiempo est.</span>
+            <p className={`font-bold ml-1 ${size === 'lg' ? 'text-xl min-[425px]:text-2xl' : 'text-base min-[425px]:text-lg'} text-brand-600 dark:text-dark-brand`}>
               {formatTiempo(trabajo.tiempoEstimadoMinutos)}
             </p>
             {enCola && <p className={`text-xs ${tw.text.muted}`}>al ser tu turno</p>}
@@ -187,31 +194,35 @@ export function JobTracking() {
         <div className="mx-auto max-w-5xl">
 
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>{title}</h1>
-              <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>{subtitle}</p>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold truncate ${tw.text.primary}`}>{title}</h1>
+              <p className={`mt-0.5 text-xs min-[375px]:text-sm ${tw.text.secondary}`}>{subtitle}</p>
             </div>
-            <Button variant="outline" className="whitespace-nowrap" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}
+              className="shrink-0 text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2"
+            >
               ← Volver
             </Button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3">
             <div className="space-y-4 lg:col-span-2">
 
               {/* PENDIENTE */}
               {isPendiente && (
                 <Card>
-                  <div className="flex flex-col items-center gap-4 py-10 text-center">
-                    <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
-                      <Loader2 className="h-8 w-8 animate-spin text-brand-600 dark:text-dark-brand" />
+                  <div className="flex flex-col items-center gap-4 py-8 text-center">
+                    <div className={`flex h-14 w-14 min-[375px]:h-16 min-[375px]:w-16 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
+                      <Loader2 className="h-7 w-7 min-[375px]:h-8 min-[375px]:w-8 animate-spin text-brand-600 dark:text-dark-brand" />
                     </div>
                     <div>
-                      <h3 className={`mb-1 text-lg font-semibold ${tw.text.primary}`}>
+                      <h3 className={`mb-1 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                         Buscando profesional disponible
                       </h3>
-                      <p className={`text-sm ${tw.text.secondary}`}>
+                      <p className={`text-xs min-[375px]:text-sm ${tw.text.secondary}`}>
                         Notificando a los mejores {trabajo.oficio.nombre}s de tu zona
                       </p>
                     </div>
@@ -225,7 +236,7 @@ export function JobTracking() {
                         Cancelar solicitud
                       </button>
                     ) : (
-                      <div className="w-full max-w-sm space-y-3">
+                      <div className="w-full space-y-3">
                         <select
                           value={motivoCancelacion}
                           onChange={(e) => setMotivoCancelacion(e.target.value)}
@@ -263,11 +274,11 @@ export function JobTracking() {
               {enCola && trabajo.proveedorNombre && (
                 <>
                   <Card className={tw.queueCard}>
-                    <div className="flex items-center gap-4">
-                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400`}>
-                        <Users className="h-5 w-5" />
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 min-[375px]:h-12 min-[375px]:w-12 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400`}>
+                        <Users className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <h3 className={`font-semibold text-sm ${tw.text.primary}`}>
                           Tu profesional está atendiendo otro servicio
                         </h3>
@@ -275,7 +286,7 @@ export function JobTracking() {
                           Serás atendido a continuación
                         </p>
                       </div>
-                      <div className="ml-auto shrink-0">
+                      <div className="shrink-0">
                         <Badge variant="queue" showPulse>En cola</Badge>
                       </div>
                     </div>
@@ -289,7 +300,7 @@ export function JobTracking() {
               {enCurso && trabajo.proveedorNombre && (
                 <>
                   <Card>
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-3 flex items-center justify-between">
                       <Badge variant="info" showPulse>En camino</Badge>
                       <span className={`text-xs font-medium ${tw.text.secondary}`}>
                         En ruta a tu ubicación

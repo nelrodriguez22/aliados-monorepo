@@ -86,9 +86,9 @@ export function NotificationsDropdown({ isClient }: NotifDropdownProps) {
         className={`relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition
           ${tw.text.secondary} hover:bg-slate-100 dark:hover:bg-dark-elevated`}
       >
-        <Bell className="h-[18px] w-[18px]" />
+        <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center
+          <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center
             rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>

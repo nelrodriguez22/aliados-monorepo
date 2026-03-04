@@ -33,14 +33,14 @@ const d = (light: string, dark: string) =>
 
 export const tw = {
   // ── Cards — landing reference ──
-  card: d(
-    'bg-white rounded-2xl border border-slate-200 p-6',
-    'bg-dark-surface border-dark-border'
-  ),
-  cardHover: d(
-    'bg-white rounded-2xl border border-slate-200 p-6 cursor-pointer transition-all duration-150 hover:border-slate-300 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]',
-    'bg-dark-surface border-dark-border cursor-pointer transition-all duration-150 hover:border-dark-border-strong hover:shadow-none hover:bg-dark-elevated'
-  ),
+card: d(
+  'bg-white rounded-2xl border border-slate-200 p-4 sm:p-6',
+  'bg-dark-surface border-dark-border'
+),
+cardHover: d(
+  'bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 cursor-pointer transition-all duration-150 hover:border-slate-300 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]',
+  'bg-dark-surface border-dark-border cursor-pointer transition-all duration-150 hover:border-dark-border-strong hover:shadow-none hover:bg-dark-elevated'
+),
 
   // ── Buttons ──
   btn: {
@@ -123,7 +123,7 @@ export const tw = {
     'cursor-pointer text-sm font-medium text-slate-500 transition-colors hover:text-slate-900',
     'text-dark-text-secondary hover:text-dark-text'
   ),
-  container: 'mx-auto w-full max-w-[min(55%,800px)] py-6 lg:py-8',
+  container: 'mx-auto w-full max-w-[min(92%,800px)] sm:max-w-[min(80%,800px)] lg:max-w-[min(55%,800px)] py-6 lg:py-8',
   section:   d('bg-white',          'bg-dark-bg'),
   pageBg:    d('flex-1 bg-slate-50', 'bg-dark-bg'),
 

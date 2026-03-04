@@ -33,8 +33,8 @@ function Toggle({
       `}
     >
       <span className={`
-        absolute top-[3px] left-[3px]
-        h-[18px] w-[18px] rounded-full bg-white
+        absolute top-0.75 left-0.75
+        h-4.5 w-4.5 rounded-full bg-white
         shadow-[0_1px_3px_rgba(0,0,0,0.15)]
         transition-transform duration-200
         ${enabled ? 'translate-x-5' : 'translate-x-0'}
@@ -64,22 +64,22 @@ function SettingRow({
   soon?: boolean;
 }) {
   return (
-    <div className={`flex items-center gap-4 py-4 border-b last:border-0 ${tw.dividerLight} ${disabled ? 'opacity-50' : ''}`}>
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-        <Icon className={`h-4 w-4 ${iconColor}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-3 py-4 border-b last:border-0 ${tw.dividerLight} ${disabled ? 'opacity-60' : ''}`}>
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+        </div>
+        <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium ${tw.text.primary}`}>{title}</p>
+          <p className={`text-xs mt-0.5 ${tw.text.secondary}`}>{description}</p>
           {soon && (
-            <span className={`text-xs ${tw.text.faint}`}>· Próximamente</span>
+            <span className={`text-xs font-medium text-amber-500 dark:text-amber-400`}>
+              Próximamente
+            </span>
           )}
         </div>
-        <p className={`text-xs mt-0.5 ${tw.text.secondary}`}>{description}</p>
+        <div className="shrink-0">{action}</div>
       </div>
-      <div className="shrink-0">{action}</div>
-    </div>
-  );
+    );
 }
 
 export function ClientSettings() {
@@ -128,14 +128,14 @@ export function ClientSettings() {
         <div className="mx-auto max-w-2xl">
 
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Configuración</h1>
-              <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>
-                Personalizá tu experiencia
-              </p>
+          <div className="mb-8 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Configuración</h1>
+              <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>Personalizá tu experiencia</p>
             </div>
-            <Button variant="outline" onClick={() => navigate(dashboardRoute)}>← Volver</Button>
+            <Button variant="outline" onClick={() => navigate(dashboardRoute)} className="shrink-0 text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
+              ← Volver
+            </Button>
           </div>
 
           <div className="space-y-4">

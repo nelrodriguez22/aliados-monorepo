@@ -47,7 +47,7 @@ export function Header() {
         backdrop-blur-xl
         transition-colors duration-200
       ">
-        <div className="flex w-full items-center justify-between px-6 max-w-7xl mx-auto">
+          <div className="flex w-full items-center justify-between px-3 sm:px-6 max-w-7xl mx-auto">
 
           {/* Logo */}
           <div
@@ -63,9 +63,11 @@ export function Header() {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 min-[425px]:gap-3">
 
-            <ThemeToggle />
+            <span className="hidden min-[425px]:inline-flex">
+              <ThemeToggle />
+            </span>
 
             {isInstallable && (
               <button

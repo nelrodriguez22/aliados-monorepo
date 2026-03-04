@@ -64,14 +64,16 @@ export function ProviderCompletedJob() {
       <div className={tw.container}>
         <div className="mx-auto max-w-2xl">
 
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
               {trabajo.completedAt && (
                 <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>{formatDateTime(trabajo.completedAt)}</p>
               )}
             </div>
-            <Button variant="outline" onClick={() => navigate(ROUTES.PROVIDER.DASHBOARD)}>← Volver</Button>
+            <Button variant="outline" onClick={() => navigate(ROUTES.PROVIDER.DASHBOARD)} className="shrink-0 text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
+              ← Volver
+            </Button>
           </div>
 
           {/* Banner éxito */}

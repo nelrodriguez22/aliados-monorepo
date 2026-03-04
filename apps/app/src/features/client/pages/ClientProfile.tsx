@@ -17,8 +17,8 @@ export function ClientProfile() {
   const isProvider = user?.role === 'PROVIDER';
 
   const [formData, setFormData] = useState({
-    nombre:    user?.name      || "",
-    telefono:  user?.telefono  || "",
+    nombre: user?.name || "",
+    telefono: user?.telefono || "",
     localidad: user?.localidad || "",
   });
 
@@ -82,55 +82,66 @@ export function ClientProfile() {
         <div className="mx-auto max-w-2xl">
 
           {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Mi perfil</h1>
+          <div className="mb-8 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Mi perfil</h1>
               <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>
                 Administrá tu información personal
               </p>
             </div>
-            <Button variant="outline" onClick={() => navigate(dashboardRoute)}>← Volver</Button>
+            <Button variant="outline" onClick={() => navigate(dashboardRoute)} className="shrink-0 text-xs min-[375px]:text-sm px-3 min-[375px]:px-4">
+              ← Volver
+            </Button>
           </div>
 
           <div className="space-y-4">
 
             {/* Avatar + acciones */}
             <Card>
-              <div className="flex items-center gap-5">
-                <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
-                  {user?.fotoPerfil ? (
-                    <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-2xl object-cover" />
-                  ) : (
-                    <span className="text-2xl font-bold text-brand-600 dark:text-dark-brand">
-                      {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className={`text-lg font-bold truncate ${tw.text.primary}`}>{user?.name}</h2>
-                  <p className={`text-sm truncate ${tw.text.secondary}`}>{user?.email}</p>
-                  <div className="mt-2">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
-                      ${isProvider
-                        ? 'bg-brand-100 text-brand-700 dark:bg-dark-brand/15 dark:text-dark-brand'
-                        : 'bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary'
-                      }`}>
-                      <Shield className="h-3 w-3" />
-                      {isProvider ? 'Profesional' : 'Cliente'}
-                    </span>
-                  </div>
-                </div>
-                <div className="shrink-0">
+              <div className="flex flex-col ">
+                {/* Fila superior: botón a la derecha */}
+                <div className="flex justify-end">
                   {!isEditing ? (
-                    <Button variant="outline" onClick={() => setIsEditing(true)}>Editar</Button>
+                    <Button variant="outline" onClick={() => setIsEditing(true)} className="text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
+                      Editar
+                    </Button>
                   ) : (
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={handleCancel}>Cancelar</Button>
-                      <Button onClick={() => updateMutation.mutate(formData)} disabled={updateMutation.isPending}>
+                      <Button variant="outline" onClick={handleCancel} className="text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
+                        Cancelar
+                      </Button>
+                      <Button onClick={() => updateMutation.mutate(formData)} disabled={updateMutation.isPending} className="text-xs min-[375px]:text-sm px-3 min-[375px]:px-4 py-1.5 min-[375px]:py-2">
                         {updateMutation.isPending ? 'Guardando...' : 'Guardar'}
                       </Button>
                     </div>
                   )}
+                </div>
+
+                {/* Fila inferior: avatar + info */}
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-12 w-12 min-[375px]:h-16 min-[375px]:w-16 shrink-0 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
+                    {user?.fotoPerfil ? (
+                      <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-2xl object-cover" />
+                    ) : (
+                      <span className="text-base min-[375px]:text-xl font-bold text-brand-600 dark:text-dark-brand">
+                        {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className={`text-base min-[375px]:text-lg font-bold truncate ${tw.text.primary}`}>{user?.name}</h2>
+                    <p className={`text-xs min-[375px]:text-sm truncate ${tw.text.secondary}`}>{user?.email}</p>
+                    <div className="mt-1.5">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
+            ${isProvider
+                          ? 'bg-brand-100 text-brand-700 dark:bg-dark-brand/15 dark:text-dark-brand'
+                          : 'bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary'
+                        }`}>
+                        <Shield className="h-3 w-3" />
+                        {isProvider ? 'Profesional' : 'Cliente'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>

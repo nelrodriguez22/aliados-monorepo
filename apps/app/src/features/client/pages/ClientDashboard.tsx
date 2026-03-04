@@ -14,23 +14,23 @@ import { Skeleton } from "@/shared/components/ui/Skeleton";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number, JSX.Element> = {
-  1: ( // Electricista
+  1: (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z"/>
     </svg>
   ),
-  2: ( // Plomero
+  2: (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
     </svg>
   ),
-  3: ( // Cerrajero
+  3: (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2"/>
       <path d="M7 11V7a5 5 0 0110 0v4"/>
     </svg>
   ),
-  4: ( // Gasista
+  4: (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2c0 6-6 8-6 13a6 6 0 0012 0c0-5-6-7-6-13z"/>
       <path d="M9 17.5c0 1.5 1.5 2.5 3 2.5s3-1 3-2.5"/>
@@ -55,11 +55,11 @@ const ICON_BG_CLASSES = [
 // ── Skeletons ──
 function SkeletonServicios() {
   return (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
+    <div className="grid gap-2 min-[375px]:gap-3 grid-cols-2 sm:grid-cols-4">
       {[...Array(4)].map((_, i) => (
         <Card key={i}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <Skeleton className="h-16 w-16 rounded-2xl!" />
+          <div className="flex flex-col items-center gap-2 text-center py-1">
+            <Skeleton className="h-12 w-12 min-[375px]:h-14 min-[375px]:w-14 rounded-2xl!" />
             <Skeleton className="h-4 w-20" />
           </div>
         </Card>
@@ -70,18 +70,19 @@ function SkeletonServicios() {
 
 function SkeletonTrabajos() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 min-[375px]:space-y-3">
       {[...Array(2)].map((_, i) => (
         <Card key={i}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-full!" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3 w-24" />
-              </div>
+          <div className="flex items-center gap-2 min-[375px]:gap-3">
+            <Skeleton className="h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 rounded-xl!" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-20" />
             </div>
-            <Skeleton className="h-6 w-28 rounded-full!" />
+            <div className="shrink-0 space-y-1.5 flex flex-col items-end">
+              <Skeleton className="h-6 w-24 rounded-full!" />
+              <Skeleton className="h-3 w-14" />
+            </div>
           </div>
         </Card>
       ))}
@@ -91,18 +92,19 @@ function SkeletonTrabajos() {
 
 function SkeletonHistorial() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 min-[375px]:space-y-3">
       {[...Array(2)].map((_, i) => (
         <Card key={i}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-full!" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-3 w-52" />
-              </div>
+          <div className="flex items-center gap-2 min-[375px]:gap-3">
+            <Skeleton className="h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 rounded-xl!" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
             </div>
-            <Skeleton className="h-6 w-24 rounded-full!" />
+            <div className="shrink-0 space-y-1.5 flex flex-col items-end">
+              <Skeleton className="h-6 w-20 rounded-full!" />
+              <Skeleton className="h-3 w-14" />
+            </div>
           </div>
         </Card>
       ))}
@@ -195,11 +197,11 @@ export function ClientDashboard() {
 
         {/* Banner notificaciones */}
         {showNotificationBanner && (
-          <div className={`rounded-xl border px-4 py-3 mb-6 flex items-center justify-between gap-4 flex-wrap
+          <div className={`rounded-xl border px-3 py-2.5 mb-5 flex items-start justify-between gap-3 flex-wrap
             bg-brand-50 border-brand-100 dark:bg-dark-brand/8 dark:border-dark-brand/20`}>
-            <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-brand-600 dark:text-dark-brand shrink-0" />
-              <p className={`text-sm ${tw.text.secondary}`}>
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <Bell className="h-4 w-4 text-brand-600 dark:text-dark-brand shrink-0 mt-0.5" />
+              <p className={`text-xs min-[375px]:text-sm ${tw.text.secondary}`}>
                 Activá las notificaciones para saber cuándo tu profesional está en camino
               </p>
             </div>
@@ -216,24 +218,24 @@ export function ClientDashboard() {
                 className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer
                   ${tw.text.secondary} border-slate-200 hover:bg-slate-50 dark:border-dark-border dark:hover:bg-dark-elevated`}
               >
-                Ahora no
+                No
               </button>
             </div>
           </div>
         )}
 
         {/* Bienvenida */}
-        <div className="mb-8">
-          <h1 className={`mb-1 text-3xl font-bold ${tw.text.primary}`}>
+        <div className="mb-6">
+          <h1 className={`mb-1 text-2xl min-[375px]:text-3xl font-bold ${tw.text.primary}`}>
             Hola, {user?.name || 'Usuario'}
           </h1>
-          <p className={tw.text.secondary}>¿Qué servicio necesitás hoy?</p>
+          <p className={`text-sm ${tw.text.secondary}`}>¿Qué servicio necesitás hoy?</p>
         </div>
 
         {/* Buscador */}
-        <Card className="mb-8">
+        <Card className="mb-6">
           <div className="relative" ref={searchRef}>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2 min-[375px]:flex-row">
               <div className="relative flex-1">
                 <Search className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${tw.text.faint}`} />
                 <input
@@ -245,7 +247,10 @@ export function ClientDashboard() {
                   className={tw.input + " pl-10"}
                 />
               </div>
-              <Button onClick={() => navigate(ROUTES.CLIENT.SERVICE_REQUEST)}>
+              <Button
+                onClick={() => navigate(ROUTES.CLIENT.SERVICE_REQUEST)}
+                className="w-full min-[375px]:w-auto"
+              >
                 Buscar
               </Button>
             </div>
@@ -271,25 +276,25 @@ export function ClientDashboard() {
 
         {loadingTrabajos ? (
           <>
-            <div className="mb-12"><Skeleton className="h-5 w-40 mb-4" /><SkeletonServicios /></div>
-            <div className="mb-12"><Skeleton className="h-5 w-36 mb-4" /><SkeletonTrabajos /></div>
-            <div><Skeleton className="h-5 w-44 mb-4" /><SkeletonHistorial /></div>
+            <div className="mb-8"><Skeleton className="h-5 w-40 mb-3" /><SkeletonServicios /></div>
+            <div className="mb-8"><Skeleton className="h-5 w-36 mb-3" /><SkeletonTrabajos /></div>
+            <div><Skeleton className="h-5 w-44 mb-3" /><SkeletonHistorial /></div>
           </>
         ) : (
           <>
             {/* Servicios populares */}
-            <div className="mb-12">
-              <h2 className={`mb-4 text-lg font-semibold ${tw.text.primary}`}>
+            <div className="mb-8">
+              <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                 Servicios populares
               </h2>
-              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+              <div className="grid gap-2 min-[375px]:gap-3 grid-cols-2 sm:grid-cols-4">
                 {OFICIOS.map((oficio, index) => (
                   <Card key={oficio.id} hover onClick={() => handleServiceClick(oficio.id)}>
-                    <div className="flex flex-col items-center gap-3 text-center">
-                      <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${ICON_BG_CLASSES[index]}`}>
+                    <div className="flex flex-col items-center gap-2 min-[375px]:gap-3 text-center py-1">
+                      <div className={`flex h-12 w-12 min-[375px]:h-14 min-[375px]:w-14 items-center justify-center rounded-2xl ${ICON_BG_CLASSES[index]}`}>
                         {OFICIO_ICONS[oficio.id]}
                       </div>
-                      <span className={`font-medium text-sm ${tw.text.primary}`}>
+                      <span className={`font-medium text-xs min-[375px]:text-sm ${tw.text.primary}`}>
                         {oficio.nombre}
                       </span>
                     </div>
@@ -299,13 +304,13 @@ export function ClientDashboard() {
             </div>
 
             {/* Trabajos activos */}
-            <div className="mb-12">
-              <h2 className={`mb-4 text-lg font-semibold ${tw.text.primary}`}>
+            <div className="mb-8">
+              <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                 Trabajos activos
               </h2>
 
               {trabajosActivos.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 min-[375px]:space-y-3">
                   {trabajosActivos.map((trabajo: any) => {
                     const estadoBadge = getEstadoBadge(trabajo.estado);
                     return (
@@ -314,35 +319,34 @@ export function ClientDashboard() {
                           ? ROUTES.CLIENT.PROPOSAL(trabajo.id)
                           : ROUTES.CLIENT.TRACKING(trabajo.id))
                       }>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
-                              {OFICIO_ICONS[trabajo.oficio.id] ?? (
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-                                </svg>
-                              )}
-                            </div>
-                            <div>
-                              <div className="mb-1 flex items-center gap-2 flex-wrap">
-                                <h3 className={`font-semibold text-sm ${tw.text.primary}`}>
-                                  {trabajo.proveedorNombre || 'Buscando proveedor...'}
-                                </h3>
-                                <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
-                                  {estadoBadge.label}
-                                </Badge>
-                              </div>
-                              <p className={`text-xs ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
-                            </div>
+                        <div className="flex items-center gap-2 min-[375px]:gap-3">
+                          {/* Icono */}
+                          <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                            {OFICIO_ICONS[trabajo.oficio.id] ?? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                              </svg>
+                            )}
                           </div>
-                          {trabajo.tiempoEstimadoMinutos && (
-                            <div className="shrink-0 flex items-center gap-1.5">
-                              <Clock className={`h-3.5 w-3.5 ${tw.text.faint}`} />
-                              <span className={`text-sm font-medium ${tw.text.secondary}`}>
+                          {/* Nombre + oficio */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-semibold text-sm truncate ${tw.text.primary}`}>
+                              {trabajo.proveedorNombre || 'Buscando proveedor...'}
+                            </p>
+                            <p className={`mt-0.5 text-xs ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
+                          </div>
+                          {/* Badge + tiempo */}
+                          <div className="shrink-0 flex flex-col items-end gap-1">
+                            <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
+                              {estadoBadge.label}
+                            </Badge>
+                            {trabajo.tiempoEstimadoMinutos && (
+                              <span className={`flex items-center gap-1 text-xs ${tw.text.secondary}`}>
+                                <Clock className={`h-3 w-3 ${tw.text.faint}`} />
                                 {trabajo.tiempoEstimadoMinutos} min
                               </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </Card>
                     );
@@ -350,8 +354,8 @@ export function ClientDashboard() {
                 </div>
               ) : (
                 <Card>
-                  <div className="flex flex-col items-center gap-3 py-10 text-center">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
                       <Search className={`h-5 w-5 ${tw.text.faint}`} />
                     </div>
                     <div>
@@ -369,8 +373,8 @@ export function ClientDashboard() {
 
             {/* Historial */}
             <div ref={historialRef}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-lg font-semibold ${tw.text.primary}`}>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className={`text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                   Historial de trabajos
                 </h2>
                 {trabajosCompletados.length > 3 && (
@@ -384,45 +388,46 @@ export function ClientDashboard() {
               </div>
 
               {trabajosCompletados.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 min-[375px]:space-y-3">
                   {(showHistory ? trabajosCompletados : trabajosCompletados.slice(0, 3)).map((trabajo: any) => (
                     <Card key={trabajo.id} hover onClick={() => navigate(ROUTES.CLIENT.COMPLETED(trabajo.id))}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
-                            <CheckCircle className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <h3 className={`mb-0.5 font-semibold text-sm ${tw.text.primary}`}>
-                              {trabajo.proveedorNombre}
-                            </h3>
-                            <div className={`flex items-center gap-2 text-xs ${tw.text.secondary}`}>
-                              <span>{trabajo.oficio.nombre}</span>
-                              <span>·</span>
-                              <span>{new Date(trabajo.completedAt).toLocaleDateString('es-AR')}</span>
-                            </div>
-                            {trabajo.calificacionEstrellas && (
-                              <div className="mt-1 flex items-center gap-0.5">
-                                {[1,2,3,4,5].map((s) => (
-                                  <span key={s} className={`text-xs ${s <= trabajo.calificacionEstrellas ? 'text-amber-400' : 'text-slate-200 dark:text-dark-border'}`}>★</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2 min-[375px]:gap-3">
+                        {/* Icono */}
+                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
+                          <CheckCircle className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
                         </div>
-                        {trabajo.calificado ? (
-                          <Badge variant="success">Completado</Badge>
-                        ) : (
-                          <Badge variant="warning">Pendiente</Badge>
-                        )}
+                        {/* Nombre + oficio + estrellas */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`mb-0.5 font-semibold text-sm truncate ${tw.text.primary}`}>
+                            {trabajo.proveedorNombre}
+                          </h3>
+                          <p className={`text-xs truncate ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
+                          {trabajo.calificacionEstrellas && (
+                            <div className="mt-1 flex items-center gap-0.5">
+                              {[1,2,3,4,5].map((s) => (
+                                <span key={s} className={`text-xs ${s <= trabajo.calificacionEstrellas ? 'text-amber-400' : 'text-slate-200 dark:text-dark-border'}`}>★</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Badge + fecha */}
+                        <div className="shrink-0 flex flex-col items-end gap-1">
+                          {trabajo.calificado
+                            ? <Badge variant="success">Completado</Badge>
+                            : <Badge variant="warning">Pendiente</Badge>
+                          }
+                          <span className={`text-xs ${tw.text.secondary}`}>
+                            {new Date(trabajo.completedAt).toLocaleDateString('es-AR')}
+                          </span>
+                        </div>
                       </div>
                     </Card>
                   ))}
                 </div>
               ) : (
                 <Card>
-                  <div className="flex flex-col items-center gap-3 py-10 text-center">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
                       <ClipboardList className={`h-5 w-5 ${tw.text.faint}`} />
                     </div>
                     <div>
