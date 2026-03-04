@@ -11,9 +11,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Aliados — El profesional que necesitás, cuando lo necesitás</title>
   <meta name="description" content="Conectamos clientes con profesionales de confianza en Rosario. Electricistas, plomeros, cerrajeros y más." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -912,6 +909,21 @@ const REGISTER_URL = `${APP_URL}/registro`;
     }
     @media (max-width: 640px) {
       .services-header { flex-direction: column; align-items: flex-start; }
+    }
+    @font-face {
+      font-family: 'Plus Jakarta Sans';
+      src: url('/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+      font-weight: 300 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'DM Sans';
+      src: url('/fonts/DMSans-Variable.woff2') format('woff2');
+      font-weight: 300 500;
+      font-style: normal;
+      font-display: swap;
     }
   </style>
 </head>
