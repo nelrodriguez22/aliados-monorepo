@@ -83,6 +83,7 @@ export function NotificationsDropdown({ isClient }: NotifDropdownProps) {
       {/* Bell button */}
       <button
         onClick={handleToggle}
+        aria-label="Notificaciones"
         className={`relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition
           ${tw.text.secondary} hover:bg-slate-100 dark:hover:bg-dark-elevated`}
       >

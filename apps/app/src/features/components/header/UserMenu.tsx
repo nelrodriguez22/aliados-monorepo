@@ -95,6 +95,7 @@ export function UserMenu({ variant }: UserMenuProps) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setShow(!show)}
+        aria-label="Menú de usuario"
         className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition
           ${tw2.iconBg.brand} hover:opacity-80`}
       >
