@@ -61,9 +61,10 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: 'dist',   // era 'public', Firebase espera 'dist'
+    outDir: 'dist',
+    sourcemap: 'hidden',
   },
-  publicDir: 'public', // assets estáticos (favicon, etc.) — era 'static'
+  publicDir: 'public',
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
