@@ -1,13 +1,10 @@
 name: Deploy to Firebase Hosting
-
 on:
   push:
     branches: [main]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,11 +23,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build landing
-        run: pnpm --filter landing build
-
-      - name: Build app
-        run: pnpm --filter aliados build
+      - name: Build all
+        run: pnpm turbo build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_LANDING_URL: ${{ secrets.VITE_LANDING_URL }}
