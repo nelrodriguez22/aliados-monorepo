@@ -1,6 +1,9 @@
 ---
-// Aliados - Landing Minimal Light
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? 'https://aliados-app-22.web.app';
+const LOGIN_URL = `${APP_URL}/login`;
+const REGISTER_URL = `${APP_URL}/registro`;
 ---
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -931,8 +934,8 @@
           <svg class="icon-moon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </span>
       </button>
-      <a href="/auth/login" class="btn-ghost">Iniciar sesión</a>
-      <a href="/auth/register" class="btn-primary">Empezar gratis</a>
+      <a href={LOGIN_URL} class="btn-ghost">Iniciar sesión</a>
+      <a href={REGISTER_URL} class="btn-primary">Empezar gratis</a>
     </div>
   </header>
 
@@ -952,7 +955,7 @@
       Conectamos clientes con profesionales verificados en minutos. Sin intermediarios, sin esperas.
     </p>
     <div class="hero-actions">
-      <a href="/auth/register" class="btn-primary btn-primary-lg">Solicitar un servicio</a>
+      <a href={REGISTER_URL} class="btn-primary btn-primary-lg">Solicitar un servicio</a>
       <a href="#como-funciona" class="btn-secondary-lg">
         Ver cómo funciona
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1173,7 +1176,7 @@
           <li><span class="benefit-check">✓</span> Cobrás directo, sin intermediarios</li>
           <li><span class="benefit-check">✓</span> Tu reputación crece con cada trabajo</li>
         </ul>
-        <a href="/auth/register?role=provider" class="btn-white">Registrarme como profesional</a>
+        <a href={REGISTER_URL} class="btn-white">Registrarme como profesional</a>
       </div>
       <div class="provider-stats fade-up" style="transition-delay:0.15s">
         <div class="pstat">
@@ -1228,8 +1231,8 @@
       <h2>Resolvé lo que<br/><strong>necesitás hoy.</strong></h2>
       <p>Unite a los cientos de rosarinos que ya confían en Aliados para encontrar el profesional correcto en el momento justo.</p>
       <div class="final-actions">
-        <a href="/auth/register" class="btn-primary btn-primary-lg">Crear cuenta gratis</a>
-        <a href="/auth/login" class="btn-secondary-lg">Iniciar sesión</a>
+        <a href={REGISTER_URL} class="btn-primary btn-primary-lg">Crear cuenta gratis</a>
+        <a href={LOGIN_URL} class="btn-secondary-lg">Iniciar sesión</a>
       </div>
     </div>
   </section>
