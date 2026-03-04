@@ -83,7 +83,7 @@ out
 dist
 
 #firebase build Output
-public/
+# public/
 
 # Gatsby files
 .cache/
