@@ -15,7 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
                         .allowedOrigins(
-                                "https://aliados-web-22.web.app",
+                                "https://aliados-app-22.web.app",
                                 "http://localhost:5173"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
@@ -24,7 +24,7 @@ public class CorsConfig {
 
                 registry.addMapping("/ws/**")
                         .allowedOrigins(
-                                "https://aliados-web-22.web.app",
+                                "https://aliados-app-22.web.app",
                                 "http://localhost:5173"
                         )
                         .allowedMethods("GET", "POST", "OPTIONS")
