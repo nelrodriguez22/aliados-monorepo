@@ -45,64 +45,49 @@ const REGISTER_URL = `${APP_URL}/registro`;
       --faint:         #4a5568;
     }
 
-    /* ── FONTS ── */
     @font-face {
       font-family: 'Plus Jakarta Sans';
       src: url('/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
-      font-weight: 300 700;
-      font-style: normal;
-      font-display: swap;
+      font-weight: 300 700; font-style: normal; font-display: swap;
     }
     @font-face {
       font-family: 'DM Sans';
       src: url('/fonts/DMSans-Variable.woff2') format('woff2');
-      font-weight: 300 500;
-      font-style: normal;
-      font-display: swap;
+      font-weight: 300 500; font-style: normal; font-display: swap;
     }
 
-    /* ── DARK OVERRIDES ── */
-    html.dark .services-section  { background: var(--surface); }
-    html.dark .how-visual        { background: var(--surface); }
-    html.dark .mock-card         { background: var(--bg); }
-    html.dark .mock-map          { background: linear-gradient(135deg, #0a1929 0%, #0d2137 100%); }
-    html.dark .testimonial-card  { background: var(--surface); }
-    html.dark header             { background: rgba(15,17,23,0.92); }
-    html.dark .providers-section { background: #0a1929; }
-    html.dark .providers-tag     { background: rgba(26,138,191,0.15); color: var(--accent); }
-    html.dark .faq-section       { background: var(--bg); }
-    html.dark .final-cta         { background: var(--bg); }
+    html.dark .services-section     { background: var(--surface); }
+    html.dark .how-visual            { background: var(--surface); }
+    html.dark .mock-card             { background: var(--bg); }
+    html.dark .mock-map              { background: linear-gradient(135deg, #0a1929 0%, #0d2137 100%); }
+    html.dark .testimonials-section  { background: var(--bg); }
+    html.dark .testimonial-card      { background: var(--surface); }
+    html.dark header                 { background: rgba(15,17,23,0.92); }
+    html.dark .providers-section     { background: #0a1929; }
+    html.dark .providers-tag         { background: rgba(26,138,191,0.15); color: var(--accent); }
+    html.dark .faq-section           { background: var(--bg); }
+    html.dark .final-cta             { background: var(--bg); }
+    html.dark .step-preview          { background: var(--surface); }
+    html.dark .prev-track            { background: linear-gradient(135deg, #0a1929, #0d2137); }
 
-    /* ── DARK: hero orbes más visibles ── */
-    html.dark .hero-orb-1 {
-      background: radial-gradient(circle, rgba(26,138,191,0.30) 0%, rgba(10,100,144,0.14) 40%, transparent 70%);
-    }
-    html.dark .hero-orb-2 {
-      background: radial-gradient(circle, rgba(56,182,232,0.22) 0%, rgba(26,138,191,0.10) 45%, transparent 70%);
-    }
-    html.dark .hero-orb-3 {
-      background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, transparent 65%);
-    }
+    html.dark .hero-orb-1 { background: radial-gradient(circle, rgba(26,138,191,0.30) 0%, rgba(10,100,144,0.14) 40%, transparent 70%); }
+    html.dark .hero-orb-2 { background: radial-gradient(circle, rgba(56,182,232,0.22) 0%, rgba(26,138,191,0.10) 45%, transparent 70%); }
+    html.dark .hero-orb-3 { background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, transparent 65%); }
     html.dark .hero::before {
       background:
         radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,138,191,0.18) 0%, transparent 70%),
         linear-gradient(180deg, rgba(10,100,144,0.12) 0%, transparent 60%);
     }
 
-    /* ── THEME TOGGLE ── */
     .theme-toggle {
-      width: 52px; height: 28px;
-      background: var(--border-strong);
-      border-radius: 9999px; border: none;
-      cursor: pointer; position: relative;
-      transition: background 0.3s;
-      flex-shrink: 0; padding: 0;
+      width: 52px; height: 28px; background: var(--border-strong);
+      border-radius: 9999px; border: none; cursor: pointer;
+      position: relative; transition: background 0.3s; flex-shrink: 0; padding: 0;
     }
     html.dark .theme-toggle { background: var(--brand); }
     .toggle-thumb {
-      position: absolute; top: 3px; left: 3px;
-      width: 22px; height: 22px; background: white;
-      border-radius: 50%;
+      position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+      background: white; border-radius: 50%;
       transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
       display: flex; align-items: center; justify-content: center;
       color: #f59e0b; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
@@ -121,265 +106,147 @@ const REGISTER_URL = `${APP_URL}/registro`;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── HEADER ── */
     header {
-      position: fixed; top: 0; left: 0; right: 0;
-      z-index: 100; height: 60px;
-      display: flex; align-items: center;
-      justify-content: space-between;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.5rem;
       background: rgba(250,250,250,0.7);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
     .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
-    .logo img { height: 36px; }
-
-    /* desktop nav */
-    .desktop-nav { display: flex; align-items: center; gap: 2rem; }
-    .desktop-nav a { font-size: 0.875rem; font-weight: 400; color: var(--muted); text-decoration: none; transition: color 0.15s; }
-    .desktop-nav a:hover { color: var(--text); }
-    .header-right { display: flex; align-items: center; gap: 0.5rem; }
-
+    .logo img { height: 45px; }
+    .header-right { display: flex; align-items: center; gap: 1.5rem; }
+    .desktop-nav { display: flex; align-items: center; gap: 1.75rem; }
+    .desktop-nav a { font-size: 0.875rem; font-weight: 400; color: var(--muted); text-decoration: none; transition: color 0.2s, text-shadow 0.2s, font-weight 0.1s; }
+    .desktop-nav a:hover,
+    .desktop-nav a.active {
+      font-weight: 500;
+      color: var(--brand);
+      text-shadow: 0 0 16px rgba(26,138,191,0.35), 0 0 6px rgba(26,138,191,0.2);
+    }
+    html.dark .desktop-nav a:hover,
+    html.dark .desktop-nav a.active {
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(56,182,232,0.6), 0 0 8px rgba(56,182,232,0.3);
+    }
+    .header-btns { display: flex; align-items: center; gap: 0.5rem; }
     .btn-ghost {
-      font-size: 0.875rem; font-weight: 500; color: var(--muted);
-      background: none; border: none; cursor: pointer;
-      text-decoration: none; padding: 0.5rem 0.625rem;
-      transition: color 0.15s; white-space: nowrap;
+      font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.875rem;
+      color: var(--brand); background: none;
+      border: 1px solid var(--border-strong); border-radius: 9999px;
+      cursor: pointer; text-decoration: none;
+      padding: 0.45rem 1rem; display: inline-block;
+      transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
     }
-    .btn-ghost:hover { color: var(--text); }
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 10px rgba(26,138,191,0.15);
+    }
+    html.dark .btn-ghost { color: var(--accent); border-color: var(--border-strong); }
+    html.dark .btn-ghost:hover { border-color: var(--accent); box-shadow: 0 0 12px rgba(56,182,232,0.2); }
 
-    /* ── HAMBURGER ── */
-    .hamburger {
-      display: none;
-      flex-direction: column; justify-content: center; align-items: center;
-      gap: 5px; width: 36px; height: 36px;
-      background: none; border: none; cursor: pointer;
-      padding: 4px; border-radius: 8px;
-      transition: background 0.15s; flex-shrink: 0;
-    }
+    .hamburger { display: none; flex-direction: column; justify-content: center; align-items: center; gap: 5px; width: 36px; height: 36px; background: none; border: none; cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.15s; flex-shrink: 0; }
     .hamburger:hover { background: var(--border); }
-    .hamburger span {
-      display: block; width: 20px; height: 2px;
-      background: var(--text); border-radius: 2px;
-      transition: transform 0.25s ease, opacity 0.2s ease;
-      transform-origin: center;
-    }
+    .hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; transition: transform 0.25s ease, opacity 0.2s ease; transform-origin: center; }
     .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
     .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
     .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-    /* ── MOBILE MENU ── */
-    .mobile-menu {
-      display: none; position: fixed;
-      top: 60px; left: 0; right: 0; z-index: 98;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1.25rem 1.25rem 1.5rem;
-      flex-direction: column; gap: 0;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-      animation: slideDown 0.2s ease;
-    }
+    .mobile-menu { display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 98; background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.25rem 1.25rem 1.5rem; flex-direction: column; gap: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.08); animation: slideDown 0.2s ease; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     .mobile-menu.open { display: flex; }
-
     .mobile-nav { display: flex; flex-direction: column; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.75rem; }
     .mobile-nav a { font-size: 0.9375rem; font-weight: 500; color: var(--text); padding: 0.75rem 0; border-bottom: 1px solid var(--border); text-decoration: none; transition: color 0.15s; }
     .mobile-nav a:last-child { border-bottom: none; }
     .mobile-nav a:hover { color: var(--brand); }
-
     .mobile-theme-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; }
     .mobile-theme-row span { font-size: 0.875rem; color: var(--muted); }
-
     .mobile-cta { display: flex; flex-direction: column; gap: 0.625rem; }
 
-    .btn-primary {
-      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.875rem;
-      background: var(--brand); color: #fff; border: none;
-      border-radius: 9999px; padding: 0.5rem 1.125rem;
-      cursor: pointer; text-decoration: none;
-      transition: background 0.15s, transform 0.1s;
-      display: inline-block; white-space: nowrap;
-    }
+    .btn-primary { font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.875rem; background: var(--brand); color: #fff; border: none; border-radius: 9999px; padding: 0.5rem 1.125rem; cursor: pointer; text-decoration: none; transition: background 0.15s, transform 0.1s; display: inline-block; white-space: nowrap; }
     .btn-primary:hover { background: var(--brand-mid); transform: translateY(-1px); }
     .btn-primary-lg { font-size: 0.9375rem; padding: 0.75rem 1.75rem; }
-
-    .btn-secondary-lg {
-      font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.9375rem;
-      color: var(--muted); background: none;
-      border: 1px solid var(--border-strong); border-radius: 9999px;
-      padding: 0.75rem 1.75rem; cursor: pointer; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      transition: all 0.15s;
-    }
+    .btn-secondary-lg { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.9375rem; color: var(--muted); background: none; border: 1px solid var(--border-strong); border-radius: 9999px; padding: 0.75rem 1.75rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.15s; }
     .btn-secondary-lg:hover { border-color: var(--brand); color: var(--brand); }
 
-    /* ── HERO ── */
-    .hero {
-      min-height: 100dvh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 5rem 1.25rem 4rem;
-      text-align: center; position: relative;
-      overflow: hidden;
-    }
-
-    /* Fondo degradado azul sutil */
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(5,64,96,0.12) 0%, transparent 70%),
-        linear-gradient(180deg, rgba(10,100,144,0.07) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Aseguramos que el contenido quede sobre los orbes */
+    .hero { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 1.25rem 4rem; text-align: center; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(5,64,96,0.12) 0%, transparent 70%), linear-gradient(180deg, rgba(10,100,144,0.07) 0%, transparent 60%); pointer-events: none; z-index: 0; }
     .hero > *:not(.hero-orb) { position: relative; z-index: 1; }
-
     .hero-orb { position: absolute; border-radius: 50%; pointer-events: none; }
-
-    /* Orbe superior izquierdo — más visible */
-    .hero-orb-1 {
-      width: 600px; height: 600px;
-      top: -220px; left: -200px;
-      background: radial-gradient(circle, rgba(10,100,144,0.22) 0%, rgba(26,138,191,0.10) 40%, transparent 70%);
-      filter: blur(48px);
-      animation: drift1 12s ease-in-out infinite;
-    }
-
-    /* Orbe inferior derecho — más visible */
-    .hero-orb-2 {
-      width: 500px; height: 500px;
-      bottom: -180px; right: -180px;
-      background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, rgba(5,64,96,0.08) 45%, transparent 70%);
-      filter: blur(56px);
-      animation: drift2 15s ease-in-out infinite;
-    }
-
-    /* Orbe central sutil */
-    .hero-orb-3 {
-      width: 450px; height: 450px;
-      top: 40%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: radial-gradient(circle, rgba(26,138,191,0.08) 0%, transparent 65%);
-      filter: blur(40px);
-      z-index: -1;                    /* ← esto es todo lo que cambia */
-      animation: drift3 18s ease-in-out infinite reverse;
-    }
-
+    .hero-orb-1 { width: 600px; height: 600px; top: -220px; left: -200px; background: radial-gradient(circle, rgba(10,100,144,0.22) 0%, rgba(26,138,191,0.10) 40%, transparent 70%); filter: blur(48px); animation: drift1 12s ease-in-out infinite; }
+    .hero-orb-2 { width: 500px; height: 500px; bottom: -180px; right: -180px; background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, rgba(5,64,96,0.08) 45%, transparent 70%); filter: blur(56px); animation: drift2 15s ease-in-out infinite; }
+    .hero-orb-4 { width: 500px; height: 500px; bottom: -180px; left: -180px; background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, rgba(5,64,96,0.08) 45%, transparent 70%); filter: blur(56px); animation: drift2 15s ease-in-out infinite reverse; }
+    html.dark .hero-orb-4 { background: radial-gradient(circle, rgba(56,182,232,0.22) 0%, rgba(26,138,191,0.10) 45%, transparent 70%); }
+    .hero-orb-3 { width: 450px; height: 450px; top: 40%; left: 50%; background: radial-gradient(circle, rgba(26,138,191,0.08) 0%, transparent 65%); filter: blur(40px); z-index: -1; animation: drift3 18s ease-in-out infinite reverse; }
     @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px,15px); } }
     @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-15px,-20px); } }
+    @keyframes drift3 { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(calc(-50% + 15px), calc(-50% + 10px)); } }
 
-    /* drift1 para orb-3 necesita override por el translate(-50%,-50%) */
-    .hero-orb-3 {
-      animation: drift3 18s ease-in-out infinite reverse;
-    }
-    @keyframes drift3 {
-      0%,100% { transform: translate(-50%, -50%); }
-      50%      { transform: translate(calc(-50% + 15px), calc(-50% + 10px)); }
-    }
-
-    .hero-eyebrow {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      font-size: 0.8125rem; font-weight: 500;
-      color: var(--accent); letter-spacing: 0.04em; margin-bottom: 1.5rem;
-    }
-    .eyebrow-dot {
-      width: 6px; height: 6px; background: var(--green);
-      border-radius: 50%; animation: blink 2s infinite; flex-shrink: 0;
-    }
-    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-
-    .hero h1 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: clamp(2rem, 7vw, 5rem);
-      font-weight: 300; letter-spacing: -0.04em;
-      color: var(--text); line-height: 1.08;
-      margin-bottom: 1.25rem; max-width: 780px; width: 100%;
-    }
+    .hero h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(2rem, 7vw, 5rem); font-weight: 300; letter-spacing: -0.04em; color: var(--text); line-height: 1.08; margin-bottom: 1.25rem; max-width: 780px; width: 100%; }
     .hero h1 strong { font-weight: 700; color: var(--brand); }
-
-    .hero-sub {
-      font-size: clamp(0.9375rem, 2vw, 1.125rem);
-      color: var(--muted); width: 100%; max-width: 460px;
-      margin: 0 auto 2rem; font-weight: 300; line-height: 1.75;
-    }
-
-    .hero-actions {
-      display: flex; align-items: center; justify-content: center;
-      gap: 0.75rem; flex-wrap: wrap; width: 100%;
-    }
-
-    /* Stats: grid 2×2 */
-    .hero-meta {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      margin-top: 3rem; width: 100%; max-width: 400px;
-      border: 1px solid var(--border); border-radius: 1rem; overflow: hidden;
-    }
-    .meta-item {
-      text-align: center; padding: 1rem 0.75rem;
-      border-right: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .meta-item:nth-child(2n)        { border-right: none; }
+    .hero-sub { font-size: clamp(0.9375rem, 2vw, 1.125rem); color: var(--muted); width: 100%; max-width: 460px; margin: 0 auto 2rem; font-weight: 300; line-height: 1.75; }
+    .hero-actions { display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; width: 100%; }
+    .hero-meta { display: grid; grid-template-columns: 1fr 1fr; margin-top: 3rem; width: 100%; max-width: 400px; border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; }
+    .meta-item { text-align: center; padding: 1rem 0.75rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .meta-item:nth-child(2n) { border-right: none; }
     .meta-item:nth-last-child(-n+2) { border-bottom: none; }
-    .meta-sep { display: none; }
-    .meta-num {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 1.375rem; font-weight: 700;
-      color: var(--brand); letter-spacing: -0.03em; display: block;
-    }
+    .meta-num { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.375rem; font-weight: 700; color: var(--brand); letter-spacing: -0.03em; display: block; }
     .meta-label { font-size: 0.7rem; color: var(--faint); font-weight: 400; }
 
-    /* ── DIVIDER ── */
     .divider { height: 1px; background: var(--border); }
 
-    /* ── HOW IT WORKS ── */
     .how { padding: 5rem 1.25rem; max-width: 1100px; margin: 0 auto; }
-
-    .section-label {
-      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--accent);
-      display: block; margin-bottom: 1rem;
-    }
-    .section-title {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: clamp(1.625rem, 4vw, 2.75rem);
-      font-weight: 300; letter-spacing: -0.03em;
-      color: var(--text); line-height: 1.15; margin-bottom: 0.75rem;
-    }
+    .section-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 1rem; }
+    .section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(1.625rem, 4vw, 2.75rem); font-weight: 300; letter-spacing: -0.03em; color: var(--text); line-height: 1.15; margin-bottom: 0.75rem; }
     .section-title strong { font-weight: 700; }
     .section-desc { font-size: 0.9375rem; color: var(--muted); max-width: 440px; line-height: 1.7; font-weight: 300; }
 
-    .how-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 5rem; align-items: start; margin-top: 4rem;
-    }
+    .how-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; margin-top: 4rem; }
+
     .steps { display: flex; flex-direction: column; gap: 0; }
     .step {
-      display: flex; gap: 1.5rem; padding: 2rem 0;
+      display: flex; gap: 1.5rem; padding: 1.75rem 0.75rem;
       border-bottom: 1px solid var(--border);
+      border-radius: 0.75rem; cursor: default;
+      margin-left: -0.75rem; margin-right: -0.75rem;
+      transition: background 0.2s;
     }
-    .step:first-child { padding-top: 0; }
+    .step:first-child { padding-top: 0.25rem; }
     .step:last-child  { border-bottom: none; }
+    .step:hover { background: rgba(26,138,191,0.04); }
+
     .step-num-wrap {
       flex-shrink: 0; width: 32px; height: 32px;
       border: 1px solid var(--border-strong); border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-top: 2px;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
     }
-    .step-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.375rem; letter-spacing: -0.01em; }
-    .step-desc  { font-size: 0.875rem; color: var(--muted); line-height: 1.65; font-weight: 300; }
+    .step:hover .step-num-wrap { border-color: var(--accent); color: var(--accent); background: rgba(26,138,191,0.08); }
 
-    .how-visual {
-      position: sticky; top: 80px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 1.5rem; padding: 2rem;
-      display: flex; flex-direction: column; gap: 1rem;
+    .step-title {
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem;
+      font-weight: 600; color: var(--text); margin-bottom: 0.375rem;
+      letter-spacing: -0.01em;
+      transition: color 0.2s, text-shadow 0.2s, font-weight 0.1s;
     }
+    .step:hover .step-title {
+      font-weight: 700;
+      color: var(--brand);
+      text-shadow: 0 0 20px rgba(26,138,191,0.4), 0 0 6px rgba(26,138,191,0.2);
+    }
+    html.dark .step:hover .step-title {
+      color: var(--accent);
+      text-shadow: 0 0 22px rgba(56,182,232,0.55), 0 0 8px rgba(56,182,232,0.3);
+    }
+    .step-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.65; font-weight: 300; }
+
+    .how-right { display: flex; flex-direction: column; gap: 0.875rem; }
+    .how-visual { background: var(--surface); border: 1px solid var(--border); border-radius: 1.5rem; padding: 2rem; display: flex; flex-direction: column; gap: 1rem; }
     .mock-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
     .mock-title  { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.875rem; font-weight: 600; color: var(--text); }
     .mock-badge  { background: #dcfce7; color: var(--green); font-size: 0.7rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 9999px; }
@@ -393,11 +260,53 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .mock-map-pin   { width: 28px; height: 28px; background: var(--brand); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 12px rgba(5,64,96,0.3); }
     .mock-map-pulse { position: absolute; width: 50px; height: 50px; border: 2px solid rgba(5,64,96,0.2); border-radius: 50%; animation: expand 2s infinite; }
     @keyframes expand { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
-    .mock-eta       { display: flex; align-items: center; justify-content: space-between; }
+    .mock-eta   { display: flex; align-items: center; justify-content: space-between; }
     .mock-eta-label { font-size: 0.75rem; color: var(--faint); }
     .mock-eta-val   { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.875rem; font-weight: 700; color: var(--brand); }
 
-    /* ── SERVICES ── */
+    .step-preview-container { overflow: hidden; max-height: 0; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1); }
+    .step-preview-container.open { max-height: 220px; }
+    .step-preview {
+      background: var(--surface); border: 1px solid var(--accent); border-radius: 1.25rem;
+      padding: 1rem 1.125rem; display: none; flex-direction: column; gap: 0.625rem;
+      box-shadow: 0 4px 20px rgba(26,138,191,0.10), 0 0 0 1px rgba(26,138,191,0.06);
+      opacity: 0; transform: translateY(6px); transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .step-preview.visible { opacity: 1; transform: translateY(0); }
+    .preview-label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 0.375rem; }
+    .preview-label::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+    .prev-service-grid { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .prev-chip { border: 1px solid var(--border); border-radius: 9999px; padding: 0.25rem 0.65rem; font-size: 0.695rem; font-weight: 500; color: var(--muted); background: var(--bg); }
+    .prev-chip.sel { border-color: var(--accent); color: var(--accent); background: rgba(26,138,191,0.08); }
+    .prev-input { background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.4rem 0.7rem; font-size: 0.72rem; color: var(--faint); display: flex; align-items: center; gap: 0.5rem; }
+    .prev-cursor { width: 1px; height: 11px; background: var(--accent); animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+
+    .prev-match-list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .prev-match-row { display: flex; align-items: center; gap: 0.55rem; background: var(--bg); border-radius: 0.5rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); }
+    .prev-match-row.top { border-color: var(--accent); }
+    .prev-av { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-mid), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .prev-mi { flex: 1; }
+    .prev-mn { font-size: 0.7rem; font-weight: 600; color: var(--text); }
+    .prev-md { font-size: 0.63rem; color: var(--faint); }
+    .prev-sc { font-size: 0.63rem; font-weight: 700; color: var(--accent); background: rgba(26,138,191,0.1); border-radius: 9999px; padding: 0.12rem 0.38rem; }
+
+    .prev-track { background: linear-gradient(135deg, #e6f0f5, #b3d4e3); border-radius: 0.625rem; height: 58px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .prev-pin { width: 16px; height: 16px; background: var(--brand); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(5,64,96,0.35); position: relative; z-index: 1; }
+    .prev-pulse { position: absolute; width: 28px; height: 28px; border: 1.5px solid rgba(5,64,96,0.25); border-radius: 50%; animation: expand 2s infinite 0.3s; }
+    .prev-eta-row { display: flex; align-items: center; justify-content: space-between; }
+    .prev-eta-txt { font-size: 0.68rem; color: var(--faint); }
+    .prev-eta-val { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--brand); }
+
+    .prev-done-row { display: flex; align-items: center; gap: 0.55rem; background: var(--bg); border-radius: 0.5rem; padding: 0.45rem 0.7rem; border: 1px solid #dcfce7; }
+    .prev-chk { width: 20px; height: 20px; border-radius: 50%; background: #dcfce7; color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 700; flex-shrink: 0; }
+    .prev-done-txt { font-size: 0.72rem; font-weight: 500; color: var(--text); }
+    .prev-rating-row { display: flex; align-items: center; justify-content: space-between; padding: 0 0.2rem; }
+    .prev-rlabel { font-size: 0.68rem; color: var(--muted); }
+    .prev-stars { display: flex; gap: 0.15rem; }
+    .prev-stars span { font-size: 0.95rem; color: #f59e0b; }
+
     .services-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5rem 1.25rem; }
     .services-inner   { max-width: 1100px; margin: 0 auto; }
     .services-header  { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 2.5rem; gap: 1.5rem; flex-wrap: wrap; }
@@ -407,10 +316,10 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .service-icon { width: 26px; height: 26px; color: var(--brand-mid); }
     .service-name { font-size: 0.75rem; font-weight: 500; color: var(--text); }
 
-    /* ── TESTIMONIALS ── */
-    .testimonials-section { padding: 5rem 1.25rem; max-width: 1100px; margin: 0 auto; }
+    .testimonials-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5rem 1.25rem; }
+    .testimonials-inner   { max-width: 1100px; margin: 0 auto; }
     .testimonials-grid    { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 3rem; }
-    .testimonial-card     { border: 1px solid var(--border); border-radius: 1.25rem; padding: 1.75rem; background: var(--surface); display: flex; flex-direction: column; gap: 1.25rem; transition: border-color 0.15s, box-shadow 0.15s; }
+    .testimonial-card     { border: 1px solid var(--border); border-radius: 1.25rem; padding: 1.75rem; background: var(--bg); display: flex; flex-direction: column; gap: 1.25rem; transition: border-color 0.15s, box-shadow 0.15s; }
     .testimonial-card:hover { border-color: var(--border-strong); box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
     .stars { color: #f59e0b; font-size: 0.875rem; letter-spacing: 1px; }
     .testimonial-text   { font-size: 0.9375rem; color: var(--muted); line-height: 1.75; font-weight: 300; font-style: italic; flex: 1; }
@@ -419,7 +328,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .author-name { font-size: 0.875rem; font-weight: 600; color: var(--text); }
     .author-role { font-size: 0.75rem; color: var(--faint); }
 
-    /* ── PROVIDERS ── */
     .providers-section { background: var(--brand); padding: 5rem 1.25rem; }
     .providers-inner   { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
     .providers-tag     { display: inline-block; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.3rem 0.875rem; border-radius: 9999px; margin-bottom: 1.5rem; }
@@ -437,7 +345,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .pstat-label       { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
     .pstat-wide        { grid-column: span 2; }
 
-    /* ── FAQ ── */
     .faq-section { padding: 5rem 1.25rem; max-width: 680px; margin: 0 auto; }
     .faq-list    { margin-top: 3rem; }
     .faq-item    { border-bottom: 1px solid var(--border); }
@@ -448,14 +355,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .faq-a       { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; font-size: 0.875rem; color: var(--muted); line-height: 1.75; font-weight: 300; }
     .faq-item.open .faq-a { max-height: 200px; padding-bottom: 1.5rem; }
 
-    /* ── FINAL CTA ── */
-    .final-cta    { padding: 5rem 1.25rem; text-align: center; border-top: 1px solid var(--border); }
-    .final-cta h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(1.875rem, 6vw, 3.75rem); font-weight: 300; letter-spacing: -0.04em; color: var(--text); max-width: 600px; margin: 0 auto 1.25rem; line-height: 1.1; }
-    .final-cta h2 strong { font-weight: 700; color: var(--brand); }
-    .final-cta p  { font-size: 1rem; color: var(--muted); max-width: 420px; margin: 0 auto 2.5rem; font-weight: 300; line-height: 1.75; }
-    .final-actions { display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
-
-    /* ── FOOTER ── */
     footer { border-top: 1px solid var(--border); padding: 1.75rem 1.25rem; }
     .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
     .footer-copy  { font-size: 0.8rem; color: var(--faint); }
@@ -463,7 +362,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .footer-links a { font-size: 0.8rem; color: var(--faint); text-decoration: none; transition: color 0.15s; }
     .footer-links a:hover { color: var(--text); }
 
-    /* ── SCROLL TO TOP ── */
     .scroll-top { position: fixed; bottom: 1.5rem; right: 1.5rem; width: 40px; height: 40px; background: var(--brand); color: #fff; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(5,64,96,0.25); opacity: 0; transform: translateY(10px); transition: opacity 0.25s, transform 0.25s, background 0.15s; pointer-events: none; z-index: 99; }
     .scroll-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
     .scroll-top:hover { background: var(--brand-mid); }
@@ -471,49 +369,27 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .fade-up { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
     .fade-up.visible { opacity: 1; transform: translateY(0); }
 
-    /* hide mobile actions on desktop */
     @media (min-width: 769px) {
       .mobile-header-actions { display: none !important; }
       .mobile-menu { display: none !important; }
     }
-
     @media (max-width: 768px) {
-      .mobile-header-actions .btn-ghost {
-        font-size: 0.8125rem;
-        padding: 0.4rem 0.75rem;
-        border: 1px solid var(--border-strong);
-        border-radius: 9999px;
-        color: var(--text);
-      }
-    }
-
-    /* ════════════════════════════════════
-       RESPONSIVE — tablet ≤768px (hamburger)
-    ════════════════════════════════════ */
-    @media (max-width: 768px) {
-      .desktop-nav   { display: none; }
-      .hamburger     { display: flex; }
-      .header-right  { display: none; }
+      .desktop-nav { display: none; }
+      .hamburger   { display: flex; }
+      .header-btns { display: none; }
       .mobile-header-actions { display: flex !important; }
+      .mobile-header-actions .btn-ghost { font-size: 0.8125rem; padding: 0.4rem 0.75rem; border: 1px solid var(--border-strong); border-radius: 9999px; color: var(--text); }
     }
-
-    /* ════════════════════════════════════
-       RESPONSIVE — tablet ≤900px
-    ════════════════════════════════════ */
     @media (max-width: 900px) {
       .desktop-nav { display: none; }
-      .hamburger { display: flex; }
-      .header-right .theme-toggle { display: none; }
-      .header-right .btn-primary   { display: none; }
-      .how-grid         { grid-template-columns: 1fr; gap: 3rem; }
-      .how-visual       { position: static; }
-      .providers-inner  { grid-template-columns: 1fr; gap: 3rem; }
-      .hero-meta        { max-width: 480px; }
+      .hamburger   { display: flex; }
+      .header-btns .theme-toggle { display: none; }
+      .header-btns .btn-primary  { display: none; }
+      .how-grid        { grid-template-columns: 1fr; gap: 3rem; }
+      .providers-inner { grid-template-columns: 1fr; gap: 3rem; }
+      .hero-meta       { max-width: 480px; }
+      .step-preview-container { display: none; }
     }
-
-    /* ════════════════════════════════════
-       RESPONSIVE — mobile ≤480px
-    ════════════════════════════════════ */
     @media (max-width: 480px) {
       header { padding: 0 1rem; height: 56px; }
       .logo img { height: 32px; }
@@ -522,27 +398,14 @@ const REGISTER_URL = `${APP_URL}/registro`;
       .hero-orb-2 { width: 260px; height: 260px; bottom: -80px; right: -80px; }
       .hero-orb-3 { width: 200px; height: 200px; }
       .hero-actions { flex-direction: column; }
-      .hero-actions .btn-primary-lg,
-      .hero-actions .btn-secondary-lg { width: 100%; justify-content: center; }
+      .hero-actions .btn-primary-lg, .hero-actions .btn-secondary-lg { width: 100%; justify-content: center; }
       .hero-meta { max-width: 100%; }
-      .how               { padding: 4rem 1rem; }
-      .services-section  { padding: 4rem 1rem; }
-      .testimonials-section { padding: 4rem 1rem; }
-      .providers-section { padding: 4rem 1rem; }
-      .faq-section       { padding: 4rem 1rem; }
-      .final-cta         { padding: 4rem 1rem; }
+      .how, .services-section, .testimonials-section, .providers-section, .faq-section { padding: 4rem 1rem; }
       .services-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
       .service-chip  { padding: 1rem 0.5rem; }
       .testimonials-grid { grid-template-columns: 1fr; }
-      .final-actions { flex-direction: column; }
-      .final-actions .btn-primary-lg,
-      .final-actions .btn-secondary-lg { width: 100%; justify-content: center; }
       .footer-inner { flex-direction: column; align-items: flex-start; }
     }
-
-    /* ════════════════════════════════════
-       RESPONSIVE — 320px edge case
-    ════════════════════════════════════ */
     @media (max-width: 360px) {
       .hero h1 { font-size: 1.875rem; }
       .services-grid { grid-template-columns: repeat(2, 1fr); }
@@ -552,33 +415,26 @@ const REGISTER_URL = `${APP_URL}/registro`;
 </head>
 <body>
 
-  <!-- HEADER -->
   <header>
-    <a href="/" class="logo">
-      <img src="logo.png" alt="Aliados" />
-    </a>
-
-    <!-- Desktop nav -->
-    <nav class="desktop-nav">
-      <a href="#como-funciona">Cómo funciona</a>
-      <a href="#servicios">Servicios</a>
-      <a href="#proveedores">Para profesionales</a>
-      <a href="#faq">FAQ</a>
-    </nav>
-
-    <!-- Desktop right -->
+    <a href="/" class="logo"><img src="logo.png" alt="Aliados" /></a>
     <div class="header-right">
-      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
-        <span class="toggle-thumb">
-          <svg class="icon-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg class="icon-moon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        </span>
-      </button>
-      <a href={LOGIN_URL} class="btn-ghost">Iniciar sesión</a>
-      <a href={REGISTER_URL} class="btn-primary">Empezar gratis</a>
+      <nav class="desktop-nav">
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#proveedores">Para profesionales</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="header-btns">
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+          <span class="toggle-thumb">
+            <svg class="icon-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="icon-moon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          </span>
+        </button>
+        <a href={LOGIN_URL} class="btn-ghost">Iniciar sesión</a>
+        <a href={REGISTER_URL} class="btn-primary">Empezar gratis</a>
+      </div>
     </div>
-
-    <!-- Mobile: login + hamburger -->
     <div style="display:flex;align-items:center;gap:0.375rem;" class="mobile-header-actions">
       <a href={LOGIN_URL} class="btn-primary" style="font-size:0.8125rem;padding:0.4rem 0.875rem;">Iniciar sesión</a>
       <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false">
@@ -587,7 +443,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     </div>
   </header>
 
-  <!-- Mobile menu -->
   <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Menú de navegación">
     <nav class="mobile-nav">
       <a href="#como-funciona">Cómo funciona</a>
@@ -609,22 +464,13 @@ const REGISTER_URL = `${APP_URL}/registro`;
     </div>
   </div>
 
-  <!-- HERO -->
   <section class="hero">
     <div class="hero-orb hero-orb-1"></div>
     <div class="hero-orb hero-orb-2"></div>
     <div class="hero-orb hero-orb-3"></div>
-    <!-- <div class="hero-eyebrow"> -->
-    <!--   <span class="eyebrow-dot"></span> -->
-    <!--   Por el momento disponible en Rosario -->
-    <!-- </div> -->
-    <h1>
-      El profesional que necesitás,<br/>
-      <strong>cuando lo necesitás.</strong>
-    </h1>
-    <p class="hero-sub">
-      Conectamos clientes con profesionales verificados en minutos. Sin intermediarios, sin esperas.
-    </p>
+    <div class="hero-orb hero-orb-4"></div>
+    <h1>El profesional que necesitás,<br/><strong>cuando lo necesitás.</strong></h1>
+    <p class="hero-sub">Conectamos clientes con profesionales verificados en minutos. Sin intermediarios, sin esperas.</p>
     <div class="hero-actions">
       <a href={REGISTER_URL} class="btn-primary btn-primary-lg">Solicitar un servicio</a>
       <a href="#como-funciona" class="btn-secondary-lg">
@@ -633,28 +479,15 @@ const REGISTER_URL = `${APP_URL}/registro`;
       </a>
     </div>
     <div class="hero-meta">
-      <div class="meta-item">
-        <span class="meta-num">+1.200</span>
-        <span class="meta-label">Servicios completados</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-num">+180</span>
-        <span class="meta-label">Profesionales activos</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-num">4.8★</span>
-        <span class="meta-label">Calificación promedio</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-num">&lt;8 min</span>
-        <span class="meta-label">Tiempo de respuesta</span>
-      </div>
+      <div class="meta-item"><span class="meta-num">+1.200</span><span class="meta-label">Servicios completados</span></div>
+      <div class="meta-item"><span class="meta-num">+180</span><span class="meta-label">Profesionales activos</span></div>
+      <div class="meta-item"><span class="meta-num">4.8★</span><span class="meta-label">Calificación promedio</span></div>
+      <div class="meta-item"><span class="meta-num">&lt;8 min</span><span class="meta-label">Tiempo de respuesta</span></div>
     </div>
   </section>
 
   <div class="divider"></div>
 
-  <!-- HOW IT WORKS -->
   <section class="how" id="como-funciona">
     <div class="how-grid">
       <div>
@@ -663,29 +496,29 @@ const REGISTER_URL = `${APP_URL}/registro`;
           <h2 class="section-title">Simple de usar.<br/><strong>Rápido de resolver.</strong></h2>
           <p class="section-desc">De la solicitud al trabajo terminado, todo dentro de la plataforma.</p>
         </div>
-        <div class="steps" style="margin-top: 3rem;">
-          <div class="step fade-up">
+        <div class="steps" style="margin-top:3rem">
+          <div class="step fade-up" data-step="1">
             <div class="step-num-wrap">01</div>
             <div class="step-body">
               <div class="step-title">Describí lo que necesitás</div>
               <p class="step-desc">Seleccioná el tipo de servicio y contanos brevemente el problema. En segundos.</p>
             </div>
           </div>
-          <div class="step fade-up" style="transition-delay:0.1s">
+          <div class="step fade-up" style="transition-delay:0.1s" data-step="2">
             <div class="step-num-wrap">02</div>
             <div class="step-body">
               <div class="step-title">Match automático</div>
               <p class="step-desc">El sistema conecta tu solicitud con los mejores profesionales disponibles cerca tuyo.</p>
             </div>
           </div>
-          <div class="step fade-up" style="transition-delay:0.2s">
+          <div class="step fade-up" style="transition-delay:0.2s" data-step="3">
             <div class="step-num-wrap">03</div>
             <div class="step-body">
               <div class="step-title">Coordinación en tiempo real</div>
               <p class="step-desc">Seguí la ubicación del profesional y comunicate directamente desde la app.</p>
             </div>
           </div>
-          <div class="step fade-up" style="transition-delay:0.3s">
+          <div class="step fade-up" style="transition-delay:0.3s" data-step="4">
             <div class="step-num-wrap">04</div>
             <div class="step-body">
               <div class="step-title">Trabajo completado</div>
@@ -694,26 +527,84 @@ const REGISTER_URL = `${APP_URL}/registro`;
           </div>
         </div>
       </div>
-      <div class="how-visual fade-up">
-        <div class="mock-header">
-          <span class="mock-title">Servicio en curso</span>
-          <span class="mock-badge">En camino</span>
-        </div>
-        <div class="mock-card">
-          <div class="mock-avatar">RL</div>
-          <div class="mock-info">
-            <div class="mock-name">Roberto L.</div>
-            <div class="mock-role">Electricista · 4 años</div>
+
+      <div class="how-right fade-up">
+        <div class="how-visual">
+          <div class="mock-header">
+            <span class="mock-title">Servicio en curso</span>
+            <span class="mock-badge">En camino</span>
           </div>
-          <div class="mock-stars">★★★★★</div>
+          <div class="mock-card">
+            <div class="mock-avatar">RL</div>
+            <div class="mock-info">
+              <div class="mock-name">Roberto L.</div>
+              <div class="mock-role">Electricista · 4 años</div>
+            </div>
+            <div class="mock-stars">★★★★★</div>
+          </div>
+          <div class="mock-map">
+            <div class="mock-map-pulse"></div>
+            <div class="mock-map-pin"></div>
+          </div>
+          <div class="mock-eta">
+            <span class="mock-eta-label">Tiempo estimado de llegada</span>
+            <span class="mock-eta-val">~6 min</span>
+          </div>
         </div>
-        <div class="mock-map">
-          <div class="mock-map-pulse"></div>
-          <div class="mock-map-pin"></div>
-        </div>
-        <div class="mock-eta">
-          <span class="mock-eta-label">Tiempo estimado de llegada</span>
-          <span class="mock-eta-val">~6 min</span>
+
+        <div class="step-preview-container" id="previewContainer">
+          <div class="step-preview" id="preview-1">
+            <div class="preview-label">Paso 1 — En la app</div>
+            <div class="prev-service-grid">
+              <span class="prev-chip sel">⚡ Electricista</span>
+              <span class="prev-chip">🔧 Plomero</span>
+              <span class="prev-chip">🔑 Cerrajero</span>
+              <span class="prev-chip">❄️ Aire acond.</span>
+            </div>
+            <div class="prev-input">
+              <span style="flex:1">Describí brevemente el problema...</span>
+              <div class="prev-cursor"></div>
+            </div>
+          </div>
+          <div class="step-preview" id="preview-2">
+            <div class="preview-label">Paso 2 — En la app</div>
+            <div class="prev-match-list">
+              <div class="prev-match-row top">
+                <div class="prev-av">RL</div>
+                <div class="prev-mi"><div class="prev-mn">Roberto L.</div><div class="prev-md">350m · disponible ahora</div></div>
+                <span class="prev-sc">★ 4.9</span>
+              </div>
+              <div class="prev-match-row">
+                <div class="prev-av" style="background:linear-gradient(135deg,#16a34a,#4ade80)">MF</div>
+                <div class="prev-mi"><div class="prev-mn">Marcelo F.</div><div class="prev-md">600m · disponible</div></div>
+                <span class="prev-sc">★ 4.7</span>
+              </div>
+            </div>
+          </div>
+          <div class="step-preview" id="preview-3">
+            <div class="preview-label">Paso 3 — En la app</div>
+            <div class="prev-track">
+              <div class="prev-pulse"></div>
+              <div class="prev-pin"></div>
+            </div>
+            <div class="prev-eta-row">
+              <span class="prev-eta-txt">Llegada estimada</span>
+              <span class="prev-eta-val">~6 min</span>
+            </div>
+          </div>
+          <div class="step-preview" id="preview-4">
+            <div class="preview-label">Paso 4 — En la app</div>
+            <div class="prev-done-row">
+              <div class="prev-chk">✓</div>
+              <span class="prev-done-txt">Trabajo confirmado por el cliente</span>
+            </div>
+            <div class="prev-rating-row">
+              <span class="prev-rlabel">Calificá a Roberto L.</span>
+              <div class="prev-stars">
+                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -721,7 +612,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
 
   <div class="divider"></div>
 
-  <!-- SERVICES -->
   <section class="services-section" id="servicios">
     <div class="services-inner">
       <div class="services-header">
@@ -748,34 +638,50 @@ const REGISTER_URL = `${APP_URL}/registro`;
     </div>
   </section>
 
-  <!-- TESTIMONIALS -->
-  <section class="testimonials-section" id="testimonios">
+  <section class="faq-section" id="faq">
     <div class="fade-up">
-      <span class="section-label">Testimonios</span>
-      <h2 class="section-title">Lo que dicen<br/><strong>nuestros usuarios.</strong></h2>
+      <span class="section-label">FAQ</span>
+      <h2 class="section-title">Preguntas<br/><strong>frecuentes.</strong></h2>
     </div>
-    <div class="testimonials-grid">
-      <div class="testimonial-card fade-up">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Tuve una pérdida de agua un domingo a la noche. En menos de 10 minutos ya tenía un plomero camino a casa. Increíble la rapidez."</p>
-        <div class="testimonial-author"><div class="author-avatar">MG</div><div><div class="author-name">Martina G.</div><div class="author-role">Cliente — Rosario Norte</div></div></div>
+    <div class="faq-list">
+      <div class="faq-item"><button class="faq-q">¿Es gratuito registrarse? <span class="faq-icon">+</span></button><div class="faq-a">Sí, el registro es completamente gratuito tanto para clientes como para profesionales. Podés crear tu cuenta en minutos sin necesidad de tarjeta de crédito.</div></div>
+      <div class="faq-item"><button class="faq-q">¿Cómo se verifican los profesionales? <span class="faq-icon">+</span></button><div class="faq-a">Cada profesional pasa por un proceso de validación de identidad y experiencia antes de aparecer en la plataforma. El sistema de calificaciones mantiene la calidad del servicio.</div></div>
+      <div class="faq-item"><button class="faq-q">¿Cuánto tarda en llegar un profesional? <span class="faq-icon">+</span></button><div class="faq-a">El tiempo promedio de respuesta es menor a 8 minutos. Una vez aceptada tu solicitud, podés seguir la ubicación del profesional en tiempo real.</div></div>
+      <div class="faq-item"><button class="faq-q">¿En qué zonas operan? <span class="faq-icon">+</span></button><div class="faq-a">Actualmente operamos en la ciudad de Rosario y sus alrededores. Estamos expandiéndonos constantemente para cubrir más zonas de la provincia.</div></div>
+      <div class="faq-item"><button class="faq-q">¿Cómo se maneja el pago? <span class="faq-icon">+</span></button><div class="faq-a">El pago se acuerda directamente entre el cliente y el profesional. Próximamente habilitaremos pagos integrados para mayor comodidad y seguridad.</div></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="testimonials-section" id="testimonios">
+    <div class="testimonials-inner">
+      <div class="fade-up">
+        <span class="section-label">Testimonios</span>
+        <h2 class="section-title">Lo que dicen<br/><strong>nuestros usuarios.</strong></h2>
       </div>
-      <div class="testimonial-card fade-up" style="transition-delay:0.1s">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Desde que me sumé como proveedor llenó mis días de trabajo. La plataforma es muy clara y los clientes llegan solos."</p>
-        <div class="testimonial-author"><div class="author-avatar">RL</div><div><div class="author-name">Roberto L.</div><div class="author-role">Electricista — 3 años en Aliados</div></div></div>
-      </div>
-      <div class="testimonial-card fade-up" style="transition-delay:0.2s">
-        <div class="stars">★★★★★</div>
-        <p class="testimonial-text">"Lo que más me gustó es poder ver en el mapa dónde está el profesional. Te da tranquilidad saber exactamente cuándo llega."</p>
-        <div class="testimonial-author"><div class="author-avatar">CP</div><div><div class="author-name">Carlos P.</div><div class="author-role">Cliente — Barrio Pichincha</div></div></div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card fade-up">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"Tuve una pérdida de agua un domingo a la noche. En menos de 10 minutos ya tenía un plomero camino a casa. Increíble la rapidez."</p>
+          <div class="testimonial-author"><div class="author-avatar">MG</div><div><div class="author-name">Martina G.</div><div class="author-role">Cliente — Rosario Norte</div></div></div>
+        </div>
+        <div class="testimonial-card fade-up" style="transition-delay:0.1s">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"Desde que me sumé como proveedor llenó mis días de trabajo. La plataforma es muy clara y los clientes llegan solos."</p>
+          <div class="testimonial-author"><div class="author-avatar">RL</div><div><div class="author-name">Roberto L.</div><div class="author-role">Electricista</div></div></div>
+        </div>
+        <div class="testimonial-card fade-up" style="transition-delay:0.2s">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"Lo que más me gustó es poder ver en el mapa dónde está el profesional. Te da tranquilidad saber exactamente cuándo llega."</p>
+          <div class="testimonial-author"><div class="author-avatar">CP</div><div><div class="author-name">Carlos P.</div><div class="author-role">Cliente — Barrio Pichincha</div></div></div>
+        </div>
       </div>
     </div>
   </section>
 
   <div class="divider"></div>
 
-  <!-- PROVIDERS -->
   <section class="providers-section" id="proveedores">
     <div class="providers-inner">
       <div class="fade-up">
@@ -798,53 +704,10 @@ const REGISTER_URL = `${APP_URL}/registro`;
     </div>
   </section>
 
-  <!-- FAQ -->
-  <section class="faq-section" id="faq">
-    <div class="fade-up">
-      <span class="section-label">FAQ</span>
-      <h2 class="section-title">Preguntas<br/><strong>frecuentes.</strong></h2>
-    </div>
-    <div class="faq-list">
-      <div class="faq-item">
-        <button class="faq-q">¿Es gratuito registrarse? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Sí, el registro es completamente gratuito tanto para clientes como para profesionales. Podés crear tu cuenta en minutos sin necesidad de tarjeta de crédito.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">¿Cómo se verifican los profesionales? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Cada profesional pasa por un proceso de validación de identidad y experiencia antes de aparecer en la plataforma. El sistema de calificaciones mantiene la calidad del servicio.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">¿Cuánto tarda en llegar un profesional? <span class="faq-icon">+</span></button>
-        <div class="faq-a">El tiempo promedio de respuesta es menor a 8 minutos. Una vez aceptada tu solicitud, podés seguir la ubicación del profesional en tiempo real.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">¿En qué zonas operan? <span class="faq-icon">+</span></button>
-        <div class="faq-a">Actualmente operamos en la ciudad de Rosario y sus alrededores. Estamos expandiéndonos constantemente para cubrir más zonas de la provincia.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">¿Cómo se maneja el pago? <span class="faq-icon">+</span></button>
-        <div class="faq-a">El pago se acuerda directamente entre el cliente y el profesional. Próximamente habilitaremos pagos integrados para mayor comodidad y seguridad.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FINAL CTA -->
-  <section class="final-cta">
-    <div class="fade-up">
-      <h2>Resolvé lo que<br/><strong>necesitás hoy.</strong></h2>
-      <p>Unite a los cientos de rosarinos que ya confían en Aliados para encontrar el profesional correcto en el momento justo.</p>
-      <div class="final-actions">
-        <a href={REGISTER_URL} class="btn-primary btn-primary-lg">Crear cuenta gratis</a>
-        <a href={LOGIN_URL} class="btn-secondary-lg">Iniciar sesión</a>
-      </div>
-    </div>
-  </section>
-
   <button class="scroll-top" id="scrollTop" aria-label="Volver arriba">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
   </button>
 
-  <!-- FOOTER -->
   <footer>
     <div class="footer-inner">
       <div class="footer-copy">© 2026 Aliados. Todos los derechos reservados.</div>
@@ -869,9 +732,7 @@ const REGISTER_URL = `${APP_URL}/registro`;
 
     const html = document.documentElement;
     const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (saved === 'dark' || (!saved && prefersDark)) html.classList.add('dark');
-
+    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) html.classList.add('dark');
     function toggleTheme() {
       html.classList.toggle('dark');
       localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
@@ -879,7 +740,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
     document.getElementById('themeToggleMobile')?.addEventListener('click', toggleTheme);
 
-    // Hamburger
     const hamburger  = document.getElementById('hamburger');
     const mobileMenu = document.getElementById('mobileMenu');
     hamburger?.addEventListener('click', () => {
@@ -898,17 +758,85 @@ const REGISTER_URL = `${APP_URL}/registro`;
     });
 
     const scrollBtn = document.getElementById('scrollTop');
-    window.addEventListener('scroll', () => {
-      scrollBtn?.classList.toggle('visible', window.scrollY > 400);
-    });
+    window.addEventListener('scroll', () => scrollBtn?.classList.toggle('visible', window.scrollY > 400));
     scrollBtn?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
-      });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
     }, { threshold: 0.1 });
     document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    const navLinks = document.querySelectorAll<HTMLAnchorElement>('.desktop-nav a[href^="#"]');
+    const sectionIds = ['como-funciona', 'servicios', 'faq', 'proveedores'];
+
+    const navObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        });
+      });
+    }, { rootMargin: '-20% 0px -60% 0px', threshold: 0 });
+
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) navObserver.observe(el);
+    });
+
+    const container = document.getElementById('previewContainer');
+    const allPreviews: Record<number, HTMLElement | null> = {
+      1: document.getElementById('preview-1'),
+      2: document.getElementById('preview-2'),
+      3: document.getElementById('preview-3'),
+      4: document.getElementById('preview-4'),
+    };
+
+    let activeStep: number | null = null;
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function openPreview(step: number): void {
+      if (closeTimer !== null) clearTimeout(closeTimer);
+      if (activeStep === step) return;
+      if (activeStep !== null) {
+        const prev = allPreviews[activeStep];
+        if (prev) { prev.classList.remove('visible'); prev.style.display = 'none'; }
+      }
+      activeStep = step;
+      const el = allPreviews[step];
+      if (!el || !container) return;
+      el.style.display = 'flex';
+      container.classList.add('open');
+      requestAnimationFrame(() => { requestAnimationFrame(() => { el.classList.add('visible'); }); });
+    }
+
+    function closePreview(): void {
+      closeTimer = setTimeout(() => {
+        if (activeStep === null) return;
+        const el = allPreviews[activeStep];
+        if (el) {
+          el.classList.remove('visible');
+          setTimeout(() => {
+            if (!el.classList.contains('visible')) {
+              el.style.display = 'none';
+              container?.classList.remove('open');
+              activeStep = null;
+            }
+          }, 240);
+        }
+      }, 100);
+    }
+
+    document.querySelectorAll('.step[data-step]').forEach(step => {
+      const raw = (step as HTMLElement).getAttribute('data-step');
+      if (!raw) return;
+      const n = parseInt(raw, 10);
+      step.addEventListener('mouseenter', () => openPreview(n));
+      step.addEventListener('mouseleave', closePreview);
+    });
+
+    container?.addEventListener('mouseenter', () => { if (closeTimer !== null) clearTimeout(closeTimer); });
+    container?.addEventListener('mouseleave', closePreview);
   </script>
 
 </body>
