@@ -10,7 +10,6 @@ import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
-import com.google.firebase.auth.ActionCodeSettings;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import org.slf4j.Logger;
@@ -79,15 +78,15 @@ public class UserService {
 
     private void sendVerificationEmail(User user) {
         try {
-            ActionCodeSettings actionCodeSettings = ActionCodeSettings.builder()
-                    .setUrl(frontendUrl + "/verificacion-exitosa")
-                    .setHandleCodeInApp(true)
-                    .build();
-
             String verificationLink = FirebaseAuth.getInstance()
-                    .generateEmailVerificationLink(user.getEmail(), actionCodeSettings);
+                    .generateEmailVerificationLink(user.getEmail());
 
-            emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), verificationLink);
+            // Extraer oobCode del link de Firebase y armar URL propia
+            String oobCode = extractParam(verificationLink, "oobCode");
+            String apiKey = extractParam(verificationLink, "apiKey");
+            String customLink = frontendUrl + "/verificacion-exitosa?mode=verifyEmail&oobCode=" + oobCode + "&apiKey=" + apiKey;
+
+            emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), customLink);
             logger.info("✅ Email de verificación enviado a {}", user.getEmail());
         } catch (FirebaseAuthException e) {
             logger.error("❌ Error generando link de verificación para {}: {}",
@@ -147,6 +146,21 @@ public class UserService {
 
         userRepository.save(user);
         return mapToDTO(user);
+    }
+
+    private String extractParam(String url, String param) {
+        try {
+            String query = url.substring(url.indexOf('?') + 1);
+            for (String pair : query.split("&")) {
+                String[] parts = pair.split("=", 2);
+                if (parts[0].equals(param) && parts.length > 1) {
+                    return java.net.URLDecoder.decode(parts[1], "UTF-8");
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error extrayendo parámetro {} de URL: {}", param, e.getMessage());
+        }
+        return "";
     }
 
     private UserResponseDTO mapToDTO(User user) {
