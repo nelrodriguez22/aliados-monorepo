@@ -5,16 +5,34 @@ CHANGED_FILES=$(git diff --name-only @{push}.. 2>/dev/null || git diff --name-on
 
 RUN_APP=false
 RUN_LANDING=false
+RUN_BACKEND=false
 
 for file in $CHANGED_FILES; do
   case "$file" in
     apps/app/*) RUN_APP=true ;;
     apps/landing/*) RUN_LANDING=true ;;
+    backend/*) RUN_BACKEND=true ;;
   esac
 done
 
+# Backend: compilar con Gradle si hubo cambios
+if [ "$RUN_BACKEND" = true ]; then
+  echo "🔨 Cambios detectados en backend/"
+  echo "🚀 Compilando backend..."
+  cd backend && ./gradlew compileJava --no-daemon -q
+  if [ $? -ne 0 ]; then
+    echo "❌ Backend no compila — push cancelado"
+    exit 1
+  fi
+  echo "✅ Backend compila correctamente"
+  cd ..
+fi
+
 if [ "$RUN_APP" = false ] && [ "$RUN_LANDING" = false ]; then
-  echo "✅ No hay cambios en apps/ — skip build"
+  if [ "$RUN_BACKEND" = true ]; then
+    exit 0
+  fi
+  echo "✅ No hay cambios en apps/ ni backend/ — skip build"
   exit 0
 fi
 
