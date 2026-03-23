@@ -38,6 +38,9 @@ dependencies {
 	// Firebase Admin SDK
 	implementation 'com.google.firebase:firebase-admin:9.4.2'
 
+	// SendGrid Email
+	implementation 'com.sendgrid:sendgrid-java:4.10.3'
+
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 

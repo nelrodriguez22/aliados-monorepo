@@ -10,7 +10,13 @@ import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
+import com.google.firebase.auth.ActionCodeSettings;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +26,8 @@ import java.util.Map;
 
 @Service
 public class UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -32,6 +40,12 @@ public class UserService {
 
     @Autowired
     private TrabajoRepository trabajoRepository;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Transactional
     public UserResponseDTO registerUser(RegisterDTO dto) {
@@ -57,7 +71,28 @@ public class UserService {
 
         user = userRepository.save(user);
 
+        // Enviar email de verificación personalizado via SendGrid
+        sendVerificationEmail(user);
+
         return mapToDTO(user);
+    }
+
+    private void sendVerificationEmail(User user) {
+        try {
+            ActionCodeSettings actionCodeSettings = ActionCodeSettings.builder()
+                    .setUrl(frontendUrl + "/verificacion-exitosa")
+                    .setHandleCodeInApp(true)
+                    .build();
+
+            String verificationLink = FirebaseAuth.getInstance()
+                    .generateEmailVerificationLink(user.getEmail(), actionCodeSettings);
+
+            emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), verificationLink);
+            logger.info("✅ Email de verificación enviado a {}", user.getEmail());
+        } catch (FirebaseAuthException e) {
+            logger.error("❌ Error generando link de verificación para {}: {}",
+                    user.getEmail(), e.getMessage());
+        }
     }
 
     public UserResponseDTO getUserByFirebaseUid(String firebaseUid) {
