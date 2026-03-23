@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+
+# Detectar qué apps cambiaron comparando con origin
+CHANGED_FILES=$(git diff --name-only @{push}.. 2>/dev/null || git diff --name-only origin/main..HEAD)
+
+RUN_APP=false
+RUN_LANDING=false
+
+for file in $CHANGED_FILES; do
+  case "$file" in
+    apps/app/*) RUN_APP=true ;;
+    apps/landing/*) RUN_LANDING=true ;;
+  esac
+done
+
+if [ "$RUN_APP" = false ] && [ "$RUN_LANDING" = false ]; then
+  echo "✅ No hay cambios en apps/ — skip build"
+  exit 0
+fi
+
+FILTER=""
+
+if [ "$RUN_APP" = true ]; then
+  FILTER="$FILTER --filter=aliados-app"
+  echo "🔨 Cambios detectados en apps/app"
+fi
+
+if [ "$RUN_LANDING" = true ]; then
+  FILTER="$FILTER --filter=aliados-landing"
+  echo "🔨 Cambios detectados en apps/landing"
+fi
+
+echo "🚀 Corriendo build..."
+pnpm turbo build $FILTER
+
+if [ $? -ne 0 ]; then
+  echo "❌ Build falló — push cancelado"
+  exit 1
+fi
+
+echo "✅ Build exitoso"
