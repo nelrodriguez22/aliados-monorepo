@@ -3,7 +3,6 @@ import { useNavigate, Navigate } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
-  sendEmailVerification,
   signOut,
 } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
@@ -122,7 +121,6 @@ export function Register() {
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(cred.user, { displayName: name });
-        await sendEmailVerification(cred.user);
 
         const token = await cred.user.getIdToken();
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/register`, {

@@ -32,6 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   if (firebaseLoading)        return <Spinner />;
   if (!firebaseUser)          return <>{children}</>;
+
+  // Si el email no está verificado, no bloqueamos — dejamos pasar
+  if (!firebaseUser.emailVerified) return <>{children}</>;
+
   if (!profileQuery.data)     return <Spinner />;
 
   return <>{children}</>;

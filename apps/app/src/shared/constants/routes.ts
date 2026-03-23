@@ -4,6 +4,7 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/registro',
+  VERIFICATION_SUCCESS: '/verificacion-exitosa',
 
   //cliente
   CLIENT: {
