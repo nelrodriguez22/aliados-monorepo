@@ -8,6 +8,7 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.OficioRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.google.firebase.auth.FirebaseAuth;
@@ -41,6 +42,9 @@ public class UserService {
     private TrabajoRepository trabajoRepository;
 
     @Autowired
+    private OficioRepository oficioRepository;
+
+    @Autowired
     private EmailService emailService;
 
     @Value("${app.frontend-url}")
@@ -67,6 +71,11 @@ public class UserService {
         user.setActivo(true);
         user.setStatus(UserStatus.OFFLINE); // Por defecto offline
         user.setLocalidad(dto.getLocalidad() != null ? dto.getLocalidad() : "Rosario");
+        user.setMatricula(dto.getMatricula());
+
+        if (dto.getOficioId() != null) {
+            oficioRepository.findById(dto.getOficioId()).ifPresent(user::setOficio);
+        }
 
         user = userRepository.save(user);
 
