@@ -30,6 +30,10 @@
       "target": "landing",
       "public": "apps/landing/dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    },
+    {
+      "site": "aliados-web-22",
+      "public": "empty"
     }
   ]
 }
