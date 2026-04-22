@@ -36,7 +36,8 @@ public class SecurityConfig {
                                 "/topic/**",        // Suscripciones a topics
                                 "/queue/**",        // Suscripciones a queues
                                 "/user/**",          // Mensajes a usuarios específicos
-                                "/api/geocoding/**"
+                                "/api/geocoding/**",
+                                "/api/mudanzas/tiers"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
