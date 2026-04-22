@@ -28,4 +28,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByRole(UserRole role);
 
     long countByRoleAndStatus(UserRole role, UserStatus status);
+
+    // Proveedores de fletes/mudanzas (busca por nombre de oficio)
+    @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.activo = true AND u.oficio.nombre LIKE '%udanza%' OR u.oficio.nombre LIKE '%lete%'")
+    List<User> findProveedoresFletes();
 }
