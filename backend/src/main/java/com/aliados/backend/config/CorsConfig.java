@@ -16,6 +16,7 @@ public class CorsConfig {
                 registry.addMapping("/api/**")
                         .allowedOrigins(
                                 "https://aliados-app-22.web.app",
+                                "https://aliados-app.convivirtech.com.ar",
                                 "http://localhost:5173"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
@@ -25,6 +26,7 @@ public class CorsConfig {
                 registry.addMapping("/ws/**")
                         .allowedOrigins(
                                 "https://aliados-app-22.web.app",
+                                "https://aliados-app.convivirtech.com.ar",
                                 "http://localhost:5173"
                         )
                         .allowedMethods("GET", "POST", "OPTIONS")
