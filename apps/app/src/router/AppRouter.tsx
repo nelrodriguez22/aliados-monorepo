@@ -25,6 +25,9 @@ const ProviderCompletedJob = lazy(() => import("@/features/provider/pages/Provid
 const ProviderReviews     = lazy(() => import("@/features/provider/pages/ProviderReviews").then(m => ({ default: m.ProviderReviews })));
 const Notifications       = lazy(() => import("@/features/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const AliadosDashboard    = lazy(() => import("@/features/aliados/AliadosDashboard"));
+const MudanzaRequest      = lazy(() => import("@/features/client/pages/MudanzaRequest").then(m => ({ default: m.MudanzaRequest })));
+const MudanzaDetail       = lazy(() => import("@/features/client/pages/MudanzaDetail").then(m => ({ default: m.MudanzaDetail })));
+const ProviderMudanzaDetail = lazy(() => import("@/features/provider/pages/ProviderMudanzaDetail").then(m => ({ default: m.ProviderMudanzaDetail })));
 
 // ── Loader ──
 const PageLoader = () => (
@@ -76,6 +79,8 @@ export function AppRouter() {
                 <Route path="perfil"             element={<ClientProfile />} />
                 <Route path="configuracion"      element={<ClientSettings />} />
                 <Route path="metodos-de-pago"    element={<PaymentMethods />} />
+                <Route path="mudanza/nueva"      element={<MudanzaRequest />} />
+                <Route path="mudanza/:id"         element={<MudanzaDetail />} />
               </Route>
             </Route>
 
@@ -91,6 +96,8 @@ export function AppRouter() {
                 <Route path="perfil"             element={<ClientProfile />} />
                 <Route path="configuracion"      element={<ClientSettings />} />
                 <Route path="resenas"            element={<ProviderReviews />} />
+                <Route path="mudanza/:id"        element={<ProviderMudanzaDetail />} />
+                <Route path="mudanzas"            element={<ProviderMudanzaDetail />} />
               </Route>
             </Route>
 

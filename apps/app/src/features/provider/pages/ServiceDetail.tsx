@@ -26,6 +26,7 @@ export function ServiceDetail() {
   const queryClient = useQueryClient();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [tiempoEstimado, setTiempoEstimado] = useState<number | null>(null);
+  const [tarifaCustom, setTarifaCustom] = useState<string>("");
   const [showLocationInput, setShowLocationInput] = useState(false);
   const geo = useGeocode();
 
@@ -50,6 +51,7 @@ export function ServiceDetail() {
   const proponerMutation = useMutation({
     mutationFn: async () => {
       if (!tiempoEstimado) throw new Error('Seleccioná un tiempo estimado de llegada');
+      if (isFlete && (!tarifaCustom || Number(tarifaCustom) <= 0)) throw new Error('Ingresá la tarifa del flete');
       const token = await getToken();
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}/proponer`, {
         method: 'PATCH',
@@ -58,6 +60,7 @@ export function ServiceDetail() {
           tiempoEstimadoMinutos: tiempoEstimado,
           latitud: geo.coords?.lat ?? null,
           longitud: geo.coords?.lng ?? null,
+          tarifaVisita: isFlete && tarifaCustom ? Number(tarifaCustom) : null,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -105,6 +108,8 @@ export function ServiceDetail() {
     try { fotos = JSON.parse(trabajo.fotos); }
     catch { fotos = Array.isArray(trabajo.fotos) ? trabajo.fotos : [trabajo.fotos]; }
   }
+
+  const isFlete = trabajo.oficio?.nombre === 'Flete';
 
   return (
     <div className={tw.pageBg}>
@@ -239,9 +244,19 @@ export function ServiceDetail() {
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
                   <DollarSign className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className={`text-xs ${tw.text.muted}`}>Tarifa de visita</p>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400">$15.000</p>
+                <div className="flex-1">
+                  <p className={`text-xs ${tw.text.muted}`}>{isFlete ? 'Tarifa del flete' : 'Tarifa de visita'}</p>
+                  {isFlete ? (
+                    <input
+                      type="number"
+                      value={tarifaCustom}
+                      onChange={(e) => setTarifaCustom(e.target.value)}
+                      placeholder="Ingresá el monto"
+                      className={tw.input + " mt-1 text-lg font-bold"}
+                    />
+                  ) : (
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">$15.000</p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -272,10 +287,12 @@ export function ServiceDetail() {
               ) : !showLocationInput ? (
                 <div className="space-y-2">
                   <Button fullWidth variant="outline" onClick={handleObtenerGPS} disabled={geo.gettingLocation}>
-                    {geo.gettingLocation
-                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Obteniendo...</>
-                      : <><MapPin className="mr-2 h-4 w-4" />Usar GPS</>
-                    }
+                    <span className="flex items-center justify-center gap-2">
+                      {geo.gettingLocation
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Obteniendo...</>
+                        : <><MapPin className="h-4 w-4" />Usar GPS</>
+                      }
+                    </span>
                   </Button>
                   <button
                     onClick={() => setShowLocationInput(true)}

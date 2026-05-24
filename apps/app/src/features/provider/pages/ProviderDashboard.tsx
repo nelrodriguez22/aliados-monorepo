@@ -13,7 +13,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import {
   Bell, MapPin, Clock, CheckCircle,
-  Star, ClipboardList, ZapOff, Users,
+  Star, ClipboardList, ZapOff, Users, Truck, X, Calendar,
 } from "lucide-react";
 
 // ── Skeletons ──
@@ -113,6 +113,8 @@ export function ProviderDashboard() {
   const { isSupported, permission, requestPermission } = usePushNotifications();
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
+  const [agendaMesActivo, setAgendaMesActivo] = useState<string>('');
   const queryClient = useQueryClient();
 
   const userStatus = user?.status || 'OFFLINE';
@@ -177,7 +179,50 @@ export function ProviderDashboard() {
     refetchInterval: false,
   });
 
-  const colaLlena     = (trabajoActivo ? 1 : 0) + trabajosEnCola.length >= 3;
+  const { data: mudanzasPendientes = [] } = useQuery({
+    queryKey: ['mudanzas-pendientes-prov'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/pendientes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isOnline || isBusy,
+    refetchOnMount: 'always',
+  });
+
+  const { data: mudanzaActiva } = useQuery({
+    queryKey: ['mudanza-activa-prov'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/activa`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data && data.id ? data : null;
+    },
+    refetchOnMount: 'always',
+  });
+
+  const { data: mudanzasConfirmadas = [] } = useQuery({
+    queryKey: ['mudanzas-confirmadas-prov'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/confirmadas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchOnMount: 'always',
+  });
+
+  const isFlete = user?.oficio?.nombre?.toLowerCase() === 'flete';
+  const limiteTrabajos = isFlete ? 8 : 3;
+  const colaLlena     = (trabajoActivo ? 1 : 0) + trabajosEnCola.length >= limiteTrabajos;
   const isMainLoading = loadingCompletados;
 
   useEffect(() => {
@@ -281,59 +326,6 @@ export function ProviderDashboard() {
         ) : (
           <div className="space-y-8">
 
-            {/* Trabajo activo */}
-            {trabajoActivo && (
-              <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                    Trabajo activo
-                  </h2>
-                  <Badge variant="info" showPulse>En curso</Badge>
-                </div>
-                <TrabajoCard
-                  trabajo={trabajoActivo}
-                  onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
-                  left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
-                  badgeContent={""}
-                  actionContent={
-                    <Button
-                      variant="primary"
-                      onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
-                      className="text-xs px-2.5 py-1.5"
-                    >
-                      Ver trabajo
-                    </Button>
-                  }
-                />
-              </section>
-            )}
-
-            {/* Cola */}
-            {trabajosEnCola.length > 0 && (
-              <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                    Cola de trabajos
-                  </h2>
-                  <Badge variant="queue">{trabajosEnCola.length} en espera</Badge>
-                </div>
-                <div className="space-y-2 min-[375px]:space-y-3">
-                  {trabajosEnCola.map((trabajo: any, index: number) => (
-                    <TrabajoCard
-                      key={trabajo.id}
-                      trabajo={trabajo}
-                      left={
-                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
-                          #{index + 1}
-                        </div>
-                      }
-                      badgeContent={""}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
             {/* Disponibles */}
             <section>
               <div className="mb-3">
@@ -387,6 +379,184 @@ export function ProviderDashboard() {
               )}
             </section>
 
+            {/* Trabajo pendiente (cola) */}
+            {trabajosEnCola.length > 0 && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                    Trabajos pendientes
+                  </h2>
+                  <Badge variant="queue">{trabajosEnCola.length} en espera</Badge>
+                </div>
+                <div className="space-y-2 min-[375px]:space-y-3">
+                  {trabajosEnCola.map((trabajo: any, index: number) => (
+                    <TrabajoCard
+                      key={trabajo.id}
+                      trabajo={trabajo}
+                      left={
+                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
+                          #{index + 1}
+                        </div>
+                      }
+                      badgeContent={""}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Trabajo activo */}
+            {trabajoActivo && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                    Trabajo activo
+                  </h2>
+                  <Badge variant="info" showPulse>En curso</Badge>
+                </div>
+                <TrabajoCard
+                  trabajo={trabajoActivo}
+                  onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
+                  left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
+                  badgeContent={""}
+                  actionContent={
+                    <Button
+                      variant="primary"
+                      onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
+                      className="text-xs px-2.5 py-1.5"
+                    >
+                      Ver trabajo
+                    </Button>
+                  }
+                />
+              </section>
+            )}
+
+            {/* Mudanzas pendientes */}
+            {mudanzasPendientes.length > 0 && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                    Mudanzas pendientes
+                  </h2>
+                  <Badge variant="info">{mudanzasPendientes.length} nueva{mudanzasPendientes.length > 1 ? 's' : ''}</Badge>
+                </div>
+                <div className="space-y-2 min-[375px]:space-y-3">
+                  {mudanzasPendientes.map((m: any) => (
+                    <Card key={m.id} hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}>
+                      <div className="flex items-center gap-2 min-[375px]:gap-3">
+                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                          <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
+                            {m.tierEmoji} {m.tierNombre} — {m.clienteNombre}
+                          </p>
+                          <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
+                            {m.direccionOrigen.split(',')[0]} → {m.direccionDestino.split(',')[0]}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <Button
+                            variant="success"
+                            onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}
+                            className="text-xs px-2.5 py-1.5"
+                          >
+                            Ver detalle
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Mudanzas confirmadas (cola) */}
+            {mudanzasConfirmadas.length > 0 && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                    Mudanzas confirmadas
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowAgenda(true)}
+                      className={`flex items-center gap-1 text-xs font-medium cursor-pointer transition ${tw.text.brand} hover:opacity-70`}
+                    >
+                      <Calendar className="h-3 w-3" />
+                      Ver agenda
+                    </button>
+                    <Badge variant="queue">{mudanzasConfirmadas.length} agendada{mudanzasConfirmadas.length > 1 ? 's' : ''}</Badge>
+                  </div>
+                </div>
+                <div className="space-y-2 min-[375px]:space-y-3">
+                  {mudanzasConfirmadas.map((m: any) => (
+                    <Card key={m.id} hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}>
+                      <div className="flex items-center gap-2 min-[375px]:gap-3">
+                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
+                          <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
+                            {m.tierEmoji} {m.tierNombre} — {m.clienteNombre}
+                          </p>
+                          <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
+                            {m.direccionOrigen.split(',')[0]} → {m.direccionDestino.split(',')[0]}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <Badge variant="success">Confirmada</Badge>
+                        </div>
+                      </div>
+                      {m.fechaConfirmada && (
+                        <div className={`mt-2.5 flex items-center gap-1.5 pt-2.5 border-t text-xs ${tw.text.faint} ${tw.dividerLight}`}>
+                          <Clock className="h-3 w-3 shrink-0" />
+                          <span>{m.fechaConfirmada}{m.turno ? ` — ${m.turno === 'PRIMERO' ? '1er turno (6:30hs)' : '2do turno (~11:00hs)'}` : ''}</span>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Mudanza activa */}
+            {mudanzaActiva && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                    Mudanza activa
+                  </h2>
+                  <Badge variant="info" showPulse>En curso</Badge>
+                </div>
+                <Card hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}>
+                  <div className="flex items-center gap-2 min-[375px]:gap-3">
+                    <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                      <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
+                        {mudanzaActiva.tierEmoji} {mudanzaActiva.tierNombre} — {mudanzaActiva.clienteNombre}
+                      </p>
+                      <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
+                        {mudanzaActiva.direccionOrigen.split(',')[0]} → {mudanzaActiva.direccionDestino.split(',')[0]}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <Button
+                        variant="primary"
+                        onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}
+                        className="text-xs px-2.5 py-1.5"
+                      >
+                        Ver trabajo
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </section>
+            )}
+
             {/* Historial */}
             <section>
               <div className="mb-3 flex items-center justify-between">
@@ -438,6 +608,114 @@ export function ProviderDashboard() {
           </div>
         )}
       </div>
+
+      {/* Modal agenda mudanzas */}
+      {showAgenda && (
+        <div className="fixed inset-0 z-50 flex items-end min-[425px]:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAgenda(false)} />
+          <div className={`relative w-full max-w-md max-h-[80vh] overflow-y-auto rounded-t-2xl min-[425px]:rounded-2xl p-5
+            bg-white dark:bg-dark-card`}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className={`text-base font-bold ${tw.text.primary}`}>Agenda de mudanzas</h2>
+              <button
+                onClick={() => setShowAgenda(false)}
+                className={`cursor-pointer p-1 rounded-lg transition hover:bg-slate-100 dark:hover:bg-dark-elevated ${tw.text.muted}`}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {(() => {
+              const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+              const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+              const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+              const porMes: Record<string, any[]> = {};
+              mudanzasConfirmadas
+                .filter((m: any) => m.fechaConfirmada)
+                .sort((a: any, b: any) => a.fechaConfirmada.localeCompare(b.fechaConfirmada))
+                .forEach((m: any) => {
+                  const [year, month] = m.fechaConfirmada.split('-');
+                  const key = `${year}-${month}`;
+                  if (!porMes[key]) porMes[key] = [];
+                  porMes[key].push(m);
+                });
+
+              const meses = Object.keys(porMes).sort();
+
+              if (meses.length === 0) {
+                return (
+                  <p className={`text-sm text-center py-6 ${tw.text.muted}`}>No hay mudanzas agendadas</p>
+                );
+              }
+
+              const mesActual = new Date().toISOString().slice(0, 7);
+              const mesSeleccionado = agendaMesActivo && meses.includes(agendaMesActivo) ? agendaMesActivo : (meses.includes(mesActual) ? mesActual : meses[0]);
+              const mudanzasMes = porMes[mesSeleccionado] || [];
+
+              return (
+                <>
+                  <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 -mx-1 px-1 scrollbar-hide">
+                    {meses.map((key) => {
+                      const [year, month] = key.split('-');
+                      const label = `${MESES_CORTO[parseInt(month) - 1]} ${year.slice(2)}`;
+                      const isActive = key === mesSeleccionado;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setAgendaMesActivo(key)}
+                          className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${
+                            isActive
+                              ? 'bg-brand-600 dark:bg-dark-brand text-white'
+                              : `border ${tw.dividerLight} ${tw.text.secondary} hover:bg-slate-50 dark:hover:bg-dark-elevated`
+                          }`}
+                        >
+                          {label}
+                          <span className={`ml-1 ${isActive ? 'text-white/70' : tw.text.muted}`}>({porMes[key].length})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-2">
+                    {mudanzasMes.map((m: any) => {
+                      const fecha = new Date(m.fechaConfirmada + 'T12:00:00');
+                      const dia = DIAS[fecha.getDay()];
+                      const num = fecha.getDate();
+                      const turnoLabel = m.turno === 'PRIMERO' ? '6:30hs' : '~11:00hs';
+
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => { setShowAgenda(false); navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id)); }}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition
+                            hover:bg-slate-50 dark:hover:bg-dark-elevated border ${tw.dividerLight}`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand text-xs font-bold`}>
+                              {num}
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-sm font-medium truncate ${tw.text.primary}`}>
+                                {dia} — {turnoLabel}
+                              </p>
+                              <p className={`text-xs truncate ${tw.text.secondary}`}>
+                                {m.tierEmoji} {m.tierNombre} — {m.clienteNombre}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant={m.estado === 'ACEPTADO' ? 'success' : 'info'}>
+                            {m.estado === 'ACEPTADO' ? 'Confirmada' : m.estado === 'PENDIENTE_PAGO_EXTRA' ? 'Pago extra' : 'Finalizada'}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

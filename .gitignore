@@ -41,3 +41,4 @@ yarn-error.log*
 .gradle/
 build/
 .firebase/
+.idea/

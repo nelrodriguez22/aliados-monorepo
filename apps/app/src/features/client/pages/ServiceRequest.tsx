@@ -55,6 +55,7 @@ export function ServiceRequest() {
   const [imagenes, setImagenes] = useState<string[]>([]);
 
   const geo = useGeocode();
+  const geoDestino = useGeocode();
 
   const { data: oficios = [] } = useQuery({
     queryKey: ['oficios'],
@@ -65,18 +66,44 @@ export function ServiceRequest() {
     },
   });
 
+  const isFlete = oficios.find((o: any) => o.id === selectedOficio)?.nombre === 'Flete';
+
   const crearTrabajoMutation = useMutation({
     mutationFn: async () => {
       if (!selectedOficio || !description.trim() || !geo.direccion.trim()) {
         throw new Error('Completá todos los campos requeridos');
       }
+      if (isFlete && !geoDestino.direccion.trim()) {
+        throw new Error('Ingresá la dirección de destino');
+      }
       let finalCoords = geo.coords;
       if (!finalCoords && geo.direccion.trim()) {
         const result = await geo.geocodificarDireccion();
-        if (!result) throw new Error('No se pudo geocodificar la dirección');
+        if (!result) throw new Error('No se pudo geocodificar la dirección de origen');
         finalCoords = result;
       }
-      if (!finalCoords) throw new Error('No se pudo determinar la ubicación');
+      if (!finalCoords) throw new Error('Confirmá la dirección de origen');
+
+      // Destino para flete
+      let destinoData: any = {};
+      if (isFlete) {
+        let destinoCoords = geoDestino.coords;
+        if (!destinoCoords && geoDestino.direccion.trim()) {
+          // Agregar contexto de ciudad si no lo tiene
+          const addr = geoDestino.direccion.toLowerCase().includes('rosario')
+            ? geoDestino.direccion
+            : geoDestino.direccion + ', Rosario, Santa Fe, Argentina';
+          const result = await geoDestino.geocodificarDireccion(addr);
+          if (!result) throw new Error('No se pudo geocodificar la dirección de destino');
+          destinoCoords = result;
+        }
+        if (!destinoCoords) throw new Error('Confirmá la dirección de destino');
+        destinoData = {
+          direccionDestino: geoDestino.direccion,
+          latitudDestino: destinoCoords.lat,
+          longitudDestino: destinoCoords.lng,
+        };
+      }
 
       const token = await getToken();
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos`, {
@@ -88,6 +115,7 @@ export function ServiceRequest() {
           direccion: geo.direccion,
           latitudCliente: finalCoords.lat,
           longitudCliente: finalCoords.lng,
+          ...destinoData,
           fotos: imagenes.length > 0 ? JSON.stringify(imagenes) : null,
         }),
       });
@@ -220,7 +248,7 @@ export function ServiceRequest() {
 
               {/* Dirección */}
               <div className="mb-4">
-                <label className={tw.label}>Dirección *</label>
+                <label className={tw.label}>{isFlete ? 'Dirección de origen' : 'Dirección'} *</label>
                 <div className="relative">
                   {/* Input en fila propia, botón GPS abajo en mob s — fila en mob m+ */}
                   <div className="flex flex-col gap-2 min-[375px]:flex-row">
@@ -271,13 +299,67 @@ export function ServiceRequest() {
                 )}
               </div>
 
+              {/* Dirección destino (solo Flete) */}
+              {isFlete && (
+                <div className="mb-4">
+                  <label className={tw.label}>Dirección de destino *</label>
+                  <div className="relative">
+                    <div className="flex flex-col gap-2 min-[375px]:flex-row">
+                      <input
+                        type="text"
+                        value={geoDestino.direccion}
+                        onChange={(e) => geoDestino.handleDireccionChange(e.target.value)}
+                        onFocus={() => geoDestino.sugerencias.length > 0 && geoDestino.setShowSugerencias(true)}
+                        onBlur={() => setTimeout(() => geoDestino.setShowSugerencias(false), 200)}
+                        placeholder="Dirección a donde va el flete"
+                        className={tw.input + " flex-1 min-w-0"}
+                      />
+                      <Button
+                        onClick={() => geoDestino.obtenerUbicacionGPS()}
+                        disabled={geoDestino.gettingLocation}
+                        className="shrink-0 w-full min-[375px]:w-auto"
+                      >
+                        <span className="flex items-center justify-center gap-1.5">
+                          {geoDestino.gettingLocation
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <MapPin className="h-4 w-4" />
+                          }
+                          <span className="min-[375px]:hidden">Usar GPS</span>
+                        </span>
+                      </Button>
+                    </div>
+
+                    {geoDestino.showSugerencias && geoDestino.sugerencias.length > 0 && (
+                      <div className={`absolute z-10 mt-1 w-full ${tw.dropdown}`}>
+                        {geoDestino.sugerencias.map((s: any, i: number) => (
+                          <button
+                            key={i}
+                            onMouseDown={() => geoDestino.seleccionarSugerencia(s)}
+                            className={`flex w-full items-start gap-2 px-4 py-3 text-left text-sm transition cursor-pointer border-b last:border-0 ${tw.dividerLight} hover:bg-slate-50 dark:hover:bg-dark-elevated`}
+                          >
+                            <MapPin className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${tw.text.faint}`} />
+                            <span className={`text-sm ${tw.text.secondary}`}>{s.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {geoDestino.coords && (
+                    <div className="mt-1.5 flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-3 w-3" />
+                      <span className="text-xs font-medium">Ubicación confirmada</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Descripción */}
               <div className="mb-5">
-                <label className={tw.label}>Descripción del problema *</label>
+                <label className={tw.label}>{isFlete ? 'Descripción del flete' : 'Descripción del problema'} *</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describí el problema con el mayor detalle posible..."
+                  placeholder={isFlete ? "Describí qué necesitás transportar, dimensiones, peso aproximado..." : "Describí el problema con el mayor detalle posible..."}
                   className={tw.textarea + " min-h-32"}
                 />
               </div>
@@ -285,7 +367,7 @@ export function ServiceRequest() {
               {/* Fotos */}
               <div className="mb-5">
                 <label className={tw.label}>
-                  Fotos del problema <span className={tw.text.faint}>(opcional)</span>
+                  {isFlete ? 'Fotos de lo que necesitás transportar' : 'Fotos del problema'} <span className={tw.text.faint}>(opcional)</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2 min-[375px]:gap-3">
                   {imagenes.map((img, index) => (
@@ -322,7 +404,7 @@ export function ServiceRequest() {
               <Button
                 fullWidth
                 onClick={() => crearTrabajoMutation.mutate()}
-                disabled={crearTrabajoMutation.isPending || !selectedOficio || !description.trim() || !geo.direccion.trim()}
+                disabled={crearTrabajoMutation.isPending}
               >
                 {crearTrabajoMutation.isPending ? 'Enviando...' : 'Solicitar servicio'}
               </Button>

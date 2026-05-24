@@ -7,13 +7,13 @@ import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Bell, CheckCircle, Clock, ClipboardList } from "lucide-react";
+import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { getToken } from "@/shared/lib/getToken";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 
 // ── SVG icons por oficio ──
-const OFICIO_ICONS: Record<number, JSX.Element> = {
+const OFICIO_ICONS: Record<number | string, JSX.Element> = {
   1: (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z"/>
@@ -36,6 +36,14 @@ const OFICIO_ICONS: Record<number, JSX.Element> = {
       <path d="M9 17.5c0 1.5 1.5 2.5 3 2.5s3-1 3-2.5"/>
     </svg>
   ),
+  mudanza: (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="15" height="13" rx="2"/>
+      <path d="M16 8h4l3 5v4h-7V8z"/>
+      <circle cx="5.5" cy="18.5" r="2.5"/>
+      <circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+  ),
 };
 
 const OFICIOS = [
@@ -43,6 +51,7 @@ const OFICIOS = [
   { id: 2, nombre: 'Plomero' },
   { id: 3, nombre: 'Cerrajero' },
   { id: 4, nombre: 'Gasista' },
+  { id: 'mudanza', nombre: 'Mudanzas' },
 ];
 
 const ICON_BG_CLASSES = [
@@ -50,6 +59,7 @@ const ICON_BG_CLASSES = [
   "bg-brand-50 text-brand-600 dark:bg-dark-brand/10 dark:text-dark-brand",
   "bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary",
   "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+  "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
 ];
 
 // ── Skeletons ──
@@ -125,6 +135,22 @@ export function ClientDashboard() {
   const [showNotificationBanner, setShowNotificationBanner] = useState(false);
   const [showHistory, setShowHistory] = useState(() => searchParams.get('view') === 'all');
 
+  // Oficios desde la API para el buscador
+  const { data: oficiosApi = [] } = useQuery({
+    queryKey: ['oficios'],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/oficios`);
+      if (!res.ok) throw new Error('Error al cargar oficios');
+      return res.json();
+    },
+  });
+
+  // Combinar oficios de la API + Mudanzas para el buscador
+  const oficiosBuscador = [
+    ...oficiosApi.filter((o: any) => o.nombre !== 'Mudanzas'),
+    { id: 'mudanza', nombre: 'Mudanzas' },
+  ];
+
   const { data: todosTrabajos = [], isLoading: loadingTrabajos } = useQuery({
     queryKey: ['trabajos-cliente'],
     queryFn: async () => {
@@ -139,6 +165,24 @@ export function ClientDashboard() {
     refetchOnMount: true,
   });
 
+  const { data: mudanzasCliente = [], isLoading: loadingMudanzas } = useQuery({
+    queryKey: ['mudanzas-cliente'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/cliente`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al cargar mudanzas');
+      return res.json();
+    },
+    staleTime: 30000,
+    refetchOnMount: true,
+  });
+
+  const mudanzasActivas = mudanzasCliente.filter((m: any) =>
+    ['PENDIENTE', 'RESERVADO', 'CONTRAPROPUESTO', 'ACEPTADO', 'EN_CURSO', 'FINALIZADO', 'PENDIENTE_PAGO_EXTRA'].includes(m.estado)
+  );
+
   const trabajosActivos = todosTrabajos.filter((t: any) =>
     ['PENDIENTE', 'EN_CURSO', 'PROPUESTO', 'EN_COLA'].includes(t.estado)
   );
@@ -148,10 +192,10 @@ export function ClientDashboard() {
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const filteredOficios = searchQuery.trim().length > 0
-    ? OFICIOS.filter((o) =>
+    ? oficiosBuscador.filter((o: any) =>
         removeAccents(o.nombre.toLowerCase()).includes(removeAccents(searchQuery.toLowerCase()))
       )
-    : OFICIOS;
+    : oficiosBuscador;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -163,10 +207,15 @@ export function ClientDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleServiceClick = (oficioId: number) =>
+  const handleServiceClick = (oficioId: number | string) => {
+    if (oficioId === 'mudanza') {
+      navigate(ROUTES.CLIENT.MUDANZA_NEW);
+      return;
+    }
     navigate(`${ROUTES.CLIENT.SERVICE_REQUEST}?oficioId=${oficioId}`);
+  };
 
-  const handleSuggestionClick = (oficio: typeof OFICIOS[0]) => {
+  const handleSuggestionClick = (oficio: any) => {
     setSearchQuery(oficio.nombre);
     setShowSuggestions(false);
     handleServiceClick(oficio.id);
@@ -189,6 +238,19 @@ export function ClientDashboard() {
     if (estado === 'EN_CURSO')  return { variant: 'info' as const,     label: 'En camino',           pulse: true };
     if (estado === 'EN_COLA')   return { variant: 'queue' as const,    label: 'En cola',             pulse: true };
     return { variant: 'neutral' as const, label: estado, pulse: false };
+  };
+
+  const getMudanzaEstadoBadge = (estado: string) => {
+    const map: Record<string, { variant: any; label: string; pulse: boolean }> = {
+      PENDIENTE:            { variant: 'neutral',  label: 'Pendiente',           pulse: false },
+      RESERVADO:            { variant: 'info',     label: 'Esperando proveedor', pulse: true },
+      CONTRAPROPUESTO:      { variant: 'warning',  label: 'Cambio sugerido',     pulse: true },
+      ACEPTADO:             { variant: 'success',  label: 'Confirmada',          pulse: false },
+      EN_CURSO:             { variant: 'info',     label: 'En curso',            pulse: true },
+      FINALIZADO:           { variant: 'success',  label: 'Finalizada',          pulse: false },
+      PENDIENTE_PAGO_EXTRA: { variant: 'warning',  label: 'Pago extra',          pulse: true },
+    };
+    return map[estado] || { variant: 'neutral', label: estado, pulse: false };
   };
 
   return (
@@ -287,7 +349,7 @@ export function ClientDashboard() {
               <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                 Servicios populares
               </h2>
-              <div className="grid gap-2 min-[375px]:gap-3 grid-cols-2 sm:grid-cols-4">
+              <div className="grid gap-2 min-[375px]:gap-3 grid-cols-2 min-[425px]:grid-cols-3 sm:grid-cols-5">
                 {OFICIOS.map((oficio, index) => (
                   <Card key={oficio.id} hover onClick={() => handleServiceClick(oficio.id)}>
                     <div className="flex flex-col items-center gap-2 min-[375px]:gap-3 text-center py-1">
@@ -370,6 +432,42 @@ export function ClientDashboard() {
                 </Card>
               )}
             </div>
+
+            {/* Mudanzas activas */}
+            {mudanzasActivas.length > 0 && (
+              <div className="mb-8">
+                <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
+                  Mudanzas activas
+                </h2>
+                <div className="space-y-2 min-[375px]:space-y-3">
+                  {mudanzasActivas.map((m: any) => {
+                    const badge = getMudanzaEstadoBadge(m.estado);
+                    return (
+                      <Card key={m.id} hover onClick={() => navigate(ROUTES.CLIENT.MUDANZA_DETAIL(m.id))}>
+                        <div className="flex items-center gap-2 min-[375px]:gap-3">
+                          <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                            <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-semibold text-sm truncate ${tw.text.primary}`}>
+                              {m.tierEmoji} Mudanza {m.tierNombre}
+                            </p>
+                            <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
+                              {m.direccionOrigen.split(',')[0]} → {m.direccionDestino.split(',')[0]}
+                            </p>
+                          </div>
+                          <div className="shrink-0 flex flex-col items-end gap-1">
+                            <Badge variant={badge.variant} showPulse={badge.pulse}>
+                              {badge.label}
+                            </Badge>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Historial */}
             <div ref={historialRef}>

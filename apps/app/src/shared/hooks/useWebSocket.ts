@@ -188,6 +188,56 @@ export const useWebSocket = () => {
         queryClient.invalidateQueries({ queryKey: ['trabajos-completados'] });
         break;
 
+      // ── Mudanzas ──
+      case 'NUEVA_MUDANZA':
+        toast('🚚 ' + mensaje, { duration: 6000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-pendientes-prov'] });
+        break;
+
+      case 'MUDANZA_ACEPTADA':
+        toast.success('✅ ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-cliente'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza'] });
+        break;
+
+      case 'MUDANZA_CONTRAPROPUESTA':
+        toast('📋 ' + mensaje, { duration: 6000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-cliente'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza'] });
+        break;
+
+      case 'MUDANZA_CONTRAPROPUESTA_ACEPTADA':
+        toast.success('✅ ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-activa-prov'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-pendientes-prov'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-prov'] });
+        break;
+
+      case 'MUDANZA_CONTRAPROPUESTA_RECHAZADA':
+        toast('❌ ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-activa-prov'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-pendientes-prov'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-prov'] });
+        break;
+
+      case 'MUDANZA_INICIADA':
+        toast.success('🚚 ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-cliente'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza'] });
+        break;
+
+      case 'MUDANZA_FINALIZADA':
+        toast.success('✅ ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanzas-cliente'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza'] });
+        break;
+
+      case 'MUDANZA_COMPLETADA':
+        toast.success('✅ ' + mensaje, { duration: 5000 });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-activa-prov'] });
+        queryClient.invalidateQueries({ queryKey: ['mudanza-prov'] });
+        break;
+
       default:
         console.log('Notificación no manejada:', tipo);
     }

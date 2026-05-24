@@ -19,6 +19,8 @@ export const ROUTES = {
     PROFILE: '/cliente/perfil',
     SETTINGS: '/cliente/configuracion',
     PAYMENT_METHODS: '/cliente/metodos-de-pago',
+    MUDANZA_NEW: '/cliente/mudanza/nueva',
+    MUDANZA_DETAIL: (id: string | number = ':id') => `/cliente/mudanza/${id}`,
   },
 
   // Proveedor
@@ -29,6 +31,8 @@ export const ROUTES = {
     ACTIVE_JOB: (jobId: string | number = ':jobId') => `/proveedor/trabajo-activo/${jobId}`,
     COMPLETED_JOB: (jobId: string | number = ':jobId') => `/proveedor/completado/${jobId}`,
     REVIEWS: '/proveedor/resenas',
+    MUDANZA_DETAIL: (id: string | number = ':id') => `/proveedor/mudanza/${id}`,
+    MUDANZA_PENDIENTES: '/proveedor/mudanzas',
     NOTIFICATIONS: '/proveedor/notificaciones',
     PROFILE: '/proveedor/perfil',
     SETTINGS: '/proveedor/configuracion',
