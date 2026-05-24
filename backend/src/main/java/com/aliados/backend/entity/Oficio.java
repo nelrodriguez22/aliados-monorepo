@@ -22,4 +22,7 @@ public class Oficio {
 
     @Column(nullable = false)
     private Boolean activo = true;
+
+    @Column(nullable = false)
+    private Boolean exclusivo = false;
 }

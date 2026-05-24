@@ -18,6 +18,6 @@ public class OficioController {
 
     @GetMapping
     public ResponseEntity<List<Oficio>> getOficios() {
-        return ResponseEntity.ok(oficioRepository.findByActivoTrue());
+        return ResponseEntity.ok(oficioRepository.findByActivoTrueAndExclusivoFalse());
     }
 }
