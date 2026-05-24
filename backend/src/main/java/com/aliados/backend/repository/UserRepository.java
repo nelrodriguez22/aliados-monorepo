@@ -22,8 +22,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.status IN ('ONLINE', 'BUSY') AND u.localidad = :localidad AND u.oficio.id = :oficioId AND (SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = u.id AND t.estado IN ('EN_CURSO', 'EN_COLA')) < 3")
-    List<User> findProveedoresDisponibles(@Param("localidad") String localidad, @Param("oficioId") Long oficioId);
+    @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.status IN ('ONLINE', 'BUSY') AND u.localidad = :localidad AND u.oficio.id = :oficioId AND (SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = u.id AND t.estado IN ('EN_CURSO', 'EN_COLA')) < :maxTrabajos")
+    List<User> findProveedoresDisponibles(@Param("localidad") String localidad, @Param("oficioId") Long oficioId, @Param("maxTrabajos") int maxTrabajos);
 
     long countByRole(UserRole role);
 

@@ -44,6 +44,16 @@ public class TrabajoService {
 
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
+    private static final int LIMITE_TRABAJOS_DEFAULT = 3;
+    private static final int LIMITE_TRABAJOS_FLETE = 8;
+
+    private int getLimiteTrabajos(Oficio oficio) {
+        if (oficio != null && oficio.getNombre().equalsIgnoreCase("Flete")) {
+            return LIMITE_TRABAJOS_FLETE;
+        }
+        return LIMITE_TRABAJOS_DEFAULT;
+    }
+
     @Transactional
     public TrabajoResponseDTO crearTrabajo(String clienteFirebaseUid, CrearTrabajoDTO dto) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
@@ -259,7 +269,8 @@ public class TrabajoService {
 
     private void notificarProveedorDisponible(Trabajo trabajo) {
         String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
-        List<User> proveedores = userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId());
+        int limite = getLimiteTrabajos(trabajo.getOficio());
+        List<User> proveedores = userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite);
 
         if (proveedores.isEmpty()) {
             logger.warn("No hay proveedores disponibles para el oficio {}", trabajo.getOficio().getNombre());
@@ -346,16 +357,17 @@ public class TrabajoService {
             return;
         }
 
-        // Solo asignar si tiene espacio (menos de 3 trabajos)
+        // Solo asignar si tiene espacio
+        int limiteProveedor = getLimiteTrabajos(proveedor.getOficio());
         int trabajosActuales = trabajoRepository.countTrabajosActivosYCola(proveedor.getId());
-        if (trabajosActuales >= 3) {
+        if (trabajosActuales >= limiteProveedor) {
             return;
         }
 
         List<Trabajo> trabajosSinAsignar = trabajoRepository.findTrabajosPendientesSinAsignar(proveedor.getOficio().getId());
 
         for (Trabajo trabajo : trabajosSinAsignar) {
-            if (trabajoRepository.countTrabajosActivosYCola(proveedor.getId()) >= 3) {
+            if (trabajoRepository.countTrabajosActivosYCola(proveedor.getId()) >= limiteProveedor) {
                 break;
             }
 
@@ -528,8 +540,9 @@ public class TrabajoService {
         User proveedor = trabajo.getProveedor();
 
         int trabajosActivos = trabajoRepository.countTrabajosActivosYCola(proveedor.getId());
+        int limite = getLimiteTrabajos(trabajo.getOficio());
 
-        if (trabajosActivos >= 3) {
+        if (trabajosActivos >= limite) {
             throw new RuntimeException("El profesional ya tiene la agenda completa");
         }
 
