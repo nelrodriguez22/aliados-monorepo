@@ -169,6 +169,12 @@ public class MudanzaController {
         return ResponseEntity.ok(mudanza);
     }
 
+    @GetMapping("/proveedor/confirmadas")
+    public ResponseEntity<List<MudanzaResponseDTO>> getMudanzasConfirmadasProveedor(Authentication authentication) {
+        String uid = authentication.getName();
+        return ResponseEntity.ok(mudanzaService.getMudanzasConfirmadasProveedor(uid));
+    }
+
     @GetMapping("/proveedor/completadas")
     public ResponseEntity<List<MudanzaResponseDTO>> getMudanzasCompletadasProveedor(Authentication authentication) {
         String uid = authentication.getName();
