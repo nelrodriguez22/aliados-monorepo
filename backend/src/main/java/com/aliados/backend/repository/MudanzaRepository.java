@@ -31,4 +31,6 @@ public interface MudanzaRepository extends JpaRepository<Mudanza, Long> {
     long countMudanzasAgendadasEnFecha(@Param("fecha") LocalDate fecha);
 
     boolean existsByFechaConfirmadaAndTurnoAndEstadoNotIn(LocalDate fechaConfirmada, MudanzaTurno turno, List<MudanzaEstado> estados);
+
+    List<Mudanza> findByProveedorIdAndEstadoIn(Long proveedorId, List<MudanzaEstado> estados);
 }

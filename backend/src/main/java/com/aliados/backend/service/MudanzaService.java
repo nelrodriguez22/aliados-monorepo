@@ -620,9 +620,13 @@ public class MudanzaService {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
 
-        Mudanza mudanza = mudanzaRepository.findMudanzaEnCursoByProveedorId(proveedor.getId());
-        if (mudanza == null) return null;
-        return mapToDTO(mudanza);
+        // Buscar mudanza en curso o aceptada
+        List<Mudanza> activas = mudanzaRepository.findByProveedorIdAndEstadoIn(
+                proveedor.getId(),
+                List.of(MudanzaEstado.ACEPTADO, MudanzaEstado.EN_CURSO, MudanzaEstado.FINALIZADO, MudanzaEstado.PENDIENTE_PAGO_EXTRA)
+        );
+        if (activas.isEmpty()) return null;
+        return mapToDTO(activas.get(0));
     }
 
     public List<MudanzaResponseDTO> getMudanzasCompletadasProveedor(String proveedorFirebaseUid) {
