@@ -62,6 +62,13 @@ public class TrabajoService {
         trabajo.setFotos(dto.getFotos());
         trabajo.setEstado(TrabajoEstado.PENDIENTE);
 
+        // Destino (opcional, para Flete)
+        if (dto.getDireccionDestino() != null) {
+            trabajo.setDireccionDestino(dto.getDireccionDestino());
+            trabajo.setLatitudDestino(dto.getLatitudDestino());
+            trabajo.setLongitudDestino(dto.getLongitudDestino());
+        }
+
         double lat = dto.getLatitudCliente();
         double lng = dto.getLongitudCliente();
         if (lat < -33.05 || lat > -32.85 || lng < -60.80 || lng > -60.55) {
@@ -235,6 +242,9 @@ public class TrabajoService {
                     dto.setDireccion(trabajo.getDireccion());
                     dto.setLatitudCliente(trabajo.getLatitudCliente());
                     dto.setLongitudCliente(trabajo.getLongitudCliente());
+                    dto.setDireccionDestino(trabajo.getDireccionDestino());
+                    dto.setLatitudDestino(trabajo.getLatitudDestino());
+                    dto.setLongitudDestino(trabajo.getLongitudDestino());
                     dto.setTiempoEstimadoMinutos(trabajo.getTiempoEstimadoMinutos());
                     dto.setPrecioEstimado(trabajo.getPrecioEstimado());
                     dto.setFotos(trabajo.getFotos());
@@ -315,6 +325,9 @@ public class TrabajoService {
         dto.setDireccion(trabajo.getDireccion());
         dto.setLatitudCliente(trabajo.getLatitudCliente());
         dto.setLongitudCliente(trabajo.getLongitudCliente());
+        dto.setDireccionDestino(trabajo.getDireccionDestino());
+        dto.setLatitudDestino(trabajo.getLatitudDestino());
+        dto.setLongitudDestino(trabajo.getLongitudDestino());
         dto.setTiempoEstimadoMinutos(trabajo.getTiempoEstimadoMinutos());
         dto.setPrecioEstimado(trabajo.getPrecioEstimado());
         dto.setFotos(trabajo.getFotos());
@@ -416,6 +429,9 @@ public class TrabajoService {
         dto.setDireccion(trabajo.getDireccion());
         dto.setLatitudCliente(trabajo.getLatitudCliente());
         dto.setLongitudCliente(trabajo.getLongitudCliente());
+        dto.setDireccionDestino(trabajo.getDireccionDestino());
+        dto.setLatitudDestino(trabajo.getLatitudDestino());
+        dto.setLongitudDestino(trabajo.getLongitudDestino());
         dto.setTiempoEstimadoMinutos(trabajo.getTiempoEstimadoMinutos());
         dto.setPrecioEstimado(trabajo.getPrecioEstimado());
         dto.setFotos(trabajo.getFotos());

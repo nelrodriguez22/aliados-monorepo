@@ -18,6 +18,9 @@ public class TrabajoResponseDTO {
     private String direccion;
     private Double latitudCliente;
     private Double longitudCliente;
+    private String direccionDestino;
+    private Double latitudDestino;
+    private Double longitudDestino;
     private Integer tiempoEstimadoMinutos;
     private Double precioEstimado;
     private String fotos;

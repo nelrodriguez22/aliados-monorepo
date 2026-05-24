@@ -22,5 +22,10 @@ public class CrearTrabajoDTO {
     @NotNull(message = "La longitud es requerida")
     private Double longitudCliente;
 
+    // Destino (opcional, requerido para Flete)
+    private String direccionDestino;
+    private Double latitudDestino;
+    private Double longitudDestino;
+
     private String fotos; // JSON array de URLs
 }

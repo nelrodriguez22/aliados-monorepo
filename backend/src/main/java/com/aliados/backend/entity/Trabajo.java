@@ -46,6 +46,11 @@ public class Trabajo {
     private Double latitudProveedor;
     private Double longitudProveedor;
 
+    // Destino (opcional, usado por Flete)
+    private String direccionDestino;
+    private Double latitudDestino;
+    private Double longitudDestino;
+
     private Integer tiempoEstimadoMinutos;
     private Double precioEstimado;
 
