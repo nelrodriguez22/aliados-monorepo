@@ -52,9 +52,10 @@ public class MudanzaController {
     @PatchMapping("/{id}/aceptar")
     public ResponseEntity<MudanzaResponseDTO> aceptarMudanza(
             @PathVariable Long id,
+            @Valid @RequestBody AceptarMudanzaDTO dto,
             Authentication authentication) {
         String uid = authentication.getName();
-        return ResponseEntity.ok(mudanzaService.aceptarMudanza(id, uid));
+        return ResponseEntity.ok(mudanzaService.aceptarMudanza(id, uid, dto.getTurno()));
     }
 
     // ── Proveedor: Contraproponer tier ──

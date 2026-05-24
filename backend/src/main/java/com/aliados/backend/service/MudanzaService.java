@@ -148,7 +148,7 @@ public class MudanzaService {
     // ════════════════════════════════════════════
 
     @Transactional
-    public MudanzaResponseDTO aceptarMudanza(Long mudanzaId, String proveedorFirebaseUid) {
+    public MudanzaResponseDTO aceptarMudanza(Long mudanzaId, String proveedorFirebaseUid, MudanzaTurno turno) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
 
@@ -159,15 +159,14 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no está disponible para aceptar");
         }
 
-        // Validar disponibilidad de turnos para la fecha
+        // Validar que el turno esté libre para esa fecha
         LocalDate fechaAgendar = mudanza.getFechaDeseada();
-        long agendadas = mudanzaRepository.countMudanzasAgendadasEnFecha(fechaAgendar);
-        if (agendadas >= MAX_MUDANZAS_POR_DIA) {
-            throw new RuntimeException("No hay turnos disponibles para el " + fechaAgendar + ". Sugerí otra fecha con contrapropuesta.");
+        boolean turnoOcupado = mudanzaRepository.existsByFechaConfirmadaAndTurnoAndEstadoNotIn(
+                fechaAgendar, turno, List.of(MudanzaEstado.CANCELADO, MudanzaEstado.COMPLETADO));
+        if (turnoOcupado) {
+            String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
+            throw new RuntimeException("El " + turnoLabel + " del " + fechaAgendar + " ya está ocupado.");
         }
-
-        // Asignar turno
-        MudanzaTurno turno = agendadas == 0 ? MudanzaTurno.PRIMERO : MudanzaTurno.SEGUNDO;
 
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setProveedor(proveedor);
@@ -176,7 +175,6 @@ public class MudanzaService {
         mudanza.setAcceptedAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
 
-        // Notificar al cliente
         String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
@@ -215,6 +213,7 @@ public class MudanzaService {
 
         mudanza.setProveedor(proveedor);
         mudanza.setMotivoContrapropuesta(dto.getMotivo());
+        mudanza.setTurno(dto.getTurno());
 
         StringBuilder mensajeParts = new StringBuilder();
 
@@ -293,18 +292,18 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no tiene una contrapropuesta activa");
         }
 
-        // Validar disponibilidad de la fecha (puede haber cambiado desde la contrapropuesta)
+        // Validar que el turno esté libre para la fecha
         LocalDate fechaAgendar = mudanza.getFechaDeseada();
-        long agendadas = mudanzaRepository.countMudanzasAgendadasEnFecha(fechaAgendar);
-        if (agendadas >= MAX_MUDANZAS_POR_DIA) {
-            throw new RuntimeException("La fecha " + fechaAgendar + " ya no tiene turnos disponibles.");
+        MudanzaTurno turno = mudanza.getTurno();
+        boolean turnoOcupado = mudanzaRepository.existsByFechaConfirmadaAndTurnoAndEstadoNotIn(
+                fechaAgendar, turno, List.of(MudanzaEstado.CANCELADO, MudanzaEstado.COMPLETADO));
+        if (turnoOcupado) {
+            String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
+            throw new RuntimeException("El " + turnoLabel + " del " + fechaAgendar + " ya no está disponible.");
         }
-
-        MudanzaTurno turno = agendadas == 0 ? MudanzaTurno.PRIMERO : MudanzaTurno.SEGUNDO;
 
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setFechaConfirmada(fechaAgendar);
-        mudanza.setTurno(turno);
         mudanza.setAcceptedAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
 
