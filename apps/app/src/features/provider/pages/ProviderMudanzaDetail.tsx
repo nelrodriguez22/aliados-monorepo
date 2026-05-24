@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getToken } from "@/shared/lib/getToken";
-import { ArrowLeft, Clock, Truck, CheckCircle, AlertCircle, Loader2, Play, Square, MapPin, Building2, Image } from "lucide-react";
+import { ArrowLeft,Truck,Loader2, Play, Square, Image } from "lucide-react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/shared/constants/routes";
 import { useState, useEffect } from "react";

@@ -165,7 +165,7 @@ export function ClientDashboard() {
     refetchOnMount: true,
   });
 
-  const { data: mudanzasCliente = [], isLoading: loadingMudanzas } = useQuery({
+  const { data: mudanzasCliente = [] } = useQuery({
     queryKey: ['mudanzas-cliente'],
     queryFn: async () => {
       const token = await getToken();

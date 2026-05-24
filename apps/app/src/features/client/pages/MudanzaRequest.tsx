@@ -149,8 +149,8 @@ export function MudanzaRequest() {
 
   // Validaciones por step
   const hoy = new Date().toISOString().split("T")[0];
-  const canGoToStep2 =
-    origen.coords && destino.coords && imagenes.length > 0 && fechaDeseada && fechaDeseada > hoy;
+  // const canGoToStep2 =
+  //   origen.coords && destino.coords && imagenes.length > 0 && fechaDeseada && fechaDeseada > hoy;
 
   const handleGoToStep2 = () => {
     if (!fechaDeseada) { toast.error("Seleccioná una fecha"); return; }
