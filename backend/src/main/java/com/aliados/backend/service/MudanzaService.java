@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +34,8 @@ public class MudanzaService {
 
     @Autowired
     private NotificacionService notificacionService;
+
+    private static final int MAX_MUDANZAS_POR_DIA = 2;
 
     // Ratio de tiempo para testing: 1 min real = ratioTiempo minutos de servicio
     // En producción: 1.0 (1 min real = 1 min servicio)
@@ -88,6 +91,10 @@ public class MudanzaService {
         // Accesibilidad
         mudanza.setPisos(dto.getPisos());
         mudanza.setTieneAscensor(dto.getTieneAscensor());
+        mudanza.setCantidadAmbientes(dto.getCantidadAmbientes());
+
+        // Fecha
+        mudanza.setFechaDeseada(dto.getFechaDeseada());
 
         // Media
         mudanza.setFotos(dto.getFotos());
@@ -152,22 +159,36 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no está disponible para aceptar");
         }
 
+        // Validar disponibilidad de turnos para la fecha
+        LocalDate fechaAgendar = mudanza.getFechaDeseada();
+        long agendadas = mudanzaRepository.countMudanzasAgendadasEnFecha(fechaAgendar);
+        if (agendadas >= MAX_MUDANZAS_POR_DIA) {
+            throw new RuntimeException("No hay turnos disponibles para el " + fechaAgendar + ". Sugerí otra fecha con contrapropuesta.");
+        }
+
+        // Asignar turno
+        MudanzaTurno turno = agendadas == 0 ? MudanzaTurno.PRIMERO : MudanzaTurno.SEGUNDO;
+
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setProveedor(proveedor);
+        mudanza.setFechaConfirmada(fechaAgendar);
+        mudanza.setTurno(turno);
         mudanza.setAcceptedAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
 
         // Notificar al cliente
+        String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
                 "MUDANZA_ACEPTADA",
                 "Mudanza Confirmada",
-                "Fletes Bay aceptó tu mudanza " + mudanza.getTier().getEmoji() + " " + mudanza.getTier().getNombre(),
+                "Fletes Bay aceptó tu mudanza " + mudanza.getTier().getEmoji() + " " + mudanza.getTier().getNombre() +
+                        " para el " + fechaAgendar + " - " + turnoLabel,
                 mudanza.getId(),
                 "/cliente/mudanza/" + mudanza.getId()
         );
 
-        logger.info("Mudanza {} aceptada por proveedor {}", mudanza.getId(), proveedor.getNombre());
+        logger.info("Mudanza {} aceptada - Fecha: {} Turno: {}", mudanza.getId(), fechaAgendar, turno);
 
         return mapToDTO(mudanza);
     }
@@ -188,52 +209,68 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no está disponible para contraproponer");
         }
 
-        MudanzaTier tierSugerido = mudanzaTierRepository.findById(dto.getTierSugeridoId())
-                .orElseThrow(() -> new RuntimeException("Tier sugerido no encontrado"));
-
-        if (tierSugerido.getId().equals(mudanza.getTier().getId())) {
-            throw new RuntimeException("El tier sugerido es el mismo que el actual");
+        if (dto.getTierSugeridoId() == null && dto.getFechaSugerida() == null) {
+            throw new RuntimeException("Debés sugerir un cambio de plan, fecha, o ambos");
         }
 
-        // Guardar tier original del cliente
-        mudanza.setTierOriginal(mudanza.getTier());
-
-        // Actualizar al tier sugerido
-        mudanza.setTier(tierSugerido);
-        mudanza.setMontoBase(tierSugerido.getPrecioBase());
         mudanza.setProveedor(proveedor);
         mudanza.setMotivoContrapropuesta(dto.getMotivo());
+
+        StringBuilder mensajeParts = new StringBuilder();
+
+        // Contrapropuesta de tier
+        if (dto.getTierSugeridoId() != null) {
+            MudanzaTier tierSugerido = mudanzaTierRepository.findById(dto.getTierSugeridoId())
+                    .orElseThrow(() -> new RuntimeException("Tier sugerido no encontrado"));
+
+            if (tierSugerido.getId().equals(mudanza.getTier().getId())) {
+                throw new RuntimeException("El tier sugerido es el mismo que el actual");
+            }
+
+            mudanza.setTierOriginal(mudanza.getTier());
+            mudanza.setTier(tierSugerido);
+            mudanza.setMontoBase(tierSugerido.getPrecioBase());
+
+            mensajeParts.append(String.format("Plan: %s %s (%s)",
+                    tierSugerido.getEmoji(), tierSugerido.getNombre(),
+                    formatPrecio(tierSugerido.getPrecioBase())));
+        }
+
+        // Contrapropuesta de fecha
+        if (dto.getFechaSugerida() != null) {
+            if (dto.getFechaSugerida().equals(mudanza.getFechaDeseada())) {
+                throw new RuntimeException("La fecha sugerida es la misma que la solicitada");
+            }
+
+            mudanza.setFechaOriginal(mudanza.getFechaDeseada());
+            mudanza.setFechaDeseada(dto.getFechaSugerida());
+
+            if (mensajeParts.length() > 0) mensajeParts.append(". ");
+            mensajeParts.append("Fecha: ").append(dto.getFechaSugerida());
+        }
+
         mudanza.setEstado(MudanzaEstado.CONTRAPROPUESTO);
         mudanza = mudanzaRepository.save(mudanza);
 
-        // Determinar si es upgrade o downgrade
-        String direccion = tierSugerido.getPrecioBase() > mudanza.getTierOriginal().getPrecioBase()
-                ? "upgrade" : "downgrade";
-
-        Double diferencia = Math.abs(tierSugerido.getPrecioBase() - mudanza.getTierOriginal().getPrecioBase());
-
-        String mensaje = String.format(
-                "Fletes Bay sugiere cambiar a plan %s %s ($%,.0f). Motivo: %s",
-                tierSugerido.getEmoji(), tierSugerido.getNombre(),
-                tierSugerido.getPrecioBase(), dto.getMotivo()
-        );
+        String mensaje = String.format("Fletes Bay sugiere cambios: %s. Motivo: %s",
+                mensajeParts, dto.getMotivo());
 
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
                 "MUDANZA_CONTRAPROPUESTA",
-                "Cambio de Plan Sugerido",
+                "Cambio Sugerido",
                 mensaje,
                 mudanza.getId(),
                 "/cliente/mudanza/" + mudanza.getId()
         );
 
-        logger.info("Mudanza {} contrapropuesta: {} → {} ({}, diferencia ${})",
-                mudanza.getId(),
-                mudanza.getTierOriginal().getNombre(),
-                tierSugerido.getNombre(),
-                direccion, diferencia);
+        logger.info("Mudanza {} contrapropuesta - {}", mudanza.getId(), mensajeParts);
 
         return mapToDTO(mudanza);
+    }
+
+    private String formatPrecio(Double precio) {
+        return String.format("$%,.0f", precio);
     }
 
     // ════════════════════════════════════════════
@@ -256,7 +293,18 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no tiene una contrapropuesta activa");
         }
 
+        // Validar disponibilidad de la fecha (puede haber cambiado desde la contrapropuesta)
+        LocalDate fechaAgendar = mudanza.getFechaDeseada();
+        long agendadas = mudanzaRepository.countMudanzasAgendadasEnFecha(fechaAgendar);
+        if (agendadas >= MAX_MUDANZAS_POR_DIA) {
+            throw new RuntimeException("La fecha " + fechaAgendar + " ya no tiene turnos disponibles.");
+        }
+
+        MudanzaTurno turno = agendadas == 0 ? MudanzaTurno.PRIMERO : MudanzaTurno.SEGUNDO;
+
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
+        mudanza.setFechaConfirmada(fechaAgendar);
+        mudanza.setTurno(turno);
         mudanza.setAcceptedAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
 
@@ -265,13 +313,12 @@ public class MudanzaService {
                 mudanza.getProveedor().getFirebaseUid(),
                 "MUDANZA_CONTRAPROPUESTA_ACEPTADA",
                 "Contrapropuesta Aceptada",
-                cliente.getNombre() + " aceptó el cambio a plan " +
-                        mudanza.getTier().getEmoji() + " " + mudanza.getTier().getNombre(),
+                cliente.getNombre() + " aceptó los cambios. Agendada para el " + fechaAgendar,
                 mudanza.getId(),
                 "/proveedor/mudanza/" + mudanza.getId()
         );
 
-        logger.info("Mudanza {} contrapropuesta aceptada por cliente", mudanza.getId());
+        logger.info("Mudanza {} contrapropuesta aceptada - Agendada: {} Turno: {}", mudanza.getId(), fechaAgendar, turno);
 
         return mapToDTO(mudanza);
     }
@@ -657,6 +704,13 @@ public class MudanzaService {
         // Accesibilidad
         dto.setPisos(m.getPisos());
         dto.setTieneAscensor(m.getTieneAscensor());
+        dto.setCantidadAmbientes(m.getCantidadAmbientes());
+
+        // Fecha y turno
+        dto.setFechaDeseada(m.getFechaDeseada());
+        dto.setFechaConfirmada(m.getFechaConfirmada());
+        dto.setFechaOriginal(m.getFechaOriginal());
+        dto.setTurno(m.getTurno());
 
         // Media
         dto.setFotos(m.getFotos());

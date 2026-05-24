@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -23,4 +24,8 @@ public interface MudanzaRepository extends JpaRepository<Mudanza, Long> {
     List<Mudanza> findByEstadoOrderByCreatedAtAsc(@Param("estado") MudanzaEstado estado);
 
     long countByEstado(MudanzaEstado estado);
+
+    // Contar mudanzas agendadas (aceptadas o en curso) para una fecha
+    @Query("SELECT COUNT(m) FROM Mudanza m WHERE m.fechaConfirmada = :fecha AND m.estado NOT IN ('CANCELADO', 'COMPLETADO', 'PENDIENTE', 'RESERVADO')")
+    long countMudanzasAgendadasEnFecha(@Param("fecha") LocalDate fecha);
 }

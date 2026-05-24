@@ -2,7 +2,10 @@ package com.aliados.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
 import lombok.Data;
+
+import java.time.LocalDate;
 
 @Data
 public class CrearMudanzaDTO {
@@ -33,6 +36,13 @@ public class CrearMudanzaDTO {
 
     @NotNull(message = "Indicar si tiene ascensor es requerido")
     private Boolean tieneAscensor;
+
+    @NotNull(message = "La cantidad de ambientes es requerida")
+    @Min(value = 1, message = "Debe haber al menos 1 ambiente")
+    private Integer cantidadAmbientes;
+
+    @NotNull(message = "La fecha deseada es requerida")
+    private LocalDate fechaDeseada;
 
     @NotBlank(message = "Las fotos son requeridas")
     private String fotos; // JSON array de URLs

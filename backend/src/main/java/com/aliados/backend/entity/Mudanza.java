@@ -5,6 +5,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -63,6 +64,18 @@ public class Mudanza {
     @Column(nullable = false)
     private Boolean tieneAscensor = false;
 
+    @Column(nullable = false)
+    private Integer cantidadAmbientes; // cantidad de ambientes
+
+    // ── Fecha y turno ──
+    @Column(nullable = false)
+    private LocalDate fechaDeseada; // fecha que pide el cliente
+
+    private LocalDate fechaConfirmada; // fecha real agendada (puede diferir si hubo contrapropuesta)
+
+    @Enumerated(EnumType.STRING)
+    private MudanzaTurno turno; // PRIMERO (6:30hs) o SEGUNDO (~11hs), asignado al agendar
+
     // ── Media ──
     @Column(columnDefinition = "TEXT", nullable = false)
     private String fotos; // JSON array de URLs (obligatorio)
@@ -83,9 +96,11 @@ public class Mudanza {
     private Double comisionMonto; // calculado
     private Double montoProveedor; // neto para el proveedor
 
-    // ── Contrapropuesta ──
+    // ── Contrapropuesta (puede ser de tier, fecha, o ambos) ──
     @Column(length = 500)
-    private String motivoContrapropuesta; // texto del proveedor
+    private String motivoContrapropuesta;
+
+    private LocalDate fechaOriginal; // si hubo contrapropuesta de fecha, guarda la que pidió el cliente
 
     // ── Cronómetro ──
     private LocalDateTime iniciadoAt; // proveedor presiona "Iniciar"

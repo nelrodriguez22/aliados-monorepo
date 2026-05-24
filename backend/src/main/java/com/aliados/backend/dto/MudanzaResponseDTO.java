@@ -1,8 +1,10 @@
 package com.aliados.backend.dto;
 
 import com.aliados.backend.entity.MudanzaEstado;
+import com.aliados.backend.entity.MudanzaTurno;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -41,6 +43,13 @@ public class MudanzaResponseDTO {
     // Accesibilidad
     private Integer pisos;
     private Boolean tieneAscensor;
+    private Integer cantidadAmbientes;
+
+    // Fecha y turno
+    private LocalDate fechaDeseada;
+    private LocalDate fechaConfirmada;
+    private LocalDate fechaOriginal; // si hubo contrapropuesta de fecha
+    private MudanzaTurno turno;
 
     // Media
     private String fotos;
