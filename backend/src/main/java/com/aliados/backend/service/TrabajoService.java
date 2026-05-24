@@ -470,7 +470,7 @@ public class TrabajoService {
 
     @Transactional
     public TrabajoResponseDTO proponerTrabajo(Long trabajoId, String proveedorFirebaseUid,
-                                              Integer tiempoEstimadoMinutos, Double latitud, Double longitud) {
+                                              Integer tiempoEstimadoMinutos, Double latitud, Double longitud, Double tarifaVisita) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
 
@@ -488,7 +488,7 @@ public class TrabajoService {
         trabajo.setEstado(TrabajoEstado.PROPUESTO);
         trabajo.setProveedor(proveedor);
         trabajo.setTiempoEstimadoMinutos(tiempoEstimadoMinutos);
-        trabajo.setTarifaVisita(15000.0);
+        trabajo.setTarifaVisita(tarifaVisita != null ? tarifaVisita : 15000.0);
         trabajo.setPropuestoAt(LocalDateTime.now());
         if (latitud != null && longitud != null) {
             trabajo.setLatitudProveedor(latitud);

@@ -95,12 +95,13 @@ public class TrabajoController {
         Integer tiempoEstimado = (Integer) body.get("tiempoEstimadoMinutos");
         Double latitud = body.get("latitud") != null ? ((Number) body.get("latitud")).doubleValue() : null;
         Double longitud = body.get("longitud") != null ? ((Number) body.get("longitud")).doubleValue() : null;
+        Double tarifaVisita = body.get("tarifaVisita") != null ? ((Number) body.get("tarifaVisita")).doubleValue() : null;
 
         if (tiempoEstimado == null) {
             throw new IllegalArgumentException("Tiempo estimado es requerido");
         }
 
-        TrabajoResponseDTO trabajo = trabajoService.proponerTrabajo(id, uid, tiempoEstimado, latitud, longitud);
+        TrabajoResponseDTO trabajo = trabajoService.proponerTrabajo(id, uid, tiempoEstimado, latitud, longitud, tarifaVisita);
         return ResponseEntity.ok(trabajo);
     }
 
