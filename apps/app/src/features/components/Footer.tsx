@@ -3,7 +3,7 @@ import { tw } from "@/shared/styles/design-system";
 export function Footer() {
   return (
     <footer className={`border-t px-4 sm:px-8 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-3
-      ${tw.dividerLight} bg-white/80 dark:bg-dark-surface/80 backdrop-blur-xl`}>
+      border-slate-200/70 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-xl`}>
       <p className={`text-xs text-center sm:text-left ${tw.text.faint}`}>
         © 2026 Aliados. Todos los derechos reservados.
       </p>

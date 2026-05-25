@@ -143,11 +143,11 @@ cardHover: d(
   // ── Dropdowns ──
   dropdown: d(
     'rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50',
-    'border-dark-border bg-dark-surface shadow-2xl'
+    'border-dark-border-strong bg-dark-surface shadow-none shadow-transparent'
   ),
   dropdownItem: d(
     'flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50',
-    'text-dark-text hover:bg-dark-elevated'
+    'text-dark-text hover:bg-dark-border-strong'
   ),
   dropdownHeader: d('border-b border-slate-100 p-4',  'border-dark-border'),
   dropdownFooter: d('border-t border-slate-100 py-2', 'border-dark-border'),

@@ -81,7 +81,7 @@ export function UserMenu({ variant }: UserMenuProps) {
       onClick={onClick}
       className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm transition
         cursor-pointer ${tw2.text.secondary}
-        hover:bg-slate-50 dark:hover:bg-dark-elevated hover:${tw2.text.primary}`}
+        hover:bg-slate-50 dark:hover:bg-dark-border-strong hover:${tw2.text.primary}`}
     >
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 shrink-0" />
@@ -103,10 +103,10 @@ export function UserMenu({ variant }: UserMenuProps) {
       </button>
 
       {show && (
-        <div className={`absolute right-0 top-11 z-20 w-60 ${tw2.dropdown}`}>
+        <div className="absolute right-0 top-11 z-20 w-60 rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 dark:border-dark-border-strong dark:bg-dark-surface dark:shadow-[0_0_0_0_transparent]">
 
           {/* User info */}
-          <div className={`px-4 py-3 border-b ${tw2.dividerLight}`}>
+          <div className={`px-4 py-3 border-b border-slate-200 dark:border-dark-border-strong`}>
             <p className={`text-sm font-semibold truncate ${tw2.text.primary}`}>{user?.name}</p>
             <p className={`text-xs truncate ${tw2.text.muted}`}>{user?.email}</p>
           </div>
@@ -119,7 +119,7 @@ export function UserMenu({ variant }: UserMenuProps) {
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
                 className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm transition
                   cursor-pointer ${tw2.text.secondary}
-                  hover:bg-slate-50 dark:hover:bg-dark-elevated`}
+                  hover:bg-slate-50 dark:hover:bg-dark-border-strong`}
               >
                 <div className="flex items-center gap-3">
                   {isDark ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
@@ -162,10 +162,10 @@ export function UserMenu({ variant }: UserMenuProps) {
           </div>
 
           {/* Logout */}
-          <div className={`border-t pt-1 pb-1 ${tw2.dividerLight}`}>
+          <div className={`border-t pt-1 pb-1 border-slate-200 dark:border-dark-border-strong`}>
             <button
               onClick={handleLogout}
-              className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-900/10"
+              className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <LogOut className="h-4 w-4" />
               <span>Cerrar sesión</span>
