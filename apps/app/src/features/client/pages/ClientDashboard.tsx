@@ -163,6 +163,7 @@ export function ClientDashboard() {
     },
     staleTime: 30000,
     refetchOnMount: true,
+    refetchInterval: 30000,
   });
 
   const { data: mudanzasCliente = [] } = useQuery({
@@ -177,6 +178,7 @@ export function ClientDashboard() {
     },
     staleTime: 30000,
     refetchOnMount: true,
+    refetchInterval: 30000,
   });
 
   const mudanzasActivas = mudanzasCliente.filter((m: any) =>

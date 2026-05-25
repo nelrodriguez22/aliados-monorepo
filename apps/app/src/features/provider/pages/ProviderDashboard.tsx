@@ -163,7 +163,7 @@ export function ProviderDashboard() {
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
-    refetchInterval: false,
+    refetchInterval: 30000,
   });
 
   const { data: trabajosCompletados = [], isLoading: loadingCompletados } = useQuery({
@@ -191,6 +191,7 @@ export function ProviderDashboard() {
     },
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
+    refetchInterval: 30000,
   });
 
   const { data: mudanzaActiva } = useQuery({
@@ -625,7 +626,6 @@ export function ProviderDashboard() {
               </button>
             </div>
             {(() => {
-              {/* const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']; */}
               const MESES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
               const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
