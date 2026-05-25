@@ -28,6 +28,9 @@ public class NotificacionService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private PushNotificationService pushNotificationService;
+
     private static final Logger logger = LoggerFactory.getLogger(NotificacionService.class);
 
 
@@ -51,28 +54,8 @@ public class NotificacionService {
         NotificacionResponseDTO dto = mapToDTO(notificacion);
         messagingTemplate.convertAndSendToUser(firebaseUid, "/queue/notifications", dto);
 
-        // Enviar push notification
-        enviarPush(usuario, titulo, mensaje, actionUrl);
-    }
-
-    private void enviarPush(User usuario, String titulo, String mensaje, String actionUrl) {
-        if (usuario.getFcmToken() == null || usuario.getFcmToken().isEmpty()) return;
-
-        try {
-            com.google.firebase.messaging.Message message = com.google.firebase.messaging.Message.builder()
-                    .setToken(usuario.getFcmToken())
-                    .setNotification(com.google.firebase.messaging.Notification.builder()
-                            .setTitle(titulo)
-                            .setBody(mensaje)
-                            .build())
-                    .putData("actionUrl", actionUrl != null ? actionUrl : "/")
-                    .build();
-
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().send(message);
-            logger.info("📱 Push enviada a {}", usuario.getEmail());
-        } catch (Exception e) {
-            logger.error("❌ Error enviando push: {}", e.getMessage());
-        }
+        // Enviar push notification (async)
+        pushNotificationService.enviarPush(usuario, titulo, mensaje, actionUrl);
     }
     public List<NotificacionResponseDTO> getNotificaciones(String firebaseUid) {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
