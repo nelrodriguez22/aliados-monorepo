@@ -51,7 +51,10 @@ export const useWebSocket = () => {
         if (!firebaseUser) return;
 
         const token = await firebaseUser.getIdToken();
-        const wsUrl = `${import.meta.env.VITE_API_URL}/ws?token=${token}`;
+        // El token NO va en la URL (quedaría en logs de servidor/proxy e historial).
+        // La autenticación real se hace con el header Authorization del frame STOMP CONNECT
+        // (ver WebSocketAuthInterceptor en el backend).
+        const wsUrl = `${import.meta.env.VITE_API_URL}/ws`;
 
         const client = new Client({
           // @ts-ignore - SockJS type mismatch

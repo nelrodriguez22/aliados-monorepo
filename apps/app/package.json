@@ -11,7 +11,9 @@
   },
   "pnpm": {
     "peerDependencyRules": {
-      "allowAny": ["vite"]
+      "allowAny": [
+        "vite"
+      ]
     }
   },
   "dependencies": {
@@ -26,7 +28,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hot-toast": "2.6.0",
-    "react-router-dom": "7.13.0",
+    "react-router-dom": "7.17.0",
     "sockjs-client": "1.6.1",
     "tailwindcss": "4.1.18",
     "zustand": "5.0.11"
@@ -48,7 +50,7 @@
     "husky": "9.1.7",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.4",
-    "vite": "8.0.1",
+    "vite": "8.0.16",
     "vite-plugin-pwa": "1.2.0"
   }
 }

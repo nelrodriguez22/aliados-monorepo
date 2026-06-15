@@ -41,6 +41,7 @@ public class SecurityConfig {
                                 "/api/geocoding/**",
                                 "/api/mudanzas/tiers"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(firebaseAuthFilter,
