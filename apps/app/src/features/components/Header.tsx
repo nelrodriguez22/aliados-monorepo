@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useStore } from "@/shared/store/useStore";
 import logoConTexto from "@/assets/logocontexto.png";
@@ -7,7 +8,8 @@ import { NotificationsDropdown } from "@/features/components/header/Notification
 import { UserMenu } from "@/features/components/header/UserMenu";
 import { ProviderStatusToggle } from "@/features/components/header/ProviderStatusToggle";
 import { ThemeToggle } from "@/shared/components/ThemeToggle";
-import { Download } from "lucide-react";
+import { ChatWindow, FaqWindow, BugReportWindow } from "@/shared/components/FloatingActions";
+import { Download, MoreVertical, CircleHelp, Bug, Bot } from "lucide-react";
 
 export function Header() {
   const navigate   = useNavigate();
@@ -15,6 +17,20 @@ export function Header() {
   const { isInstallable, install } = useInstallPWA();
   const user            = useStore((state) => state.user);
   const isAuthenticated = useStore((state) => state.isAuthenticated);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [faqOpen,  setFaqOpen]  = useState(false);
+  const [bugOpen,  setBugOpen]  = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const isClient   = location.pathname.startsWith(`/${ROUTES.CLIENT.ROOT}`);
   const isProvider = location.pathname.startsWith(`/${ROUTES.PROVIDER.ROOT}`);
@@ -105,6 +121,40 @@ export function Header() {
               )
             )}
 
+            {/* Menú rápido mobile — solo en cliente/proveedor */}
+            {(isClient || isProvider) && (
+              <div className="relative sm:hidden" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(v => !v)}
+                  aria-label="Más opciones"
+                  className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors
+                    text-slate-500 dark:text-dark-text-secondary
+                    hover:bg-slate-100 dark:hover:bg-dark-elevated hover:text-brand-600 dark:hover:text-dark-brand
+                    ${menuOpen ? 'bg-slate-100 dark:bg-dark-elevated text-brand-600 dark:text-dark-brand' : ''}`}
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface z-50">
+                    {[
+                      { icon: CircleHelp, label: "Preguntas frecuentes", action: () => { setFaqOpen(true);  setMenuOpen(false); } },
+                      { icon: Bug,        label: "Reportar un bug",       action: () => { setBugOpen(true);  setMenuOpen(false); } },
+                      { icon: Bot,        label: "Asistente",             action: () => { setChatOpen(true); setMenuOpen(false); } },
+                    ].map(({ icon: Icon, label, action }) => (
+                      <button
+                        key={label}
+                        onClick={action}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-dark-text transition-colors hover:bg-slate-50 dark:hover:bg-dark-elevated border-b border-slate-100 dark:border-dark-border last:border-0 cursor-pointer"
+                      >
+                        <Icon className="h-4 w-4 text-slate-400 dark:text-dark-text-secondary shrink-0" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Cliente */}
             {isClient && (
               <>
@@ -127,6 +177,10 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {faqOpen  && <FaqWindow       onClose={() => setFaqOpen(false)}  />}
+      {bugOpen  && <BugReportWindow onClose={() => setBugOpen(false)}  />}
+      {chatOpen && <ChatWindow      onClose={() => setChatOpen(false)} />}
     </>
   );
 }

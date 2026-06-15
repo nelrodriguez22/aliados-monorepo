@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getToken } from '@/shared/lib/getToken';
 import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
-  FileText, Star, Loader2,
+  FileText, Star, Loader2, Bug, ChevronDown, ExternalLink,
 } from 'lucide-react';
 
 const STAT_CONFIG = [
@@ -15,6 +16,50 @@ const STAT_CONFIG = [
   { key: 'cancelados',  label: 'Cancelados',       icon: XCircle,      bg: 'bg-red-50 dark:bg-red-900/15', color: 'text-red-500 dark:text-red-400' },
 ] as const;
 
+const CAT_STYLE: Record<string, { label: string; cls: string }> = {
+  UI:            { label: 'UI / Visual',    cls: 'bg-brand-50 text-brand-700 dark:bg-dark-brand/15 dark:text-dark-brand' },
+  FUNCIONALIDAD: { label: 'Funcionalidad',  cls: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
+  ERROR_TECNICO: { label: 'Error técnico',  cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
+  OTRO:          { label: 'Otro',           cls: 'bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary' },
+};
+
+function BugRow({ report }: { report: any }) {
+  const [open, setOpen] = useState(false);
+  const cat = CAT_STYLE[report.categoria] ?? CAT_STYLE.OTRO;
+  const fecha = new Date(report.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div className={`border-b last:border-0 ${tw.dividerLight}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-dark-elevated cursor-pointer"
+      >
+        <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${cat.cls}`}>{cat.label}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium truncate ${tw.text.primary}`}>{report.titulo}</p>
+          <p className={`text-xs mt-0.5 ${tw.text.muted}`}>{report.usuarioNombre} · {fecha}</p>
+        </div>
+        <ChevronDown size={15} className={`mt-0.5 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className={`px-4 pb-4 space-y-2 text-sm ${tw.text.secondary}`}>
+          <p className="leading-relaxed">{report.descripcion}</p>
+          <div className="flex flex-wrap gap-3 text-xs">
+            <span className={tw.text.muted}>{report.usuarioEmail}</span>
+            {/^https?:\/\//i.test(report.url ?? '') && (
+              <a href={report.url} target="_blank" rel="noopener noreferrer"
+                className={`flex items-center gap-1 ${tw.text.brand} hover:underline`}>
+                <ExternalLink size={11} /> Ver página
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const AliadosDashboard = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
@@ -24,6 +69,19 @@ const AliadosDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Error al cargar estadísticas');
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
+
+  const { data: bugReports = [] } = useQuery({
+    queryKey: ['admin-bug-reports'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/bug-reports`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
       return res.json();
     },
     refetchInterval: 60000,
@@ -146,6 +204,29 @@ const AliadosDashboard = () => {
           </div>
 
         </div>
+
+        {/* Bug reports */}
+        <div className={`mt-4 rounded-2xl border bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-dark-border">
+            <div className="flex items-center gap-2">
+              <Bug className="h-4 w-4 text-red-500" />
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Bug reports</h2>
+            </div>
+            {bugReports.length > 0 && (
+              <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                {bugReports.length}
+              </span>
+            )}
+          </div>
+          {bugReports.length === 0 ? (
+            <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin reportes</p>
+          ) : (
+            <div>
+              {bugReports.map((r: any) => <BugRow key={r.id} report={r} />)}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

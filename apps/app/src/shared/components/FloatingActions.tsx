@@ -11,7 +11,7 @@ interface Message {
   text: string;
 }
 
-function ChatWindow({ onClose }: { onClose: () => void }) {
+export function ChatWindow({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([
     { id: "0", role: "assistant", text: "¡Hola! ¿En qué puedo ayudarte hoy?" },
   ]);
@@ -33,7 +33,7 @@ function ChatWindow({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="chat-window-enter fixed bottom-20 right-[76px] z-50 flex h-[420px] w-80 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-dark-border dark:bg-dark-surface">
+    <div className="chat-window-enter fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-surface sm:inset-auto sm:bottom-20 sm:right-[76px] sm:h-[420px] sm:w-80 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl dark:sm:border-dark-border">
       <div className="flex items-center justify-between border-b border-slate-100 bg-brand-600 px-4 py-3 dark:border-dark-border dark:bg-dark-brand">
         <div className="flex items-center gap-2">
           <Bot size={18} className="text-white" />
@@ -157,9 +157,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-function FaqWindow({ onClose }: { onClose: () => void }) {
+export function FaqWindow({ onClose }: { onClose: () => void }) {
   return (
-    <div className="chat-window-enter fixed bottom-20 right-[76px] z-50 flex h-[480px] w-96 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-dark-border dark:bg-dark-surface">
+    <div className="chat-window-enter fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-surface sm:inset-auto sm:bottom-20 sm:right-[76px] sm:h-[480px] sm:w-96 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl dark:sm:border-dark-border">
       <div className="flex items-center justify-between border-b border-slate-100 bg-brand-600 px-4 py-3 dark:border-dark-border dark:bg-dark-brand">
         <div className="flex items-center gap-2">
           <CircleHelp size={18} className="text-white" />
@@ -199,13 +199,14 @@ interface BugForm {
   descripcion: string;
 }
 
-function BugReportWindow({ onClose }: { onClose: () => void }) {
+export function BugReportWindow({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState<BugForm>({ categoria: "", titulo: "", descripcion: "" });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
 
   const set = (field: keyof BugForm) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const valid = form.categoria && form.titulo.trim() && form.descripcion.trim();
@@ -215,7 +216,7 @@ function BugReportWindow({ onClose }: { onClose: () => void }) {
     if (!valid) return;
     setLoading(true);
     try {
-      await apiClient.post("/bug-reports", { ...form, url: window.location.href });
+      await apiClient.post("/api/bug-reports", { ...form, url: window.location.href });
       setSent(true);
       toast.success("Reporte enviado. ¡Gracias!");
     } catch {
@@ -226,10 +227,10 @@ function BugReportWindow({ onClose }: { onClose: () => void }) {
   };
 
   const inputCls =
-    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-dark-border dark:bg-dark-elevated dark:text-dark-text dark:placeholder:text-dark-text-secondary dark:focus:border-dark-brand dark:focus:ring-dark-brand/20";
+    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-dark-border dark:bg-dark-elevated dark:text-dark-text dark:placeholder:text-dark-text-secondary dark:focus:border-dark-brand dark:focus:ring-dark-brand/20 sm:py-2 sm:text-sm";
 
   return (
-    <div className="chat-window-enter fixed bottom-20 right-[76px] z-50 flex w-96 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-dark-border dark:bg-dark-surface">
+    <div className="chat-window-enter fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-surface sm:inset-auto sm:bottom-20 sm:right-[76px] sm:w-96 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl dark:sm:border-dark-border">
       {/* header */}
       <div className="flex items-center justify-between border-b border-slate-100 bg-brand-600 px-4 py-3 dark:border-dark-border dark:bg-dark-brand">
         <div className="flex items-center gap-2">
@@ -271,12 +272,31 @@ function BugReportWindow({ onClose }: { onClose: () => void }) {
             <label className="text-xs font-medium text-slate-500 dark:text-dark-text-secondary">
               Categoría <span className="text-red-400">*</span>
             </label>
-            <select value={form.categoria} onChange={set("categoria")} className={inputCls}>
-              <option value="" disabled>Seleccioná una categoría</option>
-              {CATEGORIAS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setCatOpen(v => !v)}
+                className={`${inputCls} flex items-center justify-between text-left ${!form.categoria ? 'text-slate-400' : ''}`}
+              >
+                <span>{form.categoria ? CATEGORIAS.find(c => c.value === form.categoria)?.label : 'Seleccioná una categoría'}</span>
+                <ChevronDown size={16} className={`shrink-0 text-slate-400 transition-transform ${catOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {catOpen && (
+                <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface">
+                  {CATEGORIAS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => { setForm(prev => ({ ...prev, categoria: c.value })); setCatOpen(false); }}
+                      className={`w-full px-4 py-3 text-left text-base transition-colors hover:bg-slate-50 dark:hover:bg-dark-elevated border-b border-slate-100 dark:border-dark-border last:border-0 cursor-pointer sm:text-sm sm:py-2.5
+                        ${form.categoria === c.value ? 'font-medium text-brand-600 dark:text-dark-brand' : 'text-slate-700 dark:text-dark-text'}`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* título */}
@@ -365,8 +385,8 @@ export function FloatingActions() {
       {bugOpen  && <BugReportWindow onClose={() => setBugOpen(false)}  />}
       {chatOpen && <ChatWindow      onClose={() => setChatOpen(false)} />}
 
-      {/* outer: clips the beam to the rounded shape */}
-      <div className="fixed bottom-20 right-4 z-50 overflow-hidden rounded-2xl p-[2px] shadow-xl">
+      {/* outer: clips the beam to the rounded shape — desktop only */}
+      <div className="hidden sm:block fixed bottom-20 right-4 z-50 overflow-hidden rounded-2xl p-[2px] shadow-xl">
         {/* beam: solo se anima el ángulo del gradiente vía @property, sin rotar ningún elemento */}
         <div
           className="border-beam pointer-events-none absolute inset-0"
