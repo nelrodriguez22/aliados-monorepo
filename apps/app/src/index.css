@@ -76,3 +76,26 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--color-dark-bg);
   color: var(--color-dark-text);
 }
+
+/* ── Chat window entrance animation ── */
+@keyframes chat-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.chat-window-enter {
+  animation: chat-in 0.18s ease-out both;
+}
+
+/* ── Floating bar border beam ── */
+/* @property makes --beam-angle animatable so the gradient angle moves, not the element */
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes border-beam {
+  to { --beam-angle: 360deg; }
+}
+.border-beam {
+  animation: border-beam 3s linear infinite;
+}

@@ -189,6 +189,7 @@ export function ClientDashboard() {
     ['PENDIENTE', 'EN_CURSO', 'PROPUESTO', 'EN_COLA'].includes(t.estado)
   );
   const trabajosCompletados = todosTrabajos.filter((t: any) => t.estado === 'COMPLETADO');
+  const sinCalificar = trabajosCompletados.filter((t: any) => !t.calificado).length;
 
   const removeAccents = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -473,10 +474,17 @@ export function ClientDashboard() {
 
             {/* Historial */}
             <div ref={historialRef}>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className={`text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
-                  Historial de trabajos
-                </h2>
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h2 className={`text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
+                    Historial de trabajos
+                  </h2>
+                  {sinCalificar > 0 && (
+                    <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                      Tenés {sinCalificar} {sinCalificar === 1 ? 'trabajo' : 'trabajos'} sin calificar — ¡tu opinión ayuda a la comunidad!
+                    </p>
+                  )}
+                </div>
                 {trabajosCompletados.length > 3 && (
                   <button
                     onClick={() => setShowHistory(!showHistory)}
@@ -514,7 +522,7 @@ export function ClientDashboard() {
                         <div className="shrink-0 flex flex-col items-end gap-1">
                           {trabajo.calificado
                             ? <Badge variant="success">Completado</Badge>
-                            : <Badge variant="warning">Pendiente</Badge>
+                            : <Badge variant="neutral">Sin calificar</Badge>
                           }
                           <span className={`text-xs ${tw.text.secondary}`}>
                             {new Date(trabajo.completedAt).toLocaleDateString('es-AR')}

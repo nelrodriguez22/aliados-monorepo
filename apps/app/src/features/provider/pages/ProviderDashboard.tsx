@@ -591,12 +591,14 @@ export function ProviderDashboard() {
                       badgeContent={
                         <div className="flex flex-col items-end gap-1">
                           <Badge variant="success">Completado</Badge>
-                          {trabajo.calificacionEstrellas && (
+                          {trabajo.calificacionEstrellas ? (
                             <div className="flex gap-0.5">
                               {[1,2,3,4,5].map(s => (
                                 <Star key={s} className={`h-3 w-3 ${s <= trabajo.calificacionEstrellas ? 'text-amber-400 fill-amber-400' : 'text-slate-200 dark:text-dark-border'}`} />
                               ))}
                             </div>
+                          ) : (
+                            <Badge variant="neutral">Sin calificar</Badge>
                           )}
                         </div>
                       }
