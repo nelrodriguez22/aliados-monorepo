@@ -29,7 +29,7 @@ public class BugReportController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BugReportResponseDTO>> listar() {
-        return ResponseEntity.ok(bugReportService.listar());
+    public ResponseEntity<List<BugReportResponseDTO>> listar(Authentication authentication) {
+        return ResponseEntity.ok(bugReportService.listar(authentication.getName()));
     }
 }
