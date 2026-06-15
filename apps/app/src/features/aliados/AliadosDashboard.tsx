@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getToken } from '@/shared/lib/getToken';
 import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
   FileText, Star, Loader2, Bug, ChevronDown, ExternalLink,
+  Wifi, AlertTriangle, TrendingUp, PowerOff, Truck,
 } from 'lucide-react';
 
 const STAT_CONFIG = [
@@ -21,6 +22,18 @@ const CAT_STYLE: Record<string, { label: string; cls: string }> = {
   FUNCIONALIDAD: { label: 'Funcionalidad',  cls: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
   ERROR_TECNICO: { label: 'Error técnico',  cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
   OTRO:          { label: 'Otro',           cls: 'bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary' },
+};
+
+const MUDANZA_ESTADO_STYLE: Record<string, { label: string; cls: string }> = {
+  PENDIENTE:          { label: 'Pendiente',          cls: 'text-amber-600 dark:text-amber-400' },
+  RESERVADO:          { label: 'Reservado',           cls: 'text-brand-600 dark:text-dark-brand' },
+  CONTRAPROPUESTO:    { label: 'Contrapropuesto',     cls: 'text-orange-600 dark:text-orange-400' },
+  ACEPTADO:           { label: 'Aceptado',            cls: 'text-sky-600 dark:text-sky-400' },
+  EN_CURSO:           { label: 'En curso',            cls: 'text-green-600 dark:text-green-400' },
+  FINALIZADO:         { label: 'Finalizado',          cls: 'text-green-700 dark:text-green-300' },
+  PENDIENTE_PAGO_EXTRA: { label: 'Pago extra',        cls: 'text-purple-600 dark:text-purple-400' },
+  COMPLETADO:         { label: 'Completado',          cls: 'text-green-600 dark:text-green-400' },
+  CANCELADO:          { label: 'Cancelado',           cls: 'text-red-500 dark:text-red-400' },
 };
 
 function BugRow({ report }: { report: any }) {
@@ -60,31 +73,89 @@ function BugRow({ report }: { report: any }) {
   );
 }
 
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star key={i} size={12} className={i <= value ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-dark-elevated'} />
+      ))}
+    </span>
+  );
+}
+
+function SectionCard({ title, icon: Icon, iconColor, badge, children }: {
+  title: string; icon: React.ElementType; iconColor: string; badge?: number; children: React.ReactNode;
+}) {
+  return (
+    <div className={`rounded-2xl border bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-dark-border">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+          <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>{title}</h2>
+        </div>
+        {badge !== undefined && badge > 0 && (
+          <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
+            {badge}
+          </span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+async function apiFetch(path: string) {
+  const token = await getToken();
+  const res = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return res.json();
+}
+
 const AliadosDashboard = () => {
+  const queryClient = useQueryClient();
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Error al cargar estadísticas');
-      return res.json();
-    },
+    queryFn: () => apiFetch('/api/admin/stats'),
     refetchInterval: 60000,
   });
 
   const { data: bugReports = [] } = useQuery({
     queryKey: ['admin-bug-reports'],
-    queryFn: async () => {
+    queryFn: () => apiFetch('/api/bug-reports'),
+    refetchInterval: 60000,
+  });
+
+  const { data: proveedoresActivos = [] } = useQuery({
+    queryKey: ['admin-providers-active'],
+    queryFn: () => apiFetch('/api/admin/providers/active'),
+    refetchInterval: 30000,
+  });
+
+  const { data: ratingsData } = useQuery({
+    queryKey: ['admin-ratings'],
+    queryFn: () => apiFetch('/api/admin/ratings/recent'),
+    refetchInterval: 120000,
+  });
+
+  const { data: alertasData } = useQuery({
+    queryKey: ['admin-alerts'],
+    queryFn: () => apiFetch('/api/admin/alerts'),
+    refetchInterval: 30000,
+  });
+
+  const forceOffline = useMutation({
+    mutationFn: async (id: number) => {
       const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/bug-reports`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers/${id}/offline`, {
+        method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
-      return res.json();
     },
-    refetchInterval: 60000,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-providers-active'] }),
   });
 
   if (isLoading) {
@@ -111,6 +182,12 @@ const AliadosDashboard = () => {
     { label: 'En curso',     sub: 'Proveedor trabajando',         value: stats.trabajosEnCurso,     bg: tw.iconBg.green,   text: 'text-green-700 dark:text-green-400'   },
   ];
 
+  const funnel = stats.funnel ?? {};
+  const mudanzas: Record<string, number> = stats.mudanzas ?? {};
+  const trabajosVarados: any[] = alertasData?.trabajosVarados ?? [];
+  const calificacionesRecientes: any[] = ratingsData?.recientes ?? [];
+  const proveedoresBajos: any[] = ratingsData?.proveedoresBajaCalificacion ?? [];
+
   return (
     <div className={`${tw.pageBg} min-h-screen`}>
       <div className="mx-auto max-w-6xl px-4 py-8 lg:px-6">
@@ -120,6 +197,27 @@ const AliadosDashboard = () => {
           <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Panel de administración</h1>
           <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>Estadísticas en tiempo real de Aliados</p>
         </div>
+
+        {/* Alertas — trabajos varados */}
+        {trabajosVarados.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-amber-200 dark:border-amber-700/40 bg-amber-50 dark:bg-amber-900/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                  {trabajosVarados.length} {trabajosVarados.length === 1 ? 'trabajo lleva' : 'trabajos llevan'} más de 30 min sin proveedor
+                </p>
+                <div className="mt-2 space-y-1">
+                  {trabajosVarados.map((t: any) => (
+                    <p key={t.id} className="text-xs text-amber-600 dark:text-amber-500">
+                      #{t.id} · {t.oficio} · {t.direccion} · {t.minutosEsperando} min esperando
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 mb-6">
@@ -140,7 +238,7 @@ const AliadosDashboard = () => {
           })}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2 mb-4">
 
           {/* Trabajos por oficio */}
           <div className={`rounded-2xl border p-6 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
@@ -205,19 +303,163 @@ const AliadosDashboard = () => {
 
         </div>
 
-        {/* Bug reports */}
-        <div className={`mt-4 rounded-2xl border bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-dark-border">
-            <div className="flex items-center gap-2">
-              <Bug className="h-4 w-4 text-red-500" />
-              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Bug reports</h2>
+        {/* Segunda fila: Mudanzas + Funnel */}
+        <div className="grid gap-4 lg:grid-cols-2 mb-4">
+
+          {/* Mudanzas por estado */}
+          <div className={`rounded-2xl border p-6 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
+            <div className="flex items-center gap-2 mb-4">
+              <Truck className="h-4 w-4 text-sky-500" />
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Mudanzas</h2>
             </div>
-            {bugReports.length > 0 && (
-              <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
-                {bugReports.length}
-              </span>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(mudanzas).map(([estado, count]) => {
+                const style = MUDANZA_ESTADO_STYLE[estado];
+                if (!style) return null;
+                return (
+                  <div key={estado} className={`rounded-xl p-3 ${tw.iconBg.slate}`}>
+                    <p className={`text-xs font-medium ${tw.text.muted}`}>{style.label}</p>
+                    <p className={`mt-1 text-xl font-bold ${style.cls}`}>{count}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Funnel de conversión */}
+          <div className={`rounded-2xl border p-6 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Funnel de conversión</h2>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Solicitudes recibidas', value: funnel.pendiente, pct: 100, color: 'bg-brand-500 dark:bg-dark-brand' },
+                { label: 'Propuesta enviada',     value: funnel.propuesto, pct: funnel.tasaPropuesto, color: 'bg-amber-400' },
+                { label: 'Completados',           value: funnel.completado, pct: funnel.tasaCompletado, color: 'bg-green-500' },
+              ].map(({ label, value, pct, color }) => (
+                <div key={label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs ${tw.text.secondary}`}>{label}</span>
+                    <span className={`text-xs font-semibold ${tw.text.primary}`}>{value} <span className={tw.text.muted}>({pct}%)</span></span>
+                  </div>
+                  <div className={`h-2 rounded-full overflow-hidden ${tw.iconBg.slate}`}>
+                    <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              ))}
+              <p className={`text-xs mt-2 ${tw.text.muted}`}>
+                Tasa de éxito (completado vs completado+cancelado): <span className={`font-semibold ${tw.text.primary}`}>{funnel.tasaExito}%</span>
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Proveedores en tiempo real */}
+        <div className="mb-4">
+          <SectionCard title="Proveedores en tiempo real" icon={Wifi} iconColor="text-green-500">
+            {proveedoresActivos.length === 0 ? (
+              <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin proveedores activos</p>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
+                {proveedoresActivos.map((p: any) => (
+                  <div key={p.id} className="flex items-start gap-3 px-4 py-3">
+                    <div className="relative shrink-0">
+                      {p.fotoPerfil ? (
+                        <img src={p.fotoPerfil} alt="" className="h-9 w-9 rounded-full object-cover" />
+                      ) : (
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold ${tw.iconBg.slate} ${tw.text.secondary}`}>
+                          {p.nombre?.[0]}
+                        </div>
+                      )}
+                      <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-dark-surface ${p.status === 'BUSY' ? 'bg-amber-400' : 'bg-green-400'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${tw.text.primary}`}>{p.nombre}</p>
+                      <p className={`text-xs ${tw.text.muted}`}>
+                        {p.oficio} · {p.status === 'BUSY' ? 'Ocupado' : 'Disponible'}
+                      </p>
+                      {p.trabajoActual && (
+                        <p className={`text-xs mt-0.5 ${tw.text.secondary}`}>
+                          Trabajo #{p.trabajoActual.id} — {p.trabajoActual.clienteNombre} · {p.trabajoActual.direccion}
+                        </p>
+                      )}
+                    </div>
+                    {p.status === 'BUSY' && (
+                      <button
+                        type="button"
+                        disabled={forceOffline.isPending}
+                        onClick={() => forceOffline.mutate(p.id)}
+                        className="shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-dark-border px-2.5 py-1.5 text-xs text-slate-500 dark:text-dark-text-secondary hover:border-red-300 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <PowerOff size={11} />
+                        Offline
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Calificaciones recientes + proveedores bajos */}
+        <div className="grid gap-4 lg:grid-cols-2 mb-4">
+
+          <SectionCard title="Calificaciones recientes" icon={Star} iconColor="text-amber-400">
+            {calificacionesRecientes.length === 0 ? (
+              <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin calificaciones</p>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
+                {calificacionesRecientes.map((c: any) => (
+                  <div key={c.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className={`text-sm font-medium ${tw.text.primary}`}>{c.proveedorNombre}</p>
+                      <Stars value={c.estrellas} />
+                    </div>
+                    <p className={`text-xs ${tw.text.muted}`}>por {c.clienteNombre}</p>
+                    {c.comentario && (
+                      <p className={`mt-1 text-xs leading-relaxed ${tw.text.secondary}`}>"{c.comentario}"</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Proveedores con baja calificación" icon={AlertTriangle} iconColor="text-red-500" badge={proveedoresBajos.length}>
+            {proveedoresBajos.length === 0 ? (
+              <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin proveedores bajo umbral</p>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
+                {proveedoresBajos.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                    {p.fotoPerfil ? (
+                      <img src={p.fotoPerfil} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold ${tw.iconBg.slate} ${tw.text.secondary} shrink-0`}>
+                        {p.nombre?.[0]}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${tw.text.primary}`}>{p.nombre}</p>
+                      <Stars value={Math.round(p.promedio)} />
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-red-500 dark:text-red-400">{Number(p.promedio).toFixed(1)}</p>
+                      <p className={`text-xs ${tw.text.muted}`}>{p.total} cal.</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+
+        </div>
+
+        {/* Bug reports */}
+        <SectionCard title="Bug reports" icon={Bug} iconColor="text-red-500" badge={bugReports.length}>
           {bugReports.length === 0 ? (
             <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin reportes</p>
           ) : (
@@ -225,7 +467,7 @@ const AliadosDashboard = () => {
               {bugReports.map((r: any) => <BugRow key={r.id} report={r} />)}
             </div>
           )}
-        </div>
+        </SectionCard>
 
       </div>
     </div>

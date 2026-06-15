@@ -29,6 +29,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRoleAndStatus(UserRole role, UserStatus status);
 
+    @Query("SELECT u FROM User u WHERE u.role = :role AND u.status IN :statuses ORDER BY u.lastSeenAt DESC")
+    List<User> findByRoleAndStatusIn(@Param("role") UserRole role, @Param("statuses") List<UserStatus> statuses);
+
     // Proveedores de fletes/mudanzas (busca por nombre de oficio)
     @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.activo = true AND u.oficio.nombre LIKE '%udanza%' OR u.oficio.nombre LIKE '%lete%'")
     List<User> findProveedoresFletes();
