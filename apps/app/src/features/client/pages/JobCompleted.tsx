@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
-import { getToken } from "@/shared/lib/getToken";
 import { Loader2, CheckCircle, Star } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
 import toast from "react-hot-toast";
@@ -18,32 +19,15 @@ export function JobCompleted() {
   const [hover, setHover]     = useState(0);
   const [review, setReview]   = useState("");
 
-  const { data: trabajo, isLoading } = useQuery({
-    queryKey: ['trabajo', jobId],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar trabajo');
-      return res.json();
-    },
-  });
+  const { data: trabajo, isLoading } = useTrabajo(jobId);
 
   const calificarMutation = useMutation({
     mutationFn: async () => {
       if (rating === 0) throw new Error('Seleccioná al menos una estrella');
-      const token = await getToken();
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/calificaciones/trabajo/${jobId}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ estrellas: rating, comentario: review.trim() || null }),
-        }
-      );
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      return apiClient.post(`/api/calificaciones/trabajo/${jobId}`, {
+        estrellas: rating,
+        comentario: review.trim() || null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajo', jobId] });

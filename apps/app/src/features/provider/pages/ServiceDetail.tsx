@@ -5,8 +5,9 @@ import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useGeocode } from "@/shared/hooks/useGeocode";
 import { MapPin, Clock, DollarSign, FileText, X, Loader2, User, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -30,17 +31,7 @@ export function ServiceDetail() {
   const [showLocationInput, setShowLocationInput] = useState(false);
   const geo = useGeocode();
 
-  const { data: trabajo, isLoading } = useQuery({
-    queryKey: ['trabajo', id],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar trabajo');
-      return res.json();
-    },
-  });
+  const { data: trabajo, isLoading } = useTrabajo(id);
 
   const handleObtenerGPS = async () => {
     const result = await geo.obtenerUbicacionGPS();
@@ -52,19 +43,12 @@ export function ServiceDetail() {
     mutationFn: async () => {
       if (!tiempoEstimado) throw new Error('Seleccioná un tiempo estimado de llegada');
       if (isFlete && (!tarifaCustom || Number(tarifaCustom) <= 0)) throw new Error('Ingresá la tarifa del flete');
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}/proponer`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          tiempoEstimadoMinutos: tiempoEstimado,
-          latitud: geo.coords?.lat ?? null,
-          longitud: geo.coords?.lng ?? null,
-          tarifaVisita: isFlete && tarifaCustom ? Number(tarifaCustom) : null,
-        }),
+      return apiClient.patch(`/api/trabajos/${id}/proponer`, {
+        tiempoEstimadoMinutos: tiempoEstimado,
+        latitud: geo.coords?.lat ?? null,
+        longitud: geo.coords?.lng ?? null,
+        tarifaVisita: isFlete && tarifaCustom ? Number(tarifaCustom) : null,
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-pendientes'] });
@@ -75,15 +59,7 @@ export function ServiceDetail() {
   });
 
   const rechazarMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}/rechazar`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/trabajos/${id}/rechazar`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-pendientes'] });
       toast.success('Trabajo rechazado');

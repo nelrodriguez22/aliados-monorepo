@@ -3,7 +3,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { ArrowLeft, Clock, Truck, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -89,14 +89,7 @@ export function MudanzaDetail() {
 
   const { data: mudanza, isLoading } = useQuery<MudanzaDetail>({
     queryKey: ["mudanza", id],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Error al cargar mudanza");
-      return res.json();
-    },
+    queryFn: () => apiClient.get<MudanzaDetail>(`/api/mudanzas/${id}`),
     refetchInterval: wsConnected ? 30000 : 5000,
   });
 
@@ -119,15 +112,7 @@ export function MudanzaDetail() {
 
   // Mutations
   const aceptarContrapropuesta = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/aceptar-contrapropuesta`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/aceptar-contrapropuesta`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza", id] });
       toast.success("Contrapropuesta aceptada");
@@ -136,15 +121,7 @@ export function MudanzaDetail() {
   });
 
   const rechazarContrapropuesta = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/rechazar-contrapropuesta`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/rechazar-contrapropuesta`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza", id] });
       toast.success("Mudanza cancelada. Se te reembolsará el monto.");
@@ -153,15 +130,7 @@ export function MudanzaDetail() {
   });
 
   const pagarExtra = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/pagar-extra`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/pagar-extra`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza", id] });
       toast.success("Pago extra realizado");
@@ -170,15 +139,7 @@ export function MudanzaDetail() {
   });
 
   const completarMudanza = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/completar`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/completar`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza", id] });
       queryClient.invalidateQueries({ queryKey: ["mudanzas-cliente"] });

@@ -5,8 +5,9 @@ import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Loader2, Clock, Users, CheckCircle, MapPin, FileText, Send } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -18,32 +19,14 @@ export function JobTracking() {
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const [showCancelar, setShowCancelar] = useState(false);
 
-  const { data: trabajo, isLoading } = useQuery({
-    queryKey: ['trabajo', jobId],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar trabajo');
-      return res.json();
-    },
+  const { data: trabajo, isLoading } = useTrabajo(jobId, {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
   const cancelarMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}/cancelar`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ motivo: motivoCancelacion }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/trabajos/${jobId}/cancelar`, { motivo: motivoCancelacion }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Solicitud cancelada');

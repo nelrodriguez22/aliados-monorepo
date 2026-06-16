@@ -4,7 +4,8 @@ import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Loader2, CheckCircle, Clock, Star } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
 
@@ -12,28 +13,13 @@ export function ProviderCompletedJob() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate  = useNavigate();
 
-  const { data: trabajo, isLoading: loadingTrabajo } = useQuery({
-    queryKey: ['trabajo', jobId],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
-  });
+  const { data: trabajo, isLoading: loadingTrabajo } = useTrabajo(jobId);
 
   const { data: calificacion, isLoading: loadingCal } = useQuery({
     queryKey: ['calificacion-detalle', jobId],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/calificaciones/trabajo/${jobId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) return null;
-      return res.json();
+      try { return await apiClient.get(`/api/calificaciones/trabajo/${jobId}`); }
+      catch { return null; }
     },
     enabled: !!trabajo && trabajo.calificado,
   });

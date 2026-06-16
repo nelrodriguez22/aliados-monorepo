@@ -4,8 +4,9 @@ import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Clock, DollarSign, MapPin, Briefcase, Star, Loader2, Info } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,30 +15,13 @@ export function ClientProposal() {
   const navigate    = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: trabajo, isLoading } = useQuery({
-    queryKey: ['trabajo', jobId],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar trabajo');
-      return res.json();
-    },
+  const { data: trabajo, isLoading } = useTrabajo(jobId, {
     staleTime: 0,
     gcTime: 0,
   });
 
   const aceptarMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}/aceptar-propuesta`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/trabajos/${jobId}/aceptar-propuesta`),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Propuesta aceptada. El profesional está en camino.');
@@ -47,15 +31,7 @@ export function ClientProposal() {
   });
 
   const rechazarMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${jobId}/rechazar-propuesta`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/trabajos/${jobId}/rechazar-propuesta`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Propuesta rechazada. Buscando otro profesional...');

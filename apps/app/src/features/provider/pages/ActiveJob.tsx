@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTrabajo } from "@/shared/hooks/useTrabajo";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
@@ -20,41 +21,21 @@ export function ActiveJob() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const updateUserStatus = useStore((state) => state.updateUserStatus);
 
-  const { data: trabajo, isLoading } = useQuery({
-    queryKey: ['trabajo', id],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar el trabajo');
-      return res.json();
-    },
+  const { data: trabajo, isLoading } = useTrabajo(id, {
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
   const completarMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/${id}/completar`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al completar trabajo');
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/trabajos/${id}/completar`),
     onSuccess: async () => {
       queryClient.setQueryData(['trabajo-activo'], null);
       queryClient.removeQueries({ queryKey: ['trabajo-activo'] });
       queryClient.invalidateQueries({ queryKey: ['trabajos-completados'] });
       queryClient.invalidateQueries({ queryKey: ['trabajos-en-cola'] });
       try {
-        const token = await getToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) { const d = await res.json(); updateUserStatus(d.status || 'ONLINE'); }
+        const d = await apiClient.get('/api/users/me');
+        updateUserStatus(d.status || 'ONLINE');
       } catch { /* WebSocket lo actualizará */ }
       navigate(ROUTES.PROVIDER.DASHBOARD);
     },

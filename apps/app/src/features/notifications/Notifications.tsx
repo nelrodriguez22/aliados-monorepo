@@ -6,7 +6,7 @@ import { tw as tw3 } from "@/shared/styles/design-system";
 import { Bell as BellIcon, CheckCheck, Loader2 } from "lucide-react";
 import { ROUTES as ROUTES3 } from "@/shared/constants/routes";
 import { useQuery as useQuery3, useMutation, useQueryClient as useQueryClient3 } from "@tanstack/react-query";
-import { getToken as getToken3 } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { formatDateTime as formatDateTime3 } from "@/shared/lib/dayjs";
 import { useState as useState3 } from "react";
 
@@ -35,23 +35,11 @@ export function Notifications() {
 
   const { data: notificaciones = [], isLoading } = useQuery3<Notificacion[]>({
     queryKey: ['notificaciones'],
-    queryFn: async () => {
-      const token = await getToken3();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get<Notificacion[]>('/api/notificaciones'),
   });
 
   const marcarLeidaMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = await getToken3();
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones/${id}/leer`, {
-        method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
-      });
-    },
+    mutationFn: (id: number) => apiClient.patch(`/api/notificaciones/${id}/leer`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
       queryClient.invalidateQueries({ queryKey: ['notificaciones-unread'] });
@@ -59,12 +47,7 @@ export function Notifications() {
   });
 
   const marcarTodasMutation = useMutation({
-    mutationFn: async () => {
-      const token = await getToken3();
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones/leer-todas`, {
-        method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
-      });
-    },
+    mutationFn: () => apiClient.patch('/api/notificaciones/leer-todas'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
       queryClient.invalidateQueries({ queryKey: ['notificaciones-unread'] });

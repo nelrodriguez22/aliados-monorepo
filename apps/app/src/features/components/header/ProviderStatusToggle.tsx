@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useStore } from "@/shared/store/useStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import toast from "react-hot-toast";
 
 export function ProviderStatusToggle() {
@@ -31,17 +31,7 @@ export function ProviderStatusToggle() {
     startTransition(async () => {
       setOptimisticStatus(newStatus);
       try {
-        const token = await getToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        if (!res.ok) {
-          setOptimisticStatus(userStatus);
-          toast.error('Error al actualizar estado');
-          return;
-        }
+        await apiClient.patch('/api/users/me/status', { status: newStatus });
         updateUserStatus(newStatus);
         if (newStatus === 'ONLINE')
           queryClient.invalidateQueries({ queryKey: ['trabajos-pendientes'] });

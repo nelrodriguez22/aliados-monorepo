@@ -1,25 +1,9 @@
-import { getToken } from "@/shared/lib/getToken";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { apiClient } from "@/shared/lib/apiClient";
 
 export const TrabajoService = {
-  async rechazarTrabajo(trabajoId: string) {
-    const token = await getToken();
-    const res = await fetch(`${API_URL}/api/trabajos/${trabajoId}/rechazar`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error('Error al rechazar el trabajo');
-    return res.json();
-  },
+  rechazarTrabajo: (trabajoId: string) =>
+    apiClient.patch(`/api/trabajos/${trabajoId}/rechazar`),
 
-  async completarTrabajo(trabajoId: string) {
-    const token = await getToken();
-    const res = await fetch(`${API_URL}/api/trabajos/${trabajoId}/completar`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error('Error al completar el trabajo');
-    return res.json();
-  },
+  completarTrabajo: (trabajoId: string) =>
+    apiClient.patch(`/api/trabajos/${trabajoId}/completar`),
 };

@@ -3,7 +3,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { ArrowLeft,Truck,Loader2, Play, Square, Image } from "lucide-react";
 import toast from "react-hot-toast";
@@ -83,24 +83,13 @@ export function ProviderMudanzaDetail() {
 
   const { data: mudanza, isLoading } = useQuery<MudanzaDetail>({
     queryKey: ["mudanza-prov", id],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Error al cargar mudanza");
-      return res.json();
-    },
+    queryFn: () => apiClient.get<MudanzaDetail>(`/api/mudanzas/${id}`),
     refetchInterval: wsConnected ? 30000 : 5000,
   });
 
   const { data: tiers = [] } = useQuery<Tier[]>({
     queryKey: ["mudanza-tiers"],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/tiers`);
-      if (!res.ok) throw new Error("Error");
-      return res.json();
-    },
+    queryFn: () => apiClient.get<Tier[]>('/api/mudanzas/tiers', false),
   });
 
   // Cronómetro
@@ -124,14 +113,7 @@ export function ProviderMudanzaDetail() {
   const aceptar = useMutation({
     mutationFn: async () => {
       if (!turnoSeleccionado) throw new Error("Seleccioná un turno");
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/aceptar`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ turno: turnoSeleccionado }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      return apiClient.patch(`/api/mudanzas/${id}/aceptar`, { turno: turnoSeleccionado });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza-prov", id] });
@@ -144,19 +126,12 @@ export function ProviderMudanzaDetail() {
     mutationFn: async () => {
       if (!tierSugeridoId && !fechaSugerida) throw new Error("Sugerí un cambio de plan, fecha, o ambos");
       if (!turnoSeleccionado) throw new Error("Seleccioná un turno");
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/contraproponer`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          tierSugeridoId: tierSugeridoId || null,
-          fechaSugerida: fechaSugerida || null,
-          turno: turnoSeleccionado,
-          motivo,
-        }),
+      return apiClient.patch(`/api/mudanzas/${id}/contraproponer`, {
+        tierSugeridoId: tierSugeridoId || null,
+        fechaSugerida: fechaSugerida || null,
+        turno: turnoSeleccionado,
+        motivo,
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza-prov", id] });
@@ -167,15 +142,7 @@ export function ProviderMudanzaDetail() {
   });
 
   const iniciar = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/iniciar`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/iniciar`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza-prov", id] });
       toast.success("Mudanza iniciada. Cronómetro activado.");
@@ -184,15 +151,7 @@ export function ProviderMudanzaDetail() {
   });
 
   const finalizar = useMutation({
-    mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/${id}/finalizar`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    mutationFn: () => apiClient.patch(`/api/mudanzas/${id}/finalizar`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mudanza-prov", id] });
       toast.success("Mudanza finalizada");

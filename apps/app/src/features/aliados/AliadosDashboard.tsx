@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getToken } from '@/shared/lib/getToken';
+import { apiClient } from '@/shared/lib/apiClient';
 import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
@@ -104,14 +104,7 @@ function SectionCard({ title, icon: Icon, iconColor, badge, children }: {
   );
 }
 
-async function apiFetch(path: string) {
-  const token = await getToken();
-  const res = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`Error ${res.status}`);
-  return res.json();
-}
+const apiFetch = (path: string) => apiClient.get(path);
 
 const AliadosDashboard = () => {
   const queryClient = useQueryClient();
@@ -147,14 +140,7 @@ const AliadosDashboard = () => {
   });
 
   const forceOffline = useMutation({
-    mutationFn: async (id: number) => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers/${id}/offline`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-    },
+    mutationFn: (id: number) => apiClient.patch(`/api/admin/providers/${id}/offline`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-providers-active'] }),
   });
 

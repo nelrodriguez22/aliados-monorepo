@@ -8,7 +8,7 @@ import { ROUTES as ROUTES2 } from "@/shared/constants/routes";
 import { tw as tw2 } from "@/shared/styles/design-system";
 import toast from "react-hot-toast";
 import { useQuery as useQuery2, useQueryClient as useQueryClient2 } from "@tanstack/react-query";
-import { getToken as getToken2 } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Sun, Moon } from "lucide-react";
 
 interface UserMenuProps { variant: 'client' | 'provider' | 'admin'; }
@@ -32,12 +32,8 @@ export function UserMenu({ variant }: UserMenuProps) {
   const { data: calificacionData } = useQuery2({
     queryKey: ['calificacion-promedio'],
     queryFn: async () => {
-      const token = await getToken2();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/calificaciones/proveedor/promedio`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return { promedio: 0, total: 0 };
-      return res.json();
+      try { return await apiClient.get('/api/calificaciones/proveedor/promedio'); }
+      catch { return { promedio: 0, total: 0 }; }
     },
     enabled: isAuthenticated && variant === 'provider',
     staleTime: 60000,

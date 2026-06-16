@@ -1,4 +1,4 @@
-import { useActionState, useState, useEffect } from "react";
+import { useActionState, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
@@ -14,11 +14,11 @@ import {
 import icono from "@/assets/icono.png";
 import { ROUTES } from "@/shared/constants/routes";
 import { tw } from "@/shared/styles/design-system";
+import { useOficios } from "@/shared/hooks/useOficios";
 import toast from "react-hot-toast";
 
 type UserRole     = "CLIENT" | "PROVIDER";
 type RegisterState = { fieldErrors?: Record<string, string> } | null;
-type Oficio        = { id: number; nombre: string; icono: string };
 
 const handleFirebaseError = (code: string) => {
   switch (code) {
@@ -84,17 +84,10 @@ export function Register() {
   const [selectedRole, setSelectedRole]   = useState<UserRole | null>(null);
   const [showPassword, setShowPassword]   = useState(false);
   const [showConfirm, setShowConfirm]     = useState(false);
-  const [oficios, setOficios]             = useState<Oficio[]>([]);
   const [selectedOficio, setSelectedOficio] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (selectedRole === "PROVIDER") {
-      fetch(`${import.meta.env.VITE_API_URL}/api/oficios`)
-        .then((r) => r.json())
-        .then(setOficios)
-        .catch(() => toast.error('Error al cargar los oficios'));
-    }
-  }, [selectedRole]);
+  // Catálogo compartido (cache ['oficios']); solo se pide para proveedores.
+  const { data: oficios = [] } = useOficios({ enabled: selectedRole === "PROVIDER" });
 
   const [state, submitAction, isPending] = useActionState(
     async (_prev: RegisterState, formData: FormData): Promise<RegisterState> => {

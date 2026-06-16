@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { messaging } from '@/shared/lib/firebase';
 import { getToken, onMessage } from 'firebase/messaging';
-import { getToken as getAuthToken } from '@/shared/lib/getToken';
+import { apiClient } from '@/shared/lib/apiClient';
 import toast from 'react-hot-toast';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BFDfb_tFWtvZrF9YSAjLzQA8neaAdb6XIqEPPomSapukBbBnyx7XGihCWGw6YNvlJ9MR7JNCqhM9led9OaNIxjQ';
@@ -40,15 +40,7 @@ export function usePushNotifications() {
 
         if (fcmToken) {
           // Enviar token al backend
-          const authToken = await getAuthToken();
-          await fetch(`${import.meta.env.VITE_API_URL}/api/users/fcm-token`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify({ token: fcmToken }),
-          });
+          await apiClient.post('/api/users/fcm-token', { token: fcmToken });
           console.log('✅ FCM token registrado');
         }
         return true;

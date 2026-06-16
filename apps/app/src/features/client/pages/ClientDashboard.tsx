@@ -9,9 +9,10 @@ import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
+import { useOficios } from "@/shared/hooks/useOficios";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number | string, JSX.Element> = {
@@ -139,14 +140,7 @@ export function ClientDashboard() {
   const [showHistory, setShowHistory] = useState(() => searchParams.get('view') === 'all');
 
   // Oficios desde la API para el buscador
-  const { data: oficiosApi = [] } = useQuery({
-    queryKey: ['oficios'],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/oficios`);
-      if (!res.ok) throw new Error('Error al cargar oficios');
-      return res.json();
-    },
-  });
+  const { data: oficiosApi = [] } = useOficios();
 
   // Combinar oficios de la API + Mudanzas para el buscador
   const oficiosBuscador = [
@@ -156,14 +150,7 @@ export function ClientDashboard() {
 
   const { data: todosTrabajos = [], isLoading: loadingTrabajos } = useQuery({
     queryKey: ['trabajos-cliente'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/cliente`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar trabajos');
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/trabajos/cliente'),
     staleTime: 30000,
     refetchOnMount: true,
     refetchInterval: wsConnected ? 120000 : 30000,
@@ -171,14 +158,7 @@ export function ClientDashboard() {
 
   const { data: mudanzasCliente = [] } = useQuery({
     queryKey: ['mudanzas-cliente'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/cliente`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Error al cargar mudanzas');
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/mudanzas/cliente'),
     staleTime: 30000,
     refetchOnMount: true,
     refetchInterval: wsConnected ? 120000 : 30000,
@@ -331,7 +311,7 @@ export function ClientDashboard() {
                     onClick={() => handleSuggestionClick(oficio)}
                     className={tw.dropdownItem}
                   >
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${ICON_BG_CLASSES[oficio.id - 1]}`}>
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${ICON_BG_CLASSES[(oficio.id as number) - 1]}`}>
                       {OFICIO_ICONS[oficio.id]}
                     </span>
                     <span className={`font-medium text-sm ${tw.text.primary}`}>{oficio.nombre}</span>

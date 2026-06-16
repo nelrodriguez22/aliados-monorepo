@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOficios } from "@/shared/hooks/useOficios";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useGeocode } from "@/shared/hooks/useGeocode";
 import { MapPin, Loader2, Plus, X, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -57,14 +58,7 @@ export function ServiceRequest() {
   const geo = useGeocode();
   const geoDestino = useGeocode();
 
-  const { data: oficios = [] } = useQuery({
-    queryKey: ['oficios'],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/oficios`);
-      if (!res.ok) throw new Error('Error al cargar oficios');
-      return res.json();
-    },
-  });
+  const { data: oficios = [] } = useOficios();
 
   const isFlete = oficios.find((o: any) => o.id === selectedOficio)?.nombre === 'Flete';
 
@@ -105,22 +99,15 @@ export function ServiceRequest() {
         };
       }
 
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          oficioId: selectedOficio,
-          descripcion: description,
-          direccion: geo.direccion,
-          latitudCliente: finalCoords.lat,
-          longitudCliente: finalCoords.lng,
-          ...destinoData,
-          fotos: imagenes.length > 0 ? JSON.stringify(imagenes) : null,
-        }),
+      return apiClient.post('/api/trabajos', {
+        oficioId: selectedOficio,
+        descripcion: description,
+        direccion: geo.direccion,
+        latitudCliente: finalCoords.lat,
+        longitudCliente: finalCoords.lng,
+        ...destinoData,
+        fotos: imagenes.length > 0 ? JSON.stringify(imagenes) : null,
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: (trabajo) => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });

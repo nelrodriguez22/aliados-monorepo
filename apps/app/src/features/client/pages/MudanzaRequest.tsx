@@ -4,7 +4,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useGeocode } from "@/shared/hooks/useGeocode";
 import { MapPin, Loader2, Plus, X, CheckCircle, ArrowLeft, ArrowRight, Truck, Building2, Camera, Calendar, Home } from "lucide-react";
 import toast from "react-hot-toast";
@@ -68,11 +68,7 @@ export function MudanzaRequest() {
   // Fetch tiers
   const { data: tiers = [], isLoading: loadingTiers } = useQuery<Tier[]>({
     queryKey: ["mudanza-tiers"],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/tiers`);
-      if (!res.ok) throw new Error("Error al cargar planes");
-      return res.json();
-    },
+    queryFn: () => apiClient.get<Tier[]>('/api/mudanzas/tiers', false),
   });
 
   // Crear + reservar en un solo flow
@@ -85,41 +81,25 @@ export function MudanzaRequest() {
       if (!fechaDeseada) throw new Error("Seleccioná una fecha");
       if (fechaDeseada <= new Date().toISOString().split("T")[0]) throw new Error("La fecha debe ser posterior a hoy");
 
-      const token = await getToken();
-
       // 1. Crear mudanza
-      const resCrear = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          tierId: selectedTier.id,
-          direccionOrigen: origen.direccion,
-          latitudOrigen: origen.coords.lat,
-          longitudOrigen: origen.coords.lng,
-          direccionDestino: destino.direccion,
-          latitudDestino: destino.coords.lat,
-          longitudDestino: destino.coords.lng,
-          pisos,
-          tieneAscensor,
-          cantidadAmbientes,
-          fechaDeseada,
-          fotos: JSON.stringify(imagenes),
-          notasCliente: notas || null,
-        }),
+      const mudanza = await apiClient.post('/api/mudanzas', {
+        tierId: selectedTier.id,
+        direccionOrigen: origen.direccion,
+        latitudOrigen: origen.coords.lat,
+        longitudOrigen: origen.coords.lng,
+        direccionDestino: destino.direccion,
+        latitudDestino: destino.coords.lat,
+        longitudDestino: destino.coords.lng,
+        pisos,
+        tieneAscensor,
+        cantidadAmbientes,
+        fechaDeseada,
+        fotos: JSON.stringify(imagenes),
+        notasCliente: notas || null,
       });
-      if (!resCrear.ok) throw new Error(await resCrear.text());
-      const mudanza = await resCrear.json();
 
       // 2. Reservar (simula pago)
-      const resReservar = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/mudanzas/${mudanza.id}/reservar`,
-        {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!resReservar.ok) throw new Error(await resReservar.text());
-      return resReservar.json();
+      return apiClient.patch(`/api/mudanzas/${mudanza.id}/reservar`);
     },
     onSuccess: (mudanza) => {
       queryClient.invalidateQueries({ queryKey: ["mudanzas-cliente"] });

@@ -7,7 +7,7 @@ import { tw } from "@/shared/styles/design-system";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { useEffect } from "react";
 import { useStore } from "@/shared/store/useStore";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
@@ -126,14 +126,7 @@ export function ProviderDashboard() {
 
   const { data: trabajoActivo, isLoading: loadingActivo } = useQuery({
     queryKey: ['trabajo-activo'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/activo`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/trabajos/activo'),
     enabled: isBusy,
     refetchInterval: false,
     staleTime: Infinity,
@@ -142,12 +135,8 @@ export function ProviderDashboard() {
   const { data: trabajosEnCola = [] } = useQuery({
     queryKey: ['trabajos-en-cola'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/en-cola`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return [];
-      return res.json();
+      try { return await apiClient.get('/api/trabajos/en-cola'); }
+      catch { return []; }
     },
     enabled: isBusy,
     refetchInterval: false,
@@ -155,14 +144,7 @@ export function ProviderDashboard() {
 
   const { data: trabajosPendientes = [], isLoading: loadingPendientes } = useQuery({
     queryKey: ['trabajos-pendientes'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/pendientes`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/trabajos/pendientes'),
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
@@ -171,26 +153,15 @@ export function ProviderDashboard() {
 
   const { data: trabajosCompletados = [], isLoading: loadingCompletados } = useQuery({
     queryKey: ['trabajos-completados'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trabajos/completados`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/trabajos/completados'),
     refetchInterval: false,
   });
 
   const { data: mudanzasPendientes = [] } = useQuery({
     queryKey: ['mudanzas-pendientes-prov'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/pendientes`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return [];
-      return res.json();
+      try { return await apiClient.get('/api/mudanzas/proveedor/pendientes'); }
+      catch { return []; }
     },
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
@@ -200,13 +171,10 @@ export function ProviderDashboard() {
   const { data: mudanzaActiva } = useQuery({
     queryKey: ['mudanza-activa-prov'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/activa`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data && data.id ? data : null;
+      try {
+        const data = await apiClient.get('/api/mudanzas/proveedor/activa');
+        return data && data.id ? data : null;
+      } catch { return null; }
     },
     refetchOnMount: 'always',
   });
@@ -214,12 +182,8 @@ export function ProviderDashboard() {
   const { data: mudanzasConfirmadas = [] } = useQuery({
     queryKey: ['mudanzas-confirmadas-prov'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/mudanzas/proveedor/confirmadas`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return [];
-      return res.json();
+      try { return await apiClient.get('/api/mudanzas/proveedor/confirmadas'); }
+      catch { return []; }
     },
     refetchOnMount: 'always',
   });

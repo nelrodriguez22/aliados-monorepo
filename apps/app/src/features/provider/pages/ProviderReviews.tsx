@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { Loader2, Star } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
 
@@ -13,26 +13,12 @@ export function ProviderReviews() {
 
   const { data: promedio, isLoading: loadingPromedio } = useQuery({
     queryKey: ['calificacion-promedio'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/calificaciones/proveedor/promedio`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/calificaciones/proveedor/promedio'),
   });
 
   const { data: resenas = [], isLoading: loadingResenas } = useQuery({
     queryKey: ['calificaciones-proveedor'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/calificaciones/proveedor/todas`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
+    queryFn: () => apiClient.get('/api/calificaciones/proveedor/todas'),
   });
 
   if (loadingPromedio || loadingResenas) {

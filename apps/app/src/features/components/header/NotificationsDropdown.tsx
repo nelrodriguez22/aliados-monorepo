@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import { useStore } from "@/shared/store/useStore";
 import { formatDateTime } from "@/shared/lib/dayjs";
 import { ROUTES } from "@/shared/constants/routes";
@@ -20,12 +20,8 @@ export function NotificationsDropdown({ isClient }: NotifDropdownProps) {
   const { data: unreadData } = useQuery({
     queryKey: ['notificaciones-unread'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return { count: 0 };
-      return res.json();
+      try { return await apiClient.get('/api/notificaciones/unread-count'); }
+      catch { return { count: 0 }; }
     },
     enabled: isAuthenticated,
     staleTime: 60000,
@@ -34,12 +30,10 @@ export function NotificationsDropdown({ isClient }: NotifDropdownProps) {
   const { data: notificaciones = [] } = useQuery({
     queryKey: ['notificaciones-preview'],
     queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      return (await res.json()).slice(0, 5);
+      try {
+        const data = await apiClient.get<any[]>('/api/notificaciones');
+        return data.slice(0, 5);
+      } catch { return []; }
     },
     enabled: isAuthenticated && show,
   });
@@ -56,11 +50,7 @@ export function NotificationsDropdown({ isClient }: NotifDropdownProps) {
 
   const marcarLeidas = async () => {
     try {
-      const token = await getToken();
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notificaciones/leer-todas`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.patch('/api/notificaciones/leer-todas');
       queryClient.setQueryData(['notificaciones-unread'], { count: 0 });
       queryClient.invalidateQueries({ queryKey: ['notificaciones-preview'] });
       queryClient.invalidateQueries({ queryKey: ['notificaciones'] });

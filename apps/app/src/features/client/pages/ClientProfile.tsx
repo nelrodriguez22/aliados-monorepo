@@ -7,7 +7,7 @@ import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCi
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
 import { useMutation } from "@tanstack/react-query";
-import { getToken } from "@/shared/lib/getToken";
+import { apiClient } from "@/shared/lib/apiClient";
 import toast from "react-hot-toast";
 
 export function ClientProfile() {
@@ -23,16 +23,7 @@ export function ClientProfile() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Error al actualizar perfil');
-      return res.json();
-    },
+    mutationFn: (data: typeof formData) => apiClient.put('/api/users/me', data),
     onSuccess: (data) => {
       login({ ...user!, name: data.nombre, telefono: data.telefono, localidad: data.localidad });
       setIsEditing(false);
