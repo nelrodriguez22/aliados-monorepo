@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Client } from '@stomp/stompjs';
-import type { StompSubscription } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import type { Client, StompSubscription } from '@stomp/stompjs';
 import { auth } from '@/shared/lib/firebase';
 import { useStore } from '@/shared/store/useStore';
 import { useQueryClient } from '@tanstack/react-query';
@@ -55,6 +53,13 @@ export const useWebSocket = () => {
         // La autenticación real se hace con el header Authorization del frame STOMP CONNECT
         // (ver WebSocketAuthInterceptor en el backend).
         const wsUrl = `${import.meta.env.VITE_API_URL}/ws`;
+
+        // Carga diferida: sockjs + stomp solo se descargan al conectar
+        // (usuario autenticado), no en el arranque de la app.
+        const [{ Client }, { default: SockJS }] = await Promise.all([
+          import('@stomp/stompjs'),
+          import('sockjs-client'),
+        ]);
 
         const client = new Client({
           // @ts-ignore - SockJS type mismatch
