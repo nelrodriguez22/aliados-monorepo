@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging } from 'firebase/messaging';
 import { getAuth } from 'firebase/auth';
+import type { Messaging } from 'firebase/messaging';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -20,4 +20,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export default app;
-export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+
+// Messaging se carga de forma diferida (import dinámico): firebase/messaging
+// queda fuera del bundle inicial y solo se descarga cuando se usa push.
+// La promesa se cachea para no reinicializar en cada llamada.
+let messagingPromise: Promise<Messaging | null> | null = null;
+export function getMessagingInstance(): Promise<Messaging | null> {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (!messagingPromise) {
+    messagingPromise = import('firebase/messaging').then(({ getMessaging }) =>
+      getMessaging(app),
+    );
+  }
+  return messagingPromise;
+}

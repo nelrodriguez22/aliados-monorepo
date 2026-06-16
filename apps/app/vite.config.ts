@@ -74,8 +74,10 @@ export default defineConfig({
               priority: 20,
             },
             {
+              // Excluye messaging: se carga vía import() dinámico en su propio
+              // chunk async (ver getMessagingInstance en shared/lib/firebase).
               name: "vendor-firebase",
-              test: /[\\/]node_modules[\\/]firebase[\\/]/,
+              test: /[\\/]node_modules[\\/]firebase[\\/](?!messaging)/,
               priority: 15,
             },
             {

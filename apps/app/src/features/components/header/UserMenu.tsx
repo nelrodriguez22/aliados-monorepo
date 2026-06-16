@@ -1,35 +1,35 @@
-import { useRef as useRef2, useState as useState2, useEffect as useEffect2 } from "react";
-import { useNavigate as useNavigate2 } from "react-router-dom";
+import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Briefcase, CreditCard, Settings, LogOut, Star } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
-import { useStore as useStore2, useStore as useStore3 } from "@/shared/store/useStore";
-import { ROUTES as ROUTES2 } from "@/shared/constants/routes";
-import { tw as tw2 } from "@/shared/styles/design-system";
+import { useStore } from "@/shared/store/useStore";
+import { ROUTES } from "@/shared/constants/routes";
+import { tw } from "@/shared/styles/design-system";
 import toast from "react-hot-toast";
-import { useQuery as useQuery2, useQueryClient as useQueryClient2 } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Sun, Moon } from "lucide-react";
 
 interface UserMenuProps { variant: 'client' | 'provider' | 'admin'; }
 
 export function UserMenu({ variant }: UserMenuProps) {
-  const navigate    = useNavigate2();
-  const ref         = useRef2<HTMLDivElement>(null);
-  const [show, setShow] = useState2(false);
-  const user        = useStore2((s) => s.user);
-  const logout      = useStore2((s) => s.logout);
-  const isAuthenticated = useStore2((s) => s.isAuthenticated);
-  const queryClient = useQueryClient2();
-  const theme = useStore3((s) => s.theme);
-  const setTheme = useStore3((s) => s.setTheme);
+  const navigate    = useNavigate();
+  const ref         = useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(false);
+  const user        = useStore((s) => s.user);
+  const logout      = useStore((s) => s.logout);
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const queryClient = useQueryClient();
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
   const isDark = theme === 'dark';
 
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
     : '?';
 
-  const { data: calificacionData } = useQuery2({
+  const { data: calificacionData } = useQuery({
     queryKey: ['calificacion-promedio'],
     queryFn: async () => {
       try { return await apiClient.get('/api/calificaciones/proveedor/promedio'); }
@@ -39,7 +39,7 @@ export function UserMenu({ variant }: UserMenuProps) {
     staleTime: 60000,
   });
 
-  useEffect2(() => {
+  useEffect(() => {
     const handle = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setShow(false);
     };
@@ -56,7 +56,7 @@ export function UserMenu({ variant }: UserMenuProps) {
       'trabajos-en-cola','trabajos-completados','calificacion-promedio','notificaciones-unread',
     ].forEach((k) => queryClient.removeQueries({ queryKey: [k] }));
     toast.success('Sesión cerrada');
-    navigate(ROUTES2.LOGIN);
+    navigate(ROUTES.LOGIN);
   };
 
   const go = (path: string) => {
@@ -76,8 +76,8 @@ export function UserMenu({ variant }: UserMenuProps) {
     <button
       onClick={onClick}
       className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm transition
-        cursor-pointer ${tw2.text.secondary}
-        hover:bg-slate-50 dark:hover:bg-dark-border-strong hover:${tw2.text.primary}`}
+        cursor-pointer ${tw.text.secondary}
+        hover:bg-slate-50 dark:hover:bg-dark-border-strong hover:${tw.text.primary}`}
     >
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 shrink-0" />
@@ -93,7 +93,7 @@ export function UserMenu({ variant }: UserMenuProps) {
         onClick={() => setShow(!show)}
         aria-label="Menú de usuario"
         className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition
-          ${tw2.iconBg.brand} hover:opacity-80`}
+          ${tw.iconBg.brand} hover:opacity-80`}
       >
         <span className={`text-sm font-semibold text-brand-600 dark:text-dark-brand`}>{initials}</span>
       </button>
@@ -103,8 +103,8 @@ export function UserMenu({ variant }: UserMenuProps) {
 
           {/* User info */}
           <div className={`px-4 py-3 border-b border-slate-200 dark:border-dark-border-strong`}>
-            <p className={`text-sm font-semibold truncate ${tw2.text.primary}`}>{user?.name}</p>
-            <p className={`text-xs truncate ${tw2.text.muted}`}>{user?.email}</p>
+            <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>{user?.name}</p>
+            <p className={`text-xs truncate ${tw.text.muted}`}>{user?.email}</p>
           </div>
 
           {/* Items */}
@@ -114,7 +114,7 @@ export function UserMenu({ variant }: UserMenuProps) {
               <button
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
                 className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-sm transition
-                  cursor-pointer ${tw2.text.secondary}
+                  cursor-pointer ${tw.text.secondary}
                   hover:bg-slate-50 dark:hover:bg-dark-border-strong`}
               >
                 <div className="flex items-center gap-3">
@@ -133,26 +133,26 @@ export function UserMenu({ variant }: UserMenuProps) {
             </div>
             {variant === 'client' && (
               <>
-                <Item onClick={() => go(ROUTES2.CLIENT.PROFILE)}                         icon={User}       label="Mi perfil" />
-                <Item onClick={() => go(`${ROUTES2.CLIENT.DASHBOARD}?view=all`)}         icon={Briefcase}  label="Historial de trabajos" />
-                <Item onClick={() => go(ROUTES2.CLIENT.PAYMENT_METHODS)}                 icon={CreditCard} label="Métodos de pago" />
-                <Item onClick={() => go(ROUTES2.CLIENT.SETTINGS)}                        icon={Settings}   label="Configuración" />
+                <Item onClick={() => go(ROUTES.CLIENT.PROFILE)}                         icon={User}       label="Mi perfil" />
+                <Item onClick={() => go(`${ROUTES.CLIENT.DASHBOARD}?view=all`)}         icon={Briefcase}  label="Historial de trabajos" />
+                <Item onClick={() => go(ROUTES.CLIENT.PAYMENT_METHODS)}                 icon={CreditCard} label="Métodos de pago" />
+                <Item onClick={() => go(ROUTES.CLIENT.SETTINGS)}                        icon={Settings}   label="Configuración" />
               </>
             )}
             {variant === 'provider' && (
               <>
-                <Item onClick={() => go(ROUTES2.PROVIDER.PROFILE)} icon={User} label="Mi perfil" />
+                <Item onClick={() => go(ROUTES.PROVIDER.PROFILE)} icon={User} label="Mi perfil" />
                 <Item
-                  onClick={() => go(ROUTES2.PROVIDER.REVIEWS)}
+                  onClick={() => go(ROUTES.PROVIDER.REVIEWS)}
                   icon={Star}
                   label="Mis reseñas"
                   meta={calificacionData?.total > 0 ? (
-                    <span className={`text-[11px] ${tw2.text.faint}`}>
+                    <span className={`text-[11px] ${tw.text.faint}`}>
                       {Number(calificacionData.promedio).toFixed(1)} · {calificacionData.total}
                     </span>
                   ) : undefined}
                 />
-                <Item onClick={() => go(ROUTES2.PROVIDER.SETTINGS)} icon={Settings} label="Configuración" />
+                <Item onClick={() => go(ROUTES.PROVIDER.SETTINGS)} icon={Settings} label="Configuración" />
               </>
             )}
           </div>
