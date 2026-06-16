@@ -48,7 +48,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern:
-              /^https:\/\/aliados-web-backend-prd\.up\.railway\.app\/.*/i,
+              /^https:\/\/api\.aliados-app\.convivirtech\.com\.ar\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "api-cache",
@@ -79,6 +79,17 @@ export default defineConfig({
               name: "vendor-firebase",
               test: /[\\/]node_modules[\\/]firebase[\\/](?!messaging)/,
               priority: 15,
+            },
+            {
+              // WebSocket (sockjs + stomp): pesado, fuera del chunk de entrada.
+              name: "vendor-ws",
+              test: /[\\/]node_modules[\\/](sockjs-client|@stomp[\\/]stompjs)[\\/]/,
+              priority: 12,
+            },
+            {
+              name: "vendor-crypto",
+              test: /[\\/]node_modules[\\/]crypto-js[\\/]/,
+              priority: 12,
             },
             {
               name: "vendor-query",

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import CryptoJS from 'crypto-js';
+import AES from 'crypto-js/aes';
+import encUtf8 from 'crypto-js/enc-utf8';
 import type { Store } from '@/shared/types/interfaces';
 
 const ENCRYPTION_KEY = import.meta.env.VITE_STORAGE_KEY || 'aliados-key';
@@ -10,14 +11,14 @@ const encryptedStorage = {
     const value = localStorage.getItem(name);
     if (!value) return null;
     try {
-      const bytes = CryptoJS.AES.decrypt(value, ENCRYPTION_KEY);
-      return bytes.toString(CryptoJS.enc.Utf8);
+      const bytes = AES.decrypt(value, ENCRYPTION_KEY);
+      return bytes.toString(encUtf8);
     } catch {
       return null;
     }
   },
   setItem: (name: string, value: string) => {
-    const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString();
+    const encrypted = AES.encrypt(value, ENCRYPTION_KEY).toString();
     localStorage.setItem(name, encrypted);
   },
   removeItem: (name: string) => {
