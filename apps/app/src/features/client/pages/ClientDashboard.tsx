@@ -11,6 +11,7 @@ import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-r
 import { useStore } from "@/shared/store/useStore";
 import { getToken } from "@/shared/lib/getToken";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
+import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number | string, JSX.Element> = {
@@ -125,6 +126,8 @@ function SkeletonHistorial() {
 // ── Componente principal ──
 export function ClientDashboard() {
   const navigate = useNavigate();
+  // Con WS conectado los cambios llegan por push → poll lento de respaldo.
+  const { isConnected: wsConnected } = useWebSocketContext();
   const [searchParams] = useSearchParams();
   const { user } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
@@ -163,7 +166,7 @@ export function ClientDashboard() {
     },
     staleTime: 30000,
     refetchOnMount: true,
-    refetchInterval: 30000,
+    refetchInterval: wsConnected ? 120000 : 30000,
   });
 
   const { data: mudanzasCliente = [] } = useQuery({
@@ -178,7 +181,7 @@ export function ClientDashboard() {
     },
     staleTime: 30000,
     refetchOnMount: true,
-    refetchInterval: 30000,
+    refetchInterval: wsConnected ? 120000 : 30000,
   });
 
   const mudanzasActivas = mudanzasCliente.filter((m: any) =>

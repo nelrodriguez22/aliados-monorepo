@@ -11,6 +11,7 @@ import { getToken } from "@/shared/lib/getToken";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
+import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import {
   Bell, MapPin, Clock, CheckCircle,
   Star, ClipboardList, ZapOff, Users, Truck, X, Calendar,
@@ -116,6 +117,8 @@ export function ProviderDashboard() {
   const [showAgenda, setShowAgenda] = useState(false);
   const [agendaMesActivo, setAgendaMesActivo] = useState<string>('');
   const queryClient = useQueryClient();
+  // Con WS conectado los cambios llegan por push → poll lento de respaldo.
+  const { isConnected: wsConnected } = useWebSocketContext();
 
   const userStatus = user?.status || 'OFFLINE';
   const isOnline   = userStatus === 'ONLINE';
@@ -163,7 +166,7 @@ export function ProviderDashboard() {
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
-    refetchInterval: 30000,
+    refetchInterval: wsConnected ? 120000 : 30000,
   });
 
   const { data: trabajosCompletados = [], isLoading: loadingCompletados } = useQuery({
@@ -191,7 +194,7 @@ export function ProviderDashboard() {
     },
     enabled: isOnline || isBusy,
     refetchOnMount: 'always',
-    refetchInterval: 30000,
+    refetchInterval: wsConnected ? 120000 : 30000,
   });
 
   const { data: mudanzaActiva } = useQuery({

@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getToken } from "@/shared/lib/getToken";
+import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { ArrowLeft,Truck,Loader2, Play, Square, Image } from "lucide-react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/shared/constants/routes";
@@ -70,6 +71,8 @@ export function ProviderMudanzaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Con WS conectado los cambios de estado llegan por push → poll lento de respaldo.
+  const { isConnected: wsConnected } = useWebSocketContext();
 
   const [elapsed, setElapsed] = useState(0);
   const [showContrapropuesta, setShowContrapropuesta] = useState(false);
@@ -88,7 +91,7 @@ export function ProviderMudanzaDetail() {
       if (!res.ok) throw new Error("Error al cargar mudanza");
       return res.json();
     },
-    refetchInterval: 5000,
+    refetchInterval: wsConnected ? 30000 : 5000,
   });
 
   const { data: tiers = [] } = useQuery<Tier[]>({
