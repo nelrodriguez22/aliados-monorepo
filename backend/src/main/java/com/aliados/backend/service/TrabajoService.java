@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true) // sesión abierta durante el mapeo a DTO (asociaciones LAZY); los writers la sobreescriben con @Transactional
 public class TrabajoService {
 
     @Autowired
@@ -313,6 +314,7 @@ public class TrabajoService {
         return dto;
     }
 
+    @Transactional
     public void asignarTrabajosAProveedorQueSeConecta(User proveedor) {
         if (proveedor.getLocalidad() == null || !proveedor.getLocalidad().equalsIgnoreCase("Rosario")) {
             return;

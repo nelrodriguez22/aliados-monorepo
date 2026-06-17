@@ -122,7 +122,13 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 
 ### Fase 3 — Rendimiento
 - [x] #6 Índices (incluidos en `V1__init_schema.sql`).
-- [ ] #7 EAGER→LAZY + JOIN FETCH puntuales. **PENDIENTE (alto riesgo)**: toca las 8 entidades; puede romper serialización con `LazyInitializationException`. Dejar para una pasada cuidadosa con `JOIN FETCH` + verificación corriendo la app.
+- [x] #7 EAGER→LAZY (2026-06-17, sesión 2) — **implementado, PENDIENTE VERIFICAR en prod con OSIV off**:
+  - Todas las relaciones `@ManyToOne/@OneToOne` → `LAZY` (8 entidades).
+  - `@Transactional(readOnly=true)` a nivel de clase en los 6 services + ProviderScoreService (mantiene sesión abierta durante el mapeo a DTO). Writers que no lo tenían (`updateProfile`, `saveFcmToken`, `forceProviderOffline`, `asignarTrabajosAProveedorQueSeConecta`) → `@Transactional` explícito.
+  - `@EntityGraph` en finders de listado/detalle de `TrabajoRepository` (cliente/proveedor/oficio) y `MudanzaRepository` (cliente/proveedor/tier/tierOriginal) para evitar N+1.
+  - `spring.jpa.open-in-view=false` (setting correcto para prod; hace que un lazy mal resuelto explote como error, no como N+1 silencioso).
+  - Verificado: ningún controller devuelve entidades crudas; único embed en DTOs = `Oficio`/`MudanzaTier` (leaf, sin relaciones → seguros de serializar). WebSocket usa solo campos escalares de User.
+  - **Falta**: deploy + recorrer endpoints de listado/detalle mirando logs (no debe haber `LazyInitializationException`; contar queries para confirmar que no hay N+1 residual).
 - [x] #8 N+1 en DTOs — **vía batch (no denormalización)** (2026-06-17, sesión 2): nuevo `getPromediosByProveedorIds` (1 query para todos los promedios) + helpers `calificacionesPorTrabajo`/`promediosPorProveedor` en `TrabajoService`; `getTrabajosByCliente`/`EnCola`/`Pendientes`/`Completados` unificados en `mapToDTOOptimized(... Map promedios)`. Sin cambio de esquema, sin drift. `UserService.mapToDTO` se dejó: solo se usa en contextos single-user.
 - [x] #9 Cache de rol en `FirebaseAuthFilter` (Caffeine, TTL 5min, maxSize 10k; solo cachea usuarios existentes para no congelar ROLE_USER de altas en curso). Dep `caffeine` en build.gradle. Bonus: `System.out` → logger.
 - [x] #14 Filtrado en query: `getTrabajosPendientes` usa `findByEstadoAndOficioIdAndProveedorNotificadoId`; `marcarTodasComoLeidas` ahora es un `@Modifying` bulk `UPDATE ... WHERE leida=false` (antes traía todo + saveAll).

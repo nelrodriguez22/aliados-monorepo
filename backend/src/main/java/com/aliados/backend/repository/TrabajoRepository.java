@@ -2,6 +2,7 @@ package com.aliados.backend.repository;
 
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,15 +13,20 @@ import java.util.List;
 @Repository
 public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
 
+    // @EntityGraph: trae cliente/proveedor/oficio en la misma query (evita N+1 al mapear).
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByClienteFirebaseUidOrderByCreatedAtDesc(String firebaseUid);
 
     List<Trabajo> findByEstadoAndOficioId(TrabajoEstado estado, Long oficioId);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByEstadoAndOficioIdAndProveedorNotificadoId(
             TrabajoEstado estado, Long oficioId, Long proveedorNotificadoId);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, TrabajoEstado estado);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")
     Trabajo findTrabajoEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
 
@@ -32,6 +38,7 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'EN_COLA')")
     int countTrabajosActivosYCola(@Param("proveedorId") Long proveedorId);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_COLA' ORDER BY t.acceptedAt ASC")
     List<Trabajo> findTrabajosEnCola(@Param("proveedorId") Long proveedorId);
 

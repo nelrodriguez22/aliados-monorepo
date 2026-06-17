@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Transactional(readOnly = true) // sesión abierta durante el mapeo a DTO (asociaciones LAZY); los writers la sobreescriben con @Transactional
 public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -189,6 +190,7 @@ public class UserService {
         return userRepository.findByFirebaseUid(firebaseUid).orElse(null);
     }
 
+    @Transactional
     public void saveFcmToken(String firebaseUid, String fcmToken) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
@@ -196,6 +198,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
     public UserResponseDTO updateProfile(String firebaseUid, Map<String, String> body) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));

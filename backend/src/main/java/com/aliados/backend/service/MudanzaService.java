@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true) // sesión abierta durante el mapeo a DTO (asociaciones LAZY); los writers la sobreescriben con @Transactional
 public class MudanzaService {
 
     private static final Logger logger = LoggerFactory.getLogger(MudanzaService.class);

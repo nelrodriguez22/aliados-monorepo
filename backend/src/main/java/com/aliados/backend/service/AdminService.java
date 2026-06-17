@@ -4,6 +4,7 @@ import com.aliados.backend.entity.*;
 import com.aliados.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Transactional(readOnly = true) // sesión abierta durante el acceso a asociaciones LAZY; forceProviderOffline la sobreescribe con @Transactional
 public class AdminService {
 
     @Autowired private UserRepository userRepository;
@@ -117,6 +119,7 @@ public class AdminService {
         }).toList();
     }
 
+    @Transactional
     public void forceProviderOffline(Long id) {
         User proveedor = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
