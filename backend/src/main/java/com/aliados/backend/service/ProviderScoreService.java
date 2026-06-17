@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ProviderScoreService {
@@ -60,9 +62,18 @@ public class ProviderScoreService {
 
     /**
      * Ordena una lista de proveedores por score descendente.
+     *
+     * El score se calcula UNA sola vez por proveedor y se cachea en un Map: cada
+     * calcularScore() dispara varias queries, y pasarlo directo a un Comparator lo
+     * reevaluaria O(n·log n) veces durante el sort (cientos de queries con pocos proveedores).
      */
     public List<User> ordenarPorScore(List<User> proveedores) {
-        proveedores.sort(Comparator.comparingDouble(this::calcularScore).reversed());
+        Map<Long, Double> scorePorProveedor = new HashMap<>();
+        for (User proveedor : proveedores) {
+            scorePorProveedor.put(proveedor.getId(), calcularScore(proveedor));
+        }
+        proveedores.sort(Comparator.comparingDouble(
+                (User p) -> scorePorProveedor.get(p.getId())).reversed());
         return proveedores;
     }
 

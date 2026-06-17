@@ -73,33 +73,38 @@ public class UserStatusController {
     }
 
     @MessageMapping("/authenticate")
-    public void authenticate(@Payload Map<String, String> payload, SimpMessageHeaderAccessor headerAccessor) {
-        String firebaseUid = payload.get("firebaseUid");
+    public void authenticate(SimpMessageHeaderAccessor headerAccessor) {
+        // El UID se deriva SIEMPRE del token Firebase verificado, nunca de un payload
+        // del cliente: de lo contrario cualquier usuario conectado podría suplantar a
+        // otro mandando un firebaseUid ajeno y cambiarle el estado.
+        String firebaseUid = extractFirebaseUid(headerAccessor);
 
-        if (firebaseUid != null) {
-            logger.info("✅ Autenticación recibida para UID: {}", firebaseUid);
+        if (firebaseUid == null) {
+            logger.warn("❌ Autenticación WS rechazada: token ausente o inválido");
+            return;
+        }
 
+        logger.info("✅ Autenticación recibida para UID: {}", firebaseUid);
+
+        if (headerAccessor.getSessionAttributes() != null) {
             headerAccessor.getSessionAttributes().put("firebaseUid", firebaseUid);
+        }
 
-            User user = userRepository.findByFirebaseUid(firebaseUid)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            if (user.getRole() == UserRole.PROVIDER) {
-                int trabajosActivos = trabajoRepository.countTrabajosActivosYCola(user.getId());
+        if (user.getRole() == UserRole.PROVIDER) {
+            int trabajosActivos = trabajoRepository.countTrabajosActivosYCola(user.getId());
 
-                if (trabajosActivos > 0) {
-                    userService.updateUserStatus(firebaseUid, UserStatus.BUSY);
-                    logger.info("✅ Usuario {} marcado como BUSY ({} trabajos activos/en cola)", firebaseUid, trabajosActivos);
-                } else {
-                    logger.info("✅ Usuario {} conectó WebSocket - Status actual: {}", firebaseUid, user.getStatus());
-                }
+            if (trabajosActivos > 0) {
+                userService.updateUserStatus(firebaseUid, UserStatus.BUSY);
+                logger.info("✅ Usuario {} marcado como BUSY ({} trabajos activos/en cola)", firebaseUid, trabajosActivos);
             } else {
-                userService.updateUserStatus(firebaseUid, UserStatus.ONLINE);
-                logger.info("✅ Cliente {} marcado como ONLINE", firebaseUid);
+                logger.info("✅ Usuario {} conectó WebSocket - Status actual: {}", firebaseUid, user.getStatus());
             }
-
         } else {
-            logger.warn("❌ Autenticación sin firebaseUid");
+            userService.updateUserStatus(firebaseUid, UserStatus.ONLINE);
+            logger.info("✅ Cliente {} marcado como ONLINE", firebaseUid);
         }
     }
 }

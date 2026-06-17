@@ -32,7 +32,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.role = :role AND u.status IN :statuses ORDER BY u.lastSeenAt DESC")
     List<User> findByRoleAndStatusIn(@Param("role") UserRole role, @Param("statuses") List<UserStatus> statuses);
 
-    // Proveedores de fletes/mudanzas (busca por nombre de oficio)
-    @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.activo = true AND u.oficio.nombre LIKE '%udanza%' OR u.oficio.nombre LIKE '%lete%'")
+    // Proveedores de fletes/mudanzas (busca por nombre de oficio).
+    // Los parentesis son necesarios: sin ellos AND precede a OR y la rama del LIKE '%lete%'
+    // traeria a cualquier usuario (incluso clientes o inactivos) cuyo oficio contenga "lete".
+    @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.activo = true AND (u.oficio.nombre LIKE '%udanza%' OR u.oficio.nombre LIKE '%lete%')")
     List<User> findProveedoresFletes();
 }
