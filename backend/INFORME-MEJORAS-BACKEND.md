@@ -127,17 +127,17 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - [ ] #9 Cache de rol en `FirebaseAuthFilter`.
 - [ ] #14 Filtrado en query en vez de memoria.
 
-### Diagnóstico de email (SendGrid) — agregado 2026-06-17
-- Backend usa **solo SendGrid** (`api.sendgrid.com/v3/mail/send`); no hay Twilio/SMTP/SES. Por eso no aparece nada en la consola de Twilio.
-- "No llega ni a spam" → casi seguro **remitente no autenticado** (`from-email` default `noreply@aliados.com` sin SPF/DKIM) o `generateEmailVerificationLink` de Firebase fallando antes de llamar a SendGrid.
-- [x] Endpoint admin de prueba `POST /api/admin/test-email?to=...` → bypassea Firebase, pega directo a SendGrid y devuelve `statusCode`/`body`/`apiKeyPresent`/`success` (aísla el problema sin registrarse ni leer logs).
-- [x] `EmailService.sendVerificationEmail` ahora devuelve `boolean` y `UserService` loguea el resultado real (antes logueaba "✅" aunque SendGrid rechazara).
-- [ ] Pendiente operativo (no es código): **Domain Authentication** en SendGrid (SPF/DKIM) de un dominio propio (ej. `convivirtech.com.ar`) + setear `SENDGRID_FROM_EMAIL` a una dirección verificada. Sin esto, no entrega.
-- [ ] Opcional: endpoint "reenviar verificación" + envío `@Async`.
+### Email — migrado a Resend ✅ (2026-06-17, sesión 2)
+- **SendGrid → Resend COMPLETO y verificado en prod** (log: `status 200`, mail entregado desde `noreply@convivirtech.com.ar`). Dominio verificado en Resend (SPF/DKIM vía Cloudflare).
+- `EmailService` reescrito: API HTTP de Resend vía `RestTemplate` (sin SDK). Props `resend.*` en `application.properties`; vars Railway `RESEND_API_KEY` + `RESEND_FROM_EMAIL`. Dep `sendgrid-java` eliminada.
+- [x] Endpoint diagnóstico `POST /api/admin/test-email?to=...` (admin-only, devuelve status/body de Resend).
+- [x] Endpoint **reenviar verificación** `POST /api/users/resend-verification` (público/permitAll): respuesta 200 genérica anti-enumeración, no reenvía si ya verificado, cooldown 60s en memoria (`ConcurrentHashMap` en `UserService`). Front: `CheckEmail.tsx` con botón + cooldown visual.
+- Fix CORS: `allowedOriginPatterns` con `http://localhost:*` (`CorsConfig.java` + `WebSocketConfig.java`) — aplica tras deploy.
+- [ ] Opcional futuro: envío `@Async`; cooldown a Redis si se escala a >1 instancia.
 
 ### Fase 4 — Robustez / calidad
 - [ ] #10 Excepciones tipadas + códigos HTTP correctos.
-- [ ] #11 Asegurar/limitar geocoding + `UriComponentsBuilder` + RestTemplate bean.
+- [x] #11 Geocoding endurecido (2026-06-17, sesión 2): sacado de `permitAll` → ahora requiere auth (el front ya manda token vía `apiClient.get`, no rompe nada); URLs con `UriComponentsBuilder...encode()` (cierra inyección de params en `address`/`input`); `RestTemplate` bean compartido con timeouts (5s connect / 10s read) en `RestClientConfig`. _Rate-limit por-usuario diferido: con auth requerida la superficie de abuso baja mucho; agregar bucket si hace falta. EmailService aún usa `new RestTemplate()` — migrar al bean es cleanup opcional._
 - [ ] #12 WS event listener (pool, lastSeenAt).
 - [ ] #13 Reusar Principal en heartbeat.
 - [ ] #15 Limpieza de tokens FCM muertos.
