@@ -3,6 +3,7 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.RegisterDTO;
 import com.aliados.backend.dto.UserResponseDTO;
 import com.aliados.backend.dto.UserStatusDTO;
+import com.aliados.backend.entity.Oficio;
 import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
@@ -242,8 +243,9 @@ public class UserService {
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setLocalidad(user.getLocalidad());
-        Hibernate.initialize(user.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
-        dto.setOficio(user.getOficio());
+        // unproxy: devuelve la entidad Oficio real (no el proxy ByteBuddy que Jackson
+        // no puede serializar). Null-safe (clientes no tienen oficio).
+        dto.setOficio((Oficio) Hibernate.unproxy(user.getOficio()));
         if (user.getRole() == UserRole.PROVIDER) {
             Double promedio = calificacionRepository.getPromedioByProveedorId(user.getId());
             Long cantidad = calificacionRepository.getCantidadByProveedorId(user.getId());

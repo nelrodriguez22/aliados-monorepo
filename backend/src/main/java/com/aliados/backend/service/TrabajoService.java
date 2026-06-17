@@ -296,8 +296,10 @@ public class TrabajoService {
             dto.setCalificado(false);
         }
 
-        Hibernate.initialize(trabajo.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
-        dto.setOficio(trabajo.getOficio());
+        // unproxy: aunque se inicialice, el proxy LAZY sigue siendo una subclase
+        // ByteBuddy que Jackson no puede serializar. unproxy devuelve la entidad
+        // Oficio real (o null). Null-safe.
+        dto.setOficio((Oficio) Hibernate.unproxy(trabajo.getOficio()));
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
         dto.setDireccion(trabajo.getDireccion());
@@ -425,8 +427,10 @@ public class TrabajoService {
             dto.setCalificacionEstrellas(cal.getEstrellas());
         }
 
-        Hibernate.initialize(trabajo.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
-        dto.setOficio(trabajo.getOficio());
+        // unproxy: aunque se inicialice, el proxy LAZY sigue siendo una subclase
+        // ByteBuddy que Jackson no puede serializar. unproxy devuelve la entidad
+        // Oficio real (o null). Null-safe.
+        dto.setOficio((Oficio) Hibernate.unproxy(trabajo.getOficio()));
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
         dto.setDireccion(trabajo.getDireccion());
