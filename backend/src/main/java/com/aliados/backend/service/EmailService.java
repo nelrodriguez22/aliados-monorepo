@@ -1,34 +1,39 @@
 package com.aliados.backend.service;
 
-import com.sendgrid.*;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
+    private static final String RESEND_ENDPOINT = "https://api.resend.com/emails";
 
-    @Value("${sendgrid.api-key}")
-    private String sendGridApiKey;
+    @Value("${resend.api-key}")
+    private String resendApiKey;
 
-    @Value("${sendgrid.from-email}")
+    @Value("${resend.from-email}")
     private String fromEmail;
 
-    @Value("${sendgrid.from-name}")
+    @Value("${resend.from-name}")
     private String fromName;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
     /**
-     * Envía el email de verificación. Devuelve true si SendGrid lo aceptó (2xx).
+     * Envía el email de verificación. Devuelve true si Resend lo aceptó (2xx).
      */
     public boolean sendVerificationEmail(String toEmail, String nombre, String verificationLink) {
         String subject = "Verificá tu cuenta en Aliados";
@@ -37,19 +42,19 @@ public class EmailService {
     }
 
     /**
-     * Envío de prueba para diagnóstico. Bypassea Firebase: pega directo a SendGrid
+     * Envío de prueba para diagnóstico. Bypassea Firebase: pega directo a Resend
      * y expone status + body de la respuesta para validar key y remitente.
      */
     public Map<String, Object> sendTestEmail(String toEmail) {
-        String html = "<p>Email de prueba de <strong>Aliados</strong>. Si lo recibís, SendGrid está entregando OK.</p>";
+        String html = "<p>Email de prueba de <strong>Aliados</strong>. Si lo recibís, Resend está entregando OK.</p>";
         SendResult r = send(toEmail, "Test de envío - Aliados", html);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("provider", "SendGrid");
-        result.put("endpoint", "api.sendgrid.com/v3/mail/send");
-        result.put("from", fromEmail);
+        result.put("provider", "Resend");
+        result.put("endpoint", RESEND_ENDPOINT);
+        result.put("from", fromName + " <" + fromEmail + ">");
         result.put("to", toEmail);
-        result.put("apiKeyPresent", sendGridApiKey != null && !sendGridApiKey.isBlank());
+        result.put("apiKeyPresent", resendApiKey != null && !resendApiKey.isBlank());
         result.put("statusCode", r.statusCode());
         result.put("body", r.body());
         result.put("success", r.statusCode() / 100 == 2);
@@ -58,30 +63,28 @@ public class EmailService {
     }
 
     private SendResult send(String toEmail, String subject, String htmlContent) {
-        Email from = new Email(fromEmail, fromName);
-        Email to = new Email(toEmail);
-        Content content = new Content("text/html", htmlContent);
-        Mail mail = new Mail(from, subject, to, content);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("from", fromName + " <" + fromEmail + ">");
+        payload.put("to", List.of(toEmail));
+        payload.put("subject", subject);
+        payload.put("html", htmlContent);
 
-        SendGrid sg = new SendGrid(sendGridApiKey);
-        Request request = new Request();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(resendApiKey != null ? resendApiKey : "");
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-
-            Response response = sg.api(request);
-
-            if (response.getStatusCode() / 100 == 2) {
-                logger.info("✅ Email aceptado por SendGrid → {} (status {})", toEmail, response.getStatusCode());
-            } else {
-                logger.error("❌ SendGrid rechazó el envío a {}. Status: {}, Body: {}",
-                        toEmail, response.getStatusCode(), response.getBody());
-            }
-            return new SendResult(response.getStatusCode(), response.getBody(), null);
-        } catch (IOException e) {
-            logger.error("❌ Error de conexión con SendGrid enviando a {}: {}", toEmail, e.getMessage());
+            ResponseEntity<String> resp = restTemplate.postForEntity(
+                    RESEND_ENDPOINT, new HttpEntity<>(payload, headers), String.class);
+            int status = resp.getStatusCode().value();
+            logger.info("✅ Email aceptado por Resend → {} (status {})", toEmail, status);
+            return new SendResult(status, resp.getBody(), null);
+        } catch (HttpStatusCodeException e) {
+            logger.error("❌ Resend rechazó el envío a {}. Status: {}, Body: {}",
+                    toEmail, e.getStatusCode().value(), e.getResponseBodyAsString());
+            return new SendResult(e.getStatusCode().value(), e.getResponseBodyAsString(), null);
+        } catch (Exception e) {
+            logger.error("❌ Error de conexión con Resend enviando a {}: {}", toEmail, e.getMessage());
             return new SendResult(0, null, e.getMessage());
         }
     }
