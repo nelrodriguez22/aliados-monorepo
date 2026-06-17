@@ -92,13 +92,7 @@ public class NotificacionService {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        List<Notificacion> noLeidas = notificacionRepository.findByUsuarioIdOrderByCreatedAtDesc(usuario.getId())
-                .stream()
-                .filter(n -> !n.getLeida())
-                .collect(Collectors.toList());
-
-        noLeidas.forEach(n -> n.setLeida(true));
-        notificacionRepository.saveAll(noLeidas);
+        notificacionRepository.marcarTodasComoLeidas(usuario.getId());
     }
 
     private NotificacionResponseDTO mapToDTO(Notificacion n) {

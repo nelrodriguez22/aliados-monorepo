@@ -122,10 +122,10 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 
 ### Fase 3 — Rendimiento
 - [x] #6 Índices (incluidos en `V1__init_schema.sql`).
-- [ ] #7 EAGER→LAZY + JOIN FETCH puntuales.
-- [ ] #8 Denormalizar promedio de calificación / reducir N+1 en DTOs.
-- [ ] #9 Cache de rol en `FirebaseAuthFilter`.
-- [ ] #14 Filtrado en query en vez de memoria.
+- [ ] #7 EAGER→LAZY + JOIN FETCH puntuales. **PENDIENTE (alto riesgo)**: toca las 8 entidades; puede romper serialización con `LazyInitializationException`. Dejar para una pasada cuidadosa con `JOIN FETCH` + verificación corriendo la app.
+- [x] #8 N+1 en DTOs — **vía batch (no denormalización)** (2026-06-17, sesión 2): nuevo `getPromediosByProveedorIds` (1 query para todos los promedios) + helpers `calificacionesPorTrabajo`/`promediosPorProveedor` en `TrabajoService`; `getTrabajosByCliente`/`EnCola`/`Pendientes`/`Completados` unificados en `mapToDTOOptimized(... Map promedios)`. Sin cambio de esquema, sin drift. `UserService.mapToDTO` se dejó: solo se usa en contextos single-user.
+- [x] #9 Cache de rol en `FirebaseAuthFilter` (Caffeine, TTL 5min, maxSize 10k; solo cachea usuarios existentes para no congelar ROLE_USER de altas en curso). Dep `caffeine` en build.gradle. Bonus: `System.out` → logger.
+- [x] #14 Filtrado en query: `getTrabajosPendientes` usa `findByEstadoAndOficioIdAndProveedorNotificadoId`; `marcarTodasComoLeidas` ahora es un `@Modifying` bulk `UPDATE ... WHERE leida=false` (antes traía todo + saveAll).
 
 ### Email — migrado a Resend ✅ (2026-06-17, sesión 2)
 - **SendGrid → Resend COMPLETO y verificado en prod** (log: `status 200`, mail entregado desde `noreply@convivirtech.com.ar`). Dominio verificado en Resend (SPF/DKIM vía Cloudflare).

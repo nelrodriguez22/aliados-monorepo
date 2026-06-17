@@ -16,6 +16,9 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
 
     List<Trabajo> findByEstadoAndOficioId(TrabajoEstado estado, Long oficioId);
 
+    List<Trabajo> findByEstadoAndOficioIdAndProveedorNotificadoId(
+            TrabajoEstado estado, Long oficioId, Long proveedorNotificadoId);
+
     List<Trabajo> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, TrabajoEstado estado);
 
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")

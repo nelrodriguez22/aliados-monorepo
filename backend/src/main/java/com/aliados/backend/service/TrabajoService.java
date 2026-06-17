@@ -15,8 +15,10 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -102,15 +104,19 @@ public class TrabajoService {
             throw new RuntimeException("El proveedor no tiene un oficio asignado");
         }
 
-        List<Trabajo> trabajos = trabajoRepository.findByEstadoAndOficioId(
+        // Filtra en SQL por (estado, oficio, proveedor notificado) en vez de traer
+        // todos los PENDIENTE del oficio y descartar en memoria.
+        List<Trabajo> trabajos = trabajoRepository.findByEstadoAndOficioIdAndProveedorNotificadoId(
                 TrabajoEstado.PENDIENTE,
-                proveedor.getOficio().getId()
+                proveedor.getOficio().getId(),
+                proveedor.getId()
         );
 
+        Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
+        Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+
         return trabajos.stream()
-                .filter(t -> t.getProveedorNotificadoId() != null &&
-                        t.getProveedorNotificadoId().equals(proveedor.getId()))
-                .map(this::mapToDTO)
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
     }
 
@@ -217,55 +223,11 @@ public class TrabajoService {
 
         List<Trabajo> trabajos = trabajoRepository.findByClienteFirebaseUidOrderByCreatedAtDesc(firebaseUid);
 
-        List<Long> trabajoIds = trabajos.stream().map(Trabajo::getId).collect(Collectors.toList());
-        List<Calificacion> calificaciones = calificacionRepository.findByTrabajoIdIn(trabajoIds);
-        Map<Long, Calificacion> calificacionPorTrabajo = calificaciones.stream()
-                .collect(Collectors.toMap(c -> c.getTrabajo().getId(), c -> c, (a, b) -> a));
-
-        Map<Long, Double> promediosPorProveedor = new java.util.HashMap<>();
-        trabajos.stream()
-                .filter(t -> t.getProveedor() != null)
-                .map(t -> t.getProveedor().getId())
-                .distinct()
-                .forEach(provId -> promediosPorProveedor.put(provId, calificacionRepository.getPromedioByProveedorId(provId)));
+        Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
+        Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
 
         return trabajos.stream()
-                .map(trabajo -> {
-                    TrabajoResponseDTO dto = new TrabajoResponseDTO();
-                    dto.setId(trabajo.getId());
-                    dto.setClienteId(trabajo.getCliente().getId());
-                    dto.setClienteNombre(trabajo.getCliente().getNombre());
-                    if (trabajo.getProveedor() != null) {
-                        dto.setProveedorId(trabajo.getProveedor().getId());
-                        dto.setProveedorNombre(trabajo.getProveedor().getNombre());
-                        Double promedio = promediosPorProveedor.get(trabajo.getProveedor().getId());
-                        dto.setProveedorPromedioCalificacion(promedio != null ? promedio : 0.0);
-                    }
-
-                    Calificacion cal = calificacionPorTrabajo.get(trabajo.getId());
-                    dto.setCalificado(cal != null);
-                    if (cal != null) {
-                        dto.setCalificacionEstrellas(cal.getEstrellas());
-                    }
-
-                    dto.setOficio(trabajo.getOficio());
-                    dto.setEstado(trabajo.getEstado());
-                    dto.setDescripcion(trabajo.getDescripcion());
-                    dto.setDireccion(trabajo.getDireccion());
-                    dto.setLatitudCliente(trabajo.getLatitudCliente());
-                    dto.setLongitudCliente(trabajo.getLongitudCliente());
-                    dto.setDireccionDestino(trabajo.getDireccionDestino());
-                    dto.setLatitudDestino(trabajo.getLatitudDestino());
-                    dto.setLongitudDestino(trabajo.getLongitudDestino());
-                    dto.setTiempoEstimadoMinutos(trabajo.getTiempoEstimadoMinutos());
-                    dto.setPrecioEstimado(trabajo.getPrecioEstimado());
-                    dto.setFotos(trabajo.getFotos());
-                    dto.setCreatedAt(trabajo.getCreatedAt());
-                    dto.setAcceptedAt(trabajo.getAcceptedAt());
-                    dto.setCompletedAt(trabajo.getCompletedAt());
-                    dto.setTarifaVisita(trabajo.getTarifaVisita());
-                    return dto;
-                })
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
     }
 
@@ -409,18 +371,39 @@ public class TrabajoService {
                 TrabajoEstado.COMPLETADO
         );
 
-        List<Calificacion> todasCalificaciones = calificacionRepository.findByProveedorIdOrderByCreatedAtDesc(proveedor.getId());
-        Map<Long, Calificacion> calificacionPorTrabajo = todasCalificaciones.stream()
-                .collect(Collectors.toMap(c -> c.getTrabajo().getId(), c -> c, (a, b) -> a));
-
-        Double promedio = calificacionRepository.getPromedioByProveedorId(proveedor.getId());
+        Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
+        Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
 
         return trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promedio))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
     }
 
-    private TrabajoResponseDTO mapToDTOOptimized(Trabajo trabajo, Map<Long, Calificacion> calificacionPorTrabajo, Double promedio) {
+    // Batch helpers: arman en pocas queries los datos que el mapeo necesita por
+    // trabajo, para no disparar N+1 al recorrer la lista.
+    private Map<Long, Calificacion> calificacionesPorTrabajo(List<Trabajo> trabajos) {
+        List<Long> trabajoIds = trabajos.stream().map(Trabajo::getId).collect(Collectors.toList());
+        if (trabajoIds.isEmpty()) return Map.of();
+        return calificacionRepository.findByTrabajoIdIn(trabajoIds).stream()
+                .collect(Collectors.toMap(c -> c.getTrabajo().getId(), c -> c, (a, b) -> a));
+    }
+
+    private Map<Long, Double> promediosPorProveedor(List<Trabajo> trabajos) {
+        List<Long> proveedorIds = trabajos.stream()
+                .map(Trabajo::getProveedor)
+                .filter(Objects::nonNull)
+                .map(User::getId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (proveedorIds.isEmpty()) return Map.of();
+        Map<Long, Double> promedios = new HashMap<>();
+        for (Object[] row : calificacionRepository.getPromediosByProveedorIds(proveedorIds)) {
+            promedios.put((Long) row[0], (Double) row[1]);
+        }
+        return promedios;
+    }
+
+    private TrabajoResponseDTO mapToDTOOptimized(Trabajo trabajo, Map<Long, Calificacion> calificacionPorTrabajo, Map<Long, Double> promediosPorProveedor) {
         TrabajoResponseDTO dto = new TrabajoResponseDTO();
         dto.setId(trabajo.getId());
         dto.setClienteId(trabajo.getCliente().getId());
@@ -428,6 +411,7 @@ public class TrabajoService {
         if (trabajo.getProveedor() != null) {
             dto.setProveedorId(trabajo.getProveedor().getId());
             dto.setProveedorNombre(trabajo.getProveedor().getNombre());
+            Double promedio = promediosPorProveedor.get(trabajo.getProveedor().getId());
             dto.setProveedorPromedioCalificacion(promedio != null ? promedio : 0.0);
         }
 
@@ -630,8 +614,11 @@ public class TrabajoService {
 
         List<Trabajo> trabajos = trabajoRepository.findTrabajosEnCola(proveedor.getId());
 
+        Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
+        Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+
         return trabajos.stream()
-                .map(this::mapToDTO)
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
     }
 }
