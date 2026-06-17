@@ -5,6 +5,7 @@ import { AuthLayout } from "@/features/pages/AuthLayout";
 import { Login } from "@/features/auth/pages/Login";
 import { Register } from "@/features/auth/pages/Register";
 import { VerificationSuccess } from "@/features/auth/pages/VerificationSuccess";
+import { CheckEmail } from "@/features/auth/pages/CheckEmail";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
@@ -60,6 +61,7 @@ export function AppRouter() {
           <Route element={<AuthLayout />}>
             <Route path="login"   element={<Login />} />
             <Route path="registro" element={<Register />} />
+            <Route path="verifica-tu-correo" element={<CheckEmail />} />
             <Route path="verificacion-exitosa" element={<VerificationSuccess />} />
           </Route>
 

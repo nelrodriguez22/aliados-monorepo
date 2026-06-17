@@ -134,7 +134,7 @@ export function Register() {
 
         await signOut(auth);
         toast.success('¡Cuenta creada! Revisá tu email para verificarla.');
-        navigate(ROUTES.LOGIN);
+        navigate(ROUTES.CHECK_EMAIL, { state: { email } });
         return null;
       } catch (err: any) {
         toast.error(handleFirebaseError(err.code));

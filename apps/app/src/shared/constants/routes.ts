@@ -4,6 +4,7 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/registro',
+  CHECK_EMAIL: '/verifica-tu-correo',
   VERIFICATION_SUCCESS: '/verificacion-exitosa',
 
   //cliente
