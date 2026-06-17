@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ export function ProviderCompletedJob() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate  = useNavigate();
 
-  const { data: trabajo, isLoading: loadingTrabajo } = useTrabajo(jobId);
+  const { data: trabajo, isLoading: loadingTrabajo, isError: trabajoError, error: trabajoErrObj, refetch: refetchTrabajo } = useTrabajo(jobId);
 
   const { data: calificacion, isLoading: loadingCal } = useQuery({
     queryKey: ['calificacion-detalle', jobId],
@@ -29,6 +30,17 @@ export function ProviderCompletedJob() {
       <div className={`flex h-screen items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
       </div>
+    );
+  }
+  if (trabajoError) {
+    return (
+      <ErrorState
+        title="No pudimos cargar el trabajo"
+        message={(trabajoErrObj as Error)?.message || 'Ocurrió un error al obtener el trabajo.'}
+        onRetry={() => refetchTrabajo()}
+        onBack={() => navigate(ROUTES.PROVIDER.DASHBOARD)}
+        backLabel="Volver al inicio"
+      />
     );
   }
   if (!trabajo) {

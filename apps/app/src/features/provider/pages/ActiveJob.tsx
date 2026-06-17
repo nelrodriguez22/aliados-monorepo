@@ -5,6 +5,7 @@ import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Badge } from "@/shared/components/ui/Badge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
@@ -21,7 +22,7 @@ export function ActiveJob() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const updateUserStatus = useStore((state) => state.updateUserStatus);
 
-  const { data: trabajo, isLoading } = useTrabajo(id, {
+  const { data: trabajo, isLoading, isError, error, refetch } = useTrabajo(id, {
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
@@ -47,6 +48,17 @@ export function ActiveJob() {
       <div className={`flex h-64 items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
       </div>
+    );
+  }
+  if (isError) {
+    return (
+      <ErrorState
+        title="No pudimos cargar el trabajo"
+        message={(error as Error)?.message || 'Ocurrió un error al obtener el trabajo.'}
+        onRetry={() => refetch()}
+        onBack={() => navigate(ROUTES.PROVIDER.DASHBOARD)}
+        backLabel="Volver al inicio"
+      />
     );
   }
   if (!trabajo) {

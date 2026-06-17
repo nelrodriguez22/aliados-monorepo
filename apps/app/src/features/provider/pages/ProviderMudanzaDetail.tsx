@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
@@ -81,7 +82,7 @@ export function ProviderMudanzaDetail() {
   const [motivo, setMotivo] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState("");
 
-  const { data: mudanza, isLoading } = useQuery<MudanzaDetail>({
+  const { data: mudanza, isLoading, isError, error, refetch } = useQuery<MudanzaDetail>({
     queryKey: ["mudanza-prov", id],
     queryFn: () => apiClient.get<MudanzaDetail>(`/api/mudanzas/${id}`),
     refetchInterval: wsConnected ? 30000 : 5000,
@@ -158,6 +159,17 @@ export function ProviderMudanzaDetail() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  if (isError) {
+    return (
+      <ErrorState
+        title="No pudimos cargar la mudanza"
+        message={(error as Error)?.message || 'Ocurrió un error al obtener los datos de la mudanza.'}
+        onRetry={() => refetch()}
+        onBack={() => navigate(-1)}
+      />
+    );
+  }
 
   if (isLoading || !mudanza) {
     return (

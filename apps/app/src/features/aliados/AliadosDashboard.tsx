@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib/apiClient';
+import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
@@ -109,25 +110,25 @@ const apiFetch = (path: string) => apiClient.get(path);
 const AliadosDashboard = () => {
   const queryClient = useQueryClient();
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => apiFetch('/api/admin/stats'),
     refetchInterval: 60000,
   });
 
-  const { data: bugReports = [] } = useQuery({
+  const { data: bugReports = [], isError: bugError, refetch: refetchBugs } = useQuery({
     queryKey: ['admin-bug-reports'],
     queryFn: () => apiFetch('/api/bug-reports'),
     refetchInterval: 60000,
   });
 
-  const { data: proveedoresActivos = [] } = useQuery({
+  const { data: proveedoresActivos = [], isError: provError, refetch: refetchProv } = useQuery({
     queryKey: ['admin-providers-active'],
     queryFn: () => apiFetch('/api/admin/providers/active'),
     refetchInterval: 30000,
   });
 
-  const { data: ratingsData } = useQuery({
+  const { data: ratingsData, isError: ratingsError, refetch: refetchRatings } = useQuery({
     queryKey: ['admin-ratings'],
     queryFn: () => apiFetch('/api/admin/ratings/recent'),
     refetchInterval: 120000,
@@ -143,6 +144,16 @@ const AliadosDashboard = () => {
     mutationFn: (id: number) => apiClient.patch(`/api/admin/providers/${id}/offline`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-providers-active'] }),
   });
+
+  if (statsError) {
+    return (
+      <ErrorState
+        title="No pudimos cargar el panel"
+        message="Ocurrió un error al obtener las estadísticas. Reintentá en un momento."
+        onRetry={() => refetchStats()}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -345,7 +356,9 @@ const AliadosDashboard = () => {
         {/* Proveedores en tiempo real */}
         <div className="mb-4">
           <SectionCard title="Proveedores en tiempo real" icon={Wifi} iconColor="text-green-500">
-            {proveedoresActivos.length === 0 ? (
+            {provError ? (
+              <ErrorState compact message="No se pudo cargar la lista de proveedores." onRetry={() => refetchProv()} />
+            ) : proveedoresActivos.length === 0 ? (
               <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin proveedores activos</p>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
@@ -394,7 +407,9 @@ const AliadosDashboard = () => {
         <div className="grid gap-4 lg:grid-cols-2 mb-4">
 
           <SectionCard title="Calificaciones recientes" icon={Star} iconColor="text-amber-400">
-            {calificacionesRecientes.length === 0 ? (
+            {ratingsError ? (
+              <ErrorState compact message="No se pudieron cargar las calificaciones." onRetry={() => refetchRatings()} />
+            ) : calificacionesRecientes.length === 0 ? (
               <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin calificaciones</p>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
@@ -415,7 +430,9 @@ const AliadosDashboard = () => {
           </SectionCard>
 
           <SectionCard title="Proveedores con baja calificación" icon={AlertTriangle} iconColor="text-red-500" badge={proveedoresBajos.length}>
-            {proveedoresBajos.length === 0 ? (
+            {ratingsError ? (
+              <ErrorState compact message="No se pudieron cargar los datos." onRetry={() => refetchRatings()} />
+            ) : proveedoresBajos.length === 0 ? (
               <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin proveedores bajo umbral</p>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
@@ -446,7 +463,9 @@ const AliadosDashboard = () => {
 
         {/* Bug reports */}
         <SectionCard title="Bug reports" icon={Bug} iconColor="text-red-500" badge={bugReports.length}>
-          {bugReports.length === 0 ? (
+          {bugError ? (
+            <ErrorState compact message="No se pudieron cargar los reportes." onRetry={() => refetchBugs()} />
+          ) : bugReports.length === 0 ? (
             <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin reportes</p>
           ) : (
             <div>

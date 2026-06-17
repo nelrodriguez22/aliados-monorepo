@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -11,12 +12,12 @@ import { formatDateTime } from "@/shared/lib/dayjs";
 export function ProviderReviews() {
   const navigate = useNavigate();
 
-  const { data: promedio, isLoading: loadingPromedio } = useQuery({
+  const { data: promedio, isLoading: loadingPromedio, isError: errorPromedio, refetch: refetchPromedio } = useQuery({
     queryKey: ['calificacion-promedio'],
     queryFn: () => apiClient.get('/api/calificaciones/proveedor/promedio'),
   });
 
-  const { data: resenas = [], isLoading: loadingResenas } = useQuery({
+  const { data: resenas = [], isLoading: loadingResenas, isError: errorResenas, refetch: refetchResenas } = useQuery({
     queryKey: ['calificaciones-proveedor'],
     queryFn: () => apiClient.get('/api/calificaciones/proveedor/todas'),
   });
@@ -26,6 +27,18 @@ export function ProviderReviews() {
       <div className={`flex h-screen items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
       </div>
+    );
+  }
+
+  if (errorPromedio || errorResenas) {
+    return (
+      <ErrorState
+        title="No pudimos cargar tus reseñas"
+        message="Ocurrió un error al obtener tus calificaciones. Reintentá en un momento."
+        onRetry={() => { refetchPromedio(); refetchResenas(); }}
+        onBack={() => navigate(ROUTES.PROVIDER.DASHBOARD)}
+        backLabel="Volver al inicio"
+      />
     );
   }
 

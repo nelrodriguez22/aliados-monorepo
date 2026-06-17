@@ -8,6 +8,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Loader2, Clock, Users, CheckCircle, MapPin, FileText, Send } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -19,10 +20,11 @@ export function JobTracking() {
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const [showCancelar, setShowCancelar] = useState(false);
 
-  const { data: trabajo, isLoading } = useTrabajo(jobId, {
+  const { data: trabajo, isLoading, isError, error, refetch } = useTrabajo(jobId, {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const cancelarMutation = useMutation({
@@ -50,6 +52,20 @@ export function JobTracking() {
       <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
     </div>
   );
+
+  // Estado de error: si la request falla (ej. 400/404), antes quedaba en loading
+  // eterno porque `!trabajo` también era true. Lo separamos y ofrecemos reintentar.
+  if (isError) {
+    return (
+      <ErrorState
+        title="No pudimos cargar el seguimiento"
+        message={(error as Error)?.message || 'Ocurrió un error al obtener el estado de tu solicitud.'}
+        onRetry={() => refetch()}
+        onBack={() => navigate(ROUTES.CLIENT.DASHBOARD)}
+        backLabel="Volver al inicio"
+      />
+    );
+  }
 
   if (isLoading || !trabajo || trabajo.estado === 'COMPLETADO') return <Loading />;
 
