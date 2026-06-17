@@ -319,7 +319,13 @@ public class TrabajoService {
     }
 
     @Transactional
-    public void asignarTrabajosAProveedorQueSeConecta(User proveedor) {
+    public void asignarTrabajosAProveedorQueSeConecta(User proveedorRef) {
+        // El proveedor puede llegar detached (lo cargó el controller en otra sesión).
+        // Lo recargamos en ESTA transacción para que su oficio LAZY se inicialice.
+        User proveedor = userRepository.findById(proveedorRef.getId()).orElse(null);
+        if (proveedor == null) {
+            return;
+        }
         if (proveedor.getLocalidad() == null || !proveedor.getLocalidad().equalsIgnoreCase("Rosario")) {
             return;
         }
