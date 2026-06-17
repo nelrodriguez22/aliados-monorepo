@@ -32,6 +32,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
 	runtimeOnly 'org.postgresql:postgresql'
 
+	// Flyway (migraciones de BD). La version la gestiona Spring Boot.
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+
 	// WebSocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 

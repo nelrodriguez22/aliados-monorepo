@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,8 @@ public class TrabajoService {
         trabajo.setDireccion(dto.getDireccion());
         trabajo.setLatitudCliente(dto.getLatitudCliente());
         trabajo.setLongitudCliente(dto.getLongitudCliente());
-        trabajo.setFotos(dto.getFotos());
+        // jsonb solo acepta JSON válido o NULL: normalizamos vacíos a null
+        trabajo.setFotos(dto.getFotos() == null || dto.getFotos().isBlank() ? null : dto.getFotos());
         trabajo.setEstado(TrabajoEstado.PENDIENTE);
 
         // Destino (opcional, para Flete)
@@ -482,7 +484,7 @@ public class TrabajoService {
 
     @Transactional
     public TrabajoResponseDTO proponerTrabajo(Long trabajoId, String proveedorFirebaseUid,
-                                              Integer tiempoEstimadoMinutos, Double latitud, Double longitud, Double tarifaVisita) {
+                                              Integer tiempoEstimadoMinutos, Double latitud, Double longitud, BigDecimal tarifaVisita) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
 
@@ -500,7 +502,7 @@ public class TrabajoService {
         trabajo.setEstado(TrabajoEstado.PROPUESTO);
         trabajo.setProveedor(proveedor);
         trabajo.setTiempoEstimadoMinutos(tiempoEstimadoMinutos);
-        trabajo.setTarifaVisita(tarifaVisita != null ? tarifaVisita : 15000.0);
+        trabajo.setTarifaVisita(tarifaVisita != null ? tarifaVisita : new BigDecimal("15000"));
         trabajo.setPropuestoAt(LocalDateTime.now());
         if (latitud != null && longitud != null) {
             trabajo.setLatitudProveedor(latitud);

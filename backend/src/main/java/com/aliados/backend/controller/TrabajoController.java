@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -95,7 +96,7 @@ public class TrabajoController {
         Integer tiempoEstimado = (Integer) body.get("tiempoEstimadoMinutos");
         Double latitud = body.get("latitud") != null ? ((Number) body.get("latitud")).doubleValue() : null;
         Double longitud = body.get("longitud") != null ? ((Number) body.get("longitud")).doubleValue() : null;
-        Double tarifaVisita = body.get("tarifaVisita") != null ? ((Number) body.get("tarifaVisita")).doubleValue() : null;
+        BigDecimal tarifaVisita = body.get("tarifaVisita") != null ? new BigDecimal(body.get("tarifaVisita").toString()) : null;
 
         if (tiempoEstimado == null) {
             throw new IllegalArgumentException("Tiempo estimado es requerido");

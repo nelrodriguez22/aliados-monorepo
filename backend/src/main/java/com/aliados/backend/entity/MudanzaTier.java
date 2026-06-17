@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "mudanza_tiers")
 @Data
@@ -20,14 +22,14 @@ public class MudanzaTier {
     @Column(nullable = false)
     private String emoji; // 🥉🥈🥇💎
 
-    @Column(nullable = false)
-    private Double precioBase;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal precioBase;
 
     @Column(nullable = false)
     private Integer minutosIncluidos; // mínimo de horas en minutos
 
-    @Column(nullable = false)
-    private Double precioBloque30Min; // precio por cada bloque extra de 30 min
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal precioBloque30Min; // precio por cada bloque extra de 30 min
 
     @Column(nullable = false, length = 500)
     private String descripcion; // texto corto

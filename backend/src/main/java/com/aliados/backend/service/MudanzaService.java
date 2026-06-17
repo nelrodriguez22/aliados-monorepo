@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -268,7 +270,7 @@ public class MudanzaService {
         return mapToDTO(mudanza);
     }
 
-    private String formatPrecio(Double precio) {
+    private String formatPrecio(BigDecimal precio) {
         return String.format("$%,.0f", precio);
     }
 
@@ -438,24 +440,26 @@ public class MudanzaService {
             // Hay excedente
             long minutosExtra = minutosServicio - minutosIncluidos;
             int bloques = (int) Math.ceil((double) minutosExtra / 30.0);
-            double montoExtra = bloques * tier.getPrecioBloque30Min();
+            BigDecimal montoExtra = tier.getPrecioBloque30Min().multiply(BigDecimal.valueOf(bloques));
 
             mudanza.setBloquesExtra(bloques);
             mudanza.setMontoExtra(montoExtra);
-            mudanza.setMontoFinal(mudanza.getMontoBase() + montoExtra);
+            mudanza.setMontoFinal(mudanza.getMontoBase().add(montoExtra));
             mudanza.setEstado(MudanzaEstado.PENDIENTE_PAGO_EXTRA);
         } else {
             // Dentro del mínimo
             mudanza.setBloquesExtra(0);
-            mudanza.setMontoExtra(0.0);
+            mudanza.setMontoExtra(BigDecimal.ZERO);
             mudanza.setMontoFinal(mudanza.getMontoBase());
             mudanza.setEstado(MudanzaEstado.FINALIZADO);
         }
 
         // Calcular comisión y neto proveedor
-        double comision = mudanza.getMontoFinal() * (mudanza.getComisionPorcentaje() / 100.0);
+        BigDecimal comision = mudanza.getMontoFinal()
+                .multiply(mudanza.getComisionPorcentaje())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         mudanza.setComisionMonto(comision);
-        mudanza.setMontoProveedor(mudanza.getMontoFinal() - comision);
+        mudanza.setMontoProveedor(mudanza.getMontoFinal().subtract(comision));
 
         mudanza = mudanzaRepository.save(mudanza);
 

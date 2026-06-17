@@ -3,6 +3,7 @@ package com.aliados.backend.dto;
 import com.aliados.backend.entity.Oficio;
 import com.aliados.backend.entity.TrabajoEstado;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,7 +23,7 @@ public class TrabajoResponseDTO {
     private Double latitudDestino;
     private Double longitudDestino;
     private Integer tiempoEstimadoMinutos;
-    private Double precioEstimado;
+    private BigDecimal precioEstimado;
     private String fotos;
     private LocalDateTime createdAt;
     private LocalDateTime acceptedAt;
@@ -30,5 +31,5 @@ public class TrabajoResponseDTO {
     private Boolean calificado;
     private Double proveedorPromedioCalificacion;
     private Integer calificacionEstrellas;
-    private Double tarifaVisita;
+    private BigDecimal tarifaVisita;
 }

@@ -4,6 +4,7 @@ import com.aliados.backend.entity.MudanzaEstado;
 import com.aliados.backend.entity.MudanzaTurno;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -56,12 +57,12 @@ public class MudanzaResponseDTO {
     private String notasCliente;
 
     // Montos
-    private Double montoBase;
-    private Double montoFinal;
-    private Double montoExtra;
-    private Double comisionPorcentaje;
-    private Double comisionMonto;
-    private Double montoProveedor;
+    private BigDecimal montoBase;
+    private BigDecimal montoFinal;
+    private BigDecimal montoExtra;
+    private BigDecimal comisionPorcentaje;
+    private BigDecimal comisionMonto;
+    private BigDecimal montoProveedor;
 
     // Contrapropuesta
     private String motivoContrapropuesta;

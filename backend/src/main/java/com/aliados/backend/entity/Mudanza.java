@@ -3,8 +3,11 @@ package com.aliados.backend.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -77,24 +80,31 @@ public class Mudanza {
     private MudanzaTurno turno; // PRIMERO (6:30hs) o SEGUNDO (~11hs), asignado al agendar
 
     // ── Media ──
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
     private String fotos; // JSON array de URLs (obligatorio)
 
     @Column(length = 1000)
     private String notasCliente; // observaciones del cliente
 
     // ── Montos ──
-    @Column(nullable = false)
-    private Double montoBase; // lo que "pagó" el cliente por el tier
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal montoBase; // lo que "pagó" el cliente por el tier
 
-    private Double montoFinal; // calculado al finalizar
-    private Double montoExtra; // excedente si hubo
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoFinal; // calculado al finalizar
 
-    @Column(nullable = false)
-    private Double comisionPorcentaje = 10.0; // ej: 10%
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoExtra; // excedente si hubo
 
-    private Double comisionMonto; // calculado
-    private Double montoProveedor; // neto para el proveedor
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal comisionPorcentaje = new BigDecimal("10.00"); // ej: 10%
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal comisionMonto; // calculado
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoProveedor; // neto para el proveedor
 
     // ── Contrapropuesta (puede ser de tier, fecha, o ambos) ──
     @Column(length = 500)

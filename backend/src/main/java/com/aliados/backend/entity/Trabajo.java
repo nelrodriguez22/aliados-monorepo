@@ -3,7 +3,11 @@ package com.aliados.backend.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -52,9 +56,12 @@ public class Trabajo {
     private Double longitudDestino;
 
     private Integer tiempoEstimadoMinutos;
-    private Double precioEstimado;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(precision = 12, scale = 2)
+    private BigDecimal precioEstimado;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String fotos; // JSON array de URLs
 
     @Column
@@ -79,5 +86,6 @@ public class Trabajo {
     @Column
     private String motivoCancelacion;
 
-    private Double tarifaVisita;
+    @Column(precision = 12, scale = 2)
+    private BigDecimal tarifaVisita;
 }
