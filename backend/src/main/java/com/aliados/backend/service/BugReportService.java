@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true) // sesión abierta durante el mapeo a DTO (BugReport.user es LAZY); crear() la sobreescribe con @Transactional
 public class BugReportService {
 
     @Autowired
