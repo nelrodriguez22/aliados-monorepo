@@ -14,20 +14,20 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins(
+                        .allowedOriginPatterns(
                                 "https://aliados-app-22.web.app",
                                 "https://aliados-app.convivirtech.com.ar",
-                                "http://localhost:5173"
+                                "http://localhost:*"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
 
                 registry.addMapping("/ws/**")
-                        .allowedOrigins(
+                        .allowedOriginPatterns(
                                 "https://aliados-app-22.web.app",
                                 "https://aliados-app.convivirtech.com.ar",
-                                "http://localhost:5173"
+                                "http://localhost:*"
                         )
                         .allowedMethods("GET", "POST", "OPTIONS")
                         .allowedHeaders("*")

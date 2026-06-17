@@ -27,10 +27,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
+                .setAllowedOriginPatterns(
                         "https://aliados-app-22.web.app",
                         "https://aliados-app.convivirtech.com.ar",
-                        "http://localhost:5173"
+                        "http://localhost:*"
                 )
                 .addInterceptors(new com.aliados.backend.websockets.WebSocketHandshakeInterceptor())
                 .withSockJS();
