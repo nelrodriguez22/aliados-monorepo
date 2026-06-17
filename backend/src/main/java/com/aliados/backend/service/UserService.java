@@ -14,6 +14,7 @@ import com.aliados.backend.repository.UserRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -241,6 +242,7 @@ public class UserService {
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setLocalidad(user.getLocalidad());
+        Hibernate.initialize(user.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
         dto.setOficio(user.getOficio());
         if (user.getRole() == UserRole.PROVIDER) {
             Double promedio = calificacionRepository.getPromedioByProveedorId(user.getId());

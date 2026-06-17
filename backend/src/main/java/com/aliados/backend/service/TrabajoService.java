@@ -10,6 +10,7 @@ import com.aliados.backend.repository.OficioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -295,6 +296,7 @@ public class TrabajoService {
             dto.setCalificado(false);
         }
 
+        Hibernate.initialize(trabajo.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
         dto.setOficio(trabajo.getOficio());
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
@@ -423,6 +425,7 @@ public class TrabajoService {
             dto.setCalificacionEstrellas(cal.getEstrellas());
         }
 
+        Hibernate.initialize(trabajo.getOficio()); // inicializa el proxy LAZY antes de embeberlo en el DTO (se serializa fuera de la tx)
         dto.setOficio(trabajo.getOficio());
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
