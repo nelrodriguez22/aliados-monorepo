@@ -61,6 +61,15 @@ public class UserController {
         }
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestBody Map<String, String> body) {
+        // Respuesta genérica e idéntica siempre (anti-enumeración): no revela si el
+        // email existe ni si ya estaba verificado. El reenvío real ocurre en el service.
+        userService.resendVerification(body.get("email"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Si el email está registrado y sin verificar, te reenviamos el enlace de verificación."));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser(Authentication authentication) {
         String uid = authentication.getName();

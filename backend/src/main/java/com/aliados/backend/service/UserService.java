@@ -13,6 +13,7 @@ import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +22,11 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserService {
@@ -49,6 +53,12 @@ public class UserService {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    // Anti-abuso del reenvío de verificación: última vez que se reenvió por email.
+    // En memoria (suficiente para una sola instancia); es solo el backstop silencioso,
+    // el cooldown visible lo maneja el frontend.
+    private static final Duration RESEND_COOLDOWN = Duration.ofSeconds(60);
+    private final Map<String, Instant> lastResendByEmail = new ConcurrentHashMap<>();
 
     @Transactional
     public UserResponseDTO registerUser(RegisterDTO dto) {
@@ -112,6 +122,43 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         return mapToDTO(user);
+    }
+
+    /**
+     * Reenvía el email de verificación. Pensado para un endpoint público, así que
+     * NUNCA lanza ni revela si el email existe / está verificado (anti-enumeración):
+     * cualquier resultado termina silencioso. El caller responde siempre genérico.
+     */
+    public void resendVerification(String rawEmail) {
+        if (rawEmail == null || rawEmail.isBlank()) return;
+        String email = rawEmail.trim().toLowerCase();
+
+        // Backstop anti-spam: si se reenvió hace menos de RESEND_COOLDOWN, ignorar.
+        Instant last = lastResendByEmail.get(email);
+        if (last != null && Duration.between(last, Instant.now()).compareTo(RESEND_COOLDOWN) < 0) {
+            logger.info("⏳ Reenvío de verificación ignorado por cooldown para {}", email);
+            return;
+        }
+
+        try {
+            // No reenviar si el email ya está verificado en Firebase.
+            UserRecord record = FirebaseAuth.getInstance().getUserByEmail(email);
+            if (record.isEmailVerified()) {
+                logger.info("✓ Reenvío omitido: {} ya está verificado", email);
+                return;
+            }
+        } catch (FirebaseAuthException e) {
+            // Email inexistente en Firebase (u otro error): no filtrar nada, salir.
+            logger.info("Reenvío de verificación solicitado para email no resoluble en Firebase");
+            return;
+        }
+
+        // Debe existir también en nuestra DB para reusar el flujo de envío.
+        userRepository.findByEmail(email).ifPresent(user -> {
+            lastResendByEmail.put(email, Instant.now());
+            sendVerificationEmail(user);
+            logger.info("📧 Reenvío de verificación disparado para {}", email);
+        });
     }
 
     // NUEVOS MÉTODOS PARA WEBSOCKET
