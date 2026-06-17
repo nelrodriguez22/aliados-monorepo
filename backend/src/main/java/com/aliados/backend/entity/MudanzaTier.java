@@ -28,7 +28,7 @@ public class MudanzaTier {
     @Column(nullable = false)
     private Integer minutosIncluidos; // mínimo de horas en minutos
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(name = "precio_bloque30_min", nullable = false, precision = 12, scale = 2)
     private BigDecimal precioBloque30Min; // precio por cada bloque extra de 30 min
 
     @Column(nullable = false, length = 500)
