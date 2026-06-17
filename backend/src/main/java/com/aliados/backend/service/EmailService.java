@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class EmailService {
@@ -25,12 +27,39 @@ public class EmailService {
     @Value("${sendgrid.from-name}")
     private String fromName;
 
-    public void sendVerificationEmail(String toEmail, String nombre, String verificationLink) {
-        Email from = new Email(fromEmail, fromName);
-        Email to = new Email(toEmail);
+    /**
+     * Envía el email de verificación. Devuelve true si SendGrid lo aceptó (2xx).
+     */
+    public boolean sendVerificationEmail(String toEmail, String nombre, String verificationLink) {
         String subject = "Verificá tu cuenta en Aliados";
         String htmlContent = buildVerificationEmailHtml(nombre, verificationLink);
+        return send(toEmail, subject, htmlContent).statusCode() / 100 == 2;
+    }
 
+    /**
+     * Envío de prueba para diagnóstico. Bypassea Firebase: pega directo a SendGrid
+     * y expone status + body de la respuesta para validar key y remitente.
+     */
+    public Map<String, Object> sendTestEmail(String toEmail) {
+        String html = "<p>Email de prueba de <strong>Aliados</strong>. Si lo recibís, SendGrid está entregando OK.</p>";
+        SendResult r = send(toEmail, "Test de envío - Aliados", html);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("provider", "SendGrid");
+        result.put("endpoint", "api.sendgrid.com/v3/mail/send");
+        result.put("from", fromEmail);
+        result.put("to", toEmail);
+        result.put("apiKeyPresent", sendGridApiKey != null && !sendGridApiKey.isBlank());
+        result.put("statusCode", r.statusCode());
+        result.put("body", r.body());
+        result.put("success", r.statusCode() / 100 == 2);
+        if (r.error() != null) result.put("error", r.error());
+        return result;
+    }
+
+    private SendResult send(String toEmail, String subject, String htmlContent) {
+        Email from = new Email(fromEmail, fromName);
+        Email to = new Email(toEmail);
         Content content = new Content("text/html", htmlContent);
         Mail mail = new Mail(from, subject, to, content);
 
@@ -44,16 +73,20 @@ public class EmailService {
 
             Response response = sg.api(request);
 
-            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                logger.info("✅ Email de verificación enviado a {}", toEmail);
+            if (response.getStatusCode() / 100 == 2) {
+                logger.info("✅ Email aceptado por SendGrid → {} (status {})", toEmail, response.getStatusCode());
             } else {
-                logger.error("❌ Error enviando email. Status: {}, Body: {}",
-                        response.getStatusCode(), response.getBody());
+                logger.error("❌ SendGrid rechazó el envío a {}. Status: {}, Body: {}",
+                        toEmail, response.getStatusCode(), response.getBody());
             }
+            return new SendResult(response.getStatusCode(), response.getBody(), null);
         } catch (IOException e) {
-            logger.error("❌ Error de conexión con SendGrid: {}", e.getMessage());
+            logger.error("❌ Error de conexión con SendGrid enviando a {}: {}", toEmail, e.getMessage());
+            return new SendResult(0, null, e.getMessage());
         }
     }
+
+    private record SendResult(int statusCode, String body, String error) {}
 
     private String buildVerificationEmailHtml(String nombre, String verificationLink) {
         return """

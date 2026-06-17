@@ -95,10 +95,14 @@ public class UserService {
             String apiKey = extractParam(verificationLink, "apiKey");
             String customLink = frontendUrl + "/verificacion-exitosa?mode=verifyEmail&oobCode=" + oobCode + "&apiKey=" + apiKey;
 
-            emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), customLink);
-            logger.info("✅ Email de verificación enviado a {}", user.getEmail());
+            boolean enviado = emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), customLink);
+            if (enviado) {
+                logger.info("✅ Email de verificación enviado a {}", user.getEmail());
+            } else {
+                logger.error("❌ SendGrid no aceptó el email de verificación para {} (revisar API key / remitente)", user.getEmail());
+            }
         } catch (FirebaseAuthException e) {
-            logger.error("❌ Error generando link de verificación para {}: {}",
+            logger.error("❌ Error generando link de verificación para {} (SendGrid no se llegó a invocar): {}",
                     user.getEmail(), e.getMessage());
         }
     }

@@ -1,6 +1,7 @@
 package com.aliados.backend.controller;
 
 import com.aliados.backend.service.AdminService;
+import com.aliados.backend.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,16 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private EmailService emailService;
+
+    // Diagnóstico: dispara un envío directo por SendGrid (bypassea Firebase) y
+    // devuelve el status/body de la respuesta para validar API key y remitente.
+    @PostMapping("/test-email")
+    public ResponseEntity<Map<String, Object>> testEmail(@RequestParam String to) {
+        return ResponseEntity.ok(emailService.sendTestEmail(to));
+    }
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
