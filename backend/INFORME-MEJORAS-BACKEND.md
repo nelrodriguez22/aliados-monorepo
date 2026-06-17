@@ -137,7 +137,7 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 
 ### Fase 4 — Robustez / calidad
 - [ ] #10 Excepciones tipadas + códigos HTTP correctos.
-- [x] #11 Geocoding endurecido (2026-06-17, sesión 2): sacado de `permitAll` → ahora requiere auth (el front ya manda token vía `apiClient.get`, no rompe nada); URLs con `UriComponentsBuilder...encode()` (cierra inyección de params en `address`/`input`); `RestTemplate` bean compartido con timeouts (5s connect / 10s read) en `RestClientConfig`. _Rate-limit por-usuario diferido: con auth requerida la superficie de abuso baja mucho; agregar bucket si hace falta. EmailService aún usa `new RestTemplate()` — migrar al bean es cleanup opcional._
+- [x] #11 Geocoding endurecido (2026-06-17, sesión 2): sacado de `permitAll` → ahora requiere auth (el front ya manda token vía `apiClient.get`, no rompe nada); URLs con `UriComponentsBuilder...encode()` (cierra inyección de params en `address`/`input`); `RestTemplate` bean compartido con timeouts (5s connect / 10s read) en `RestClientConfig`. Rate-limit por-usuario añadido: `RateLimiter` (ventana fija en memoria, `config/RateLimiter.java`), 60 req/min por UID en los 3 endpoints → 429 al exceder. `EmailService` migrado al `RestTemplate` bean (ya no usa `new`). _RateLimiter es in-memory → a Redis si se escala a >1 instancia._
 - [ ] #12 WS event listener (pool, lastSeenAt).
 - [ ] #13 Reusar Principal en heartbeat.
 - [ ] #15 Limpieza de tokens FCM muertos.

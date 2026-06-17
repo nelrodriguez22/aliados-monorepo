@@ -30,7 +30,11 @@ public class EmailService {
     @Value("${resend.from-name}")
     private String fromName;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public EmailService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     /**
      * Envía el email de verificación. Devuelve true si Resend lo aceptó (2xx).

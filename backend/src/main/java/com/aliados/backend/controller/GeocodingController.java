@@ -1,12 +1,15 @@
 package com.aliados.backend.controller;
 
+import com.aliados.backend.config.RateLimiter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,20 +21,27 @@ public class GeocodingController {
     private static final String GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
     private static final String AUTOCOMPLETE_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
 
+    // Tope por usuario: protege la quota/costo de la API key de Google.
+    private static final int MAX_PER_MIN = 60;
+
     @Value("${google.maps.api.key}")
     private String apiKey;
 
     private final RestTemplate restTemplate;
+    private final RateLimiter rateLimiter;
 
-    public GeocodingController(RestTemplate restTemplate) {
+    public GeocodingController(RestTemplate restTemplate, RateLimiter rateLimiter) {
         this.restTemplate = restTemplate;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping("/reverse")
     public ResponseEntity<?> reverseGeocode(
             @RequestParam Double lat,
-            @RequestParam Double lng
+            @RequestParam Double lng,
+            Authentication auth
     ) {
+        if (overLimit(auth)) return tooMany();
         try {
             URI uri = UriComponentsBuilder.fromUriString(GEOCODE_URL)
                     .queryParam("latlng", lat + "," + lng)
@@ -49,7 +59,8 @@ public class GeocodingController {
     }
 
     @GetMapping("/forward")
-    public ResponseEntity<?> forwardGeocode(@RequestParam String address) {
+    public ResponseEntity<?> forwardGeocode(@RequestParam String address, Authentication auth) {
+        if (overLimit(auth)) return tooMany();
         try {
             // queryParam + encode() encodea el valor: un '&' o '=' en `address`
             // queda dentro del parámetro y no puede inyectar params nuevos.
@@ -69,7 +80,8 @@ public class GeocodingController {
     }
 
     @GetMapping("/autocomplete")
-    public ResponseEntity<?> autocomplete(@RequestParam String input) {
+    public ResponseEntity<?> autocomplete(@RequestParam String input, Authentication auth) {
+        if (overLimit(auth)) return tooMany();
         try {
             URI uri = UriComponentsBuilder.fromUriString(AUTOCOMPLETE_URL)
                     .queryParam("input", input)
@@ -106,5 +118,17 @@ public class GeocodingController {
     @SuppressWarnings("unchecked")
     private Map<String, Object> getMap(URI uri) {
         return restTemplate.getForObject(uri, Map.class);
+    }
+
+    // El UID viene del Authentication (lo setea FirebaseAuthFilter); el endpoint
+    // ya requiere auth, así que `auth` no debería ser null, pero lo cubrimos.
+    private boolean overLimit(Authentication auth) {
+        String key = (auth != null) ? auth.getName() : "anonymous";
+        return !rateLimiter.allow(key, MAX_PER_MIN, Duration.ofMinutes(1));
+    }
+
+    private ResponseEntity<?> tooMany() {
+        return ResponseEntity.status(429)
+                .body(Map.of("error", "Demasiadas solicitudes. Esperá un momento e intentá de nuevo."));
     }
 }
