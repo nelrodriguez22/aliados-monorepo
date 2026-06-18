@@ -75,8 +75,30 @@ export function Login() {
         toast.error('Verificá tu email antes de ingresar.');
         return;
       }
+
+      // ¿Existe en el backend? 404 → usuario nuevo → onboarding.
+      const token = await cred.user.getIdToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 404) {
+        navigate(ROUTES.ONBOARDING);
+        return;
+      }
+      if (!res.ok) {
+        toast.error('No se pudo iniciar sesión. Intentá de nuevo.');
+        return;
+      }
+
+      // Usuario existente: useProfile (en AuthProvider) setea el store y redirige.
       toast.success('¡Bienvenido de vuelta!');
     } catch (err: any) {
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        toast.error('Ya tenés una cuenta con email y contraseña. Ingresá por ahí.');
+        await signOut(auth);
+        return;
+      }
       if (err.code !== 'auth/popup-closed-by-user')
         toast.error(handleFirebaseError(err.code));
     }

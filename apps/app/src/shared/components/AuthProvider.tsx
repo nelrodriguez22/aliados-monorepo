@@ -20,7 +20,7 @@ const Spinner = () => (
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { firebaseUser, isLoading: firebaseLoading } = useFirebaseAuth();
-  const profileQuery = useProfile(firebaseUser);
+  const { data: profile, isNewUser } = useProfile(firebaseUser);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const logout = useStore((s) => s.logout);
 
@@ -36,7 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Si el email no está verificado, no bloqueamos — dejamos pasar
   if (!firebaseUser.emailVerified) return <>{children}</>;
 
-  if (!profileQuery.data)     return <Spinner />;
+  // Usuario nuevo (Google sin registro en backend): dejamos pasar para que
+  // la ruta de onboarding pueda renderizar en vez de spinear para siempre.
+  if (isNewUser)              return <>{children}</>;
+
+  if (!profile)               return <Spinner />;
 
   return <>{children}</>;
 }

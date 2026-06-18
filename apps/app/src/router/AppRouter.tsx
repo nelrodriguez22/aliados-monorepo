@@ -6,6 +6,7 @@ import { Login } from "@/features/auth/pages/Login";
 import { Register } from "@/features/auth/pages/Register";
 import { VerificationSuccess } from "@/features/auth/pages/VerificationSuccess";
 import { CheckEmail } from "@/features/auth/pages/CheckEmail";
+import { OnboardingGoogle } from "@/features/auth/pages/OnboardingGoogle";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
@@ -63,6 +64,7 @@ export function AppRouter() {
             <Route path="registro" element={<Register />} />
             <Route path="verifica-tu-correo" element={<CheckEmail />} />
             <Route path="verificacion-exitosa" element={<VerificationSuccess />} />
+            <Route path="completar-perfil" element={<OnboardingGoogle />} />
           </Route>
 
           {/* ── App (con header + footer) ── */}

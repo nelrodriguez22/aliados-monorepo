@@ -6,6 +6,7 @@ export const ROUTES = {
   REGISTER: '/registro',
   CHECK_EMAIL: '/verifica-tu-correo',
   VERIFICATION_SUCCESS: '/verificacion-exitosa',
+  ONBOARDING: '/completar-perfil',
 
   //cliente
   CLIENT: {

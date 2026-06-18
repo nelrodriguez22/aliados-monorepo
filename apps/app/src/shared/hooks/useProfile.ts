@@ -39,6 +39,12 @@ export function useProfile(firebaseUser: FirebaseUser | null) {
         throw new Error('Unauthorized');
       }
 
+      // 404 → usuario autenticado en Firebase pero sin registro en backend (usuario nuevo).
+      // NO hacemos signOut: mantenemos la sesión para el flujo de onboarding.
+      if (response.status === 404) {
+        throw new Error('NotRegistered');
+      }
+
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
@@ -75,9 +81,13 @@ export function useProfile(firebaseUser: FirebaseUser | null) {
     // Reintentar solo en errores de red, no en 401/403
     retry: (failureCount, error) => {
       if (error.message === 'Unauthorized') return false;
+      if (error.message === 'NotRegistered') return false;
       return failureCount < 2;
     },
   });
 
-  return query;
+  const isNewUser =
+    query.error instanceof Error && query.error.message === 'NotRegistered';
+
+  return { ...query, isNewUser };
 }
