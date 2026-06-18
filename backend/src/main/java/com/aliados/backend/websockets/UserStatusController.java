@@ -8,18 +8,14 @@ import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.service.UserService;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import java.security.Principal;
 
 @Controller
 public class UserStatusController {
@@ -35,61 +31,36 @@ public class UserStatusController {
     @Autowired
     private TrabajoRepository trabajoRepository;
 
-    // Heartbeat: el frontend envía esto cada 30 segundos para confirmar que sigue activo
+    // El UID se toma SIEMPRE del Principal establecido (y verificado contra Firebase) en el
+    // frame CONNECT por WebSocketAuthInterceptor. Antes cada mensaje re-verificaba el token
+    // (verifyIdToken en cada heartbeat, c/30s por usuario); ahora no. (#13 del informe)
+
+    // Heartbeat: el frontend lo envía cada 30 segundos para confirmar que sigue activo.
     @MessageMapping("/heartbeat")
-    public void heartbeat(@Payload Map<String, String> payload, SimpMessageHeaderAccessor headerAccessor) {
-        String firebaseUid = extractFirebaseUid(headerAccessor);
-
-        if (firebaseUid != null) {
-            // Solo actualizar lastSeenAt, no cambiar el status
-            logger.debug("Heartbeat recibido de usuario {}", firebaseUid);
+    public void heartbeat(Principal principal) {
+        if (principal != null) {
+            logger.debug("Heartbeat recibido de usuario {}", principal.getName());
         }
     }
 
-    // Cambio manual de estado (ej: proveedor acepta job → BUSY)
+    // Cambio manual de estado (ej: proveedor acepta job → BUSY).
     @MessageMapping("/status")
-    public void updateStatus(@Payload UserStatusDTO statusDTO, SimpMessageHeaderAccessor headerAccessor) {
-        String firebaseUid = extractFirebaseUid(headerAccessor);
-
-        if (firebaseUid != null && firebaseUid.equals(statusDTO.getFirebaseUid())) {
-            userService.updateUserStatus(firebaseUid, statusDTO.getStatus());
-            logger.info("Usuario {} cambió estado a {}", firebaseUid, statusDTO.getStatus());
+    public void updateStatus(@Payload UserStatusDTO statusDTO, Principal principal) {
+        if (principal != null && principal.getName().equals(statusDTO.getFirebaseUid())) {
+            userService.updateUserStatus(principal.getName(), statusDTO.getStatus());
+            logger.info("Usuario {} cambió estado a {}", principal.getName(), statusDTO.getStatus());
         }
-    }
-
-    private String extractFirebaseUid(SimpMessageHeaderAccessor headerAccessor) {
-        try {
-            String authHeader = headerAccessor.getFirstNativeHeader("Authorization");
-
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-                return decodedToken.getUid();
-            }
-        } catch (Exception e) {
-            logger.error("Error al extraer Firebase UID: {}", e.getMessage());
-        }
-
-        return null;
     }
 
     @MessageMapping("/authenticate")
-    public void authenticate(SimpMessageHeaderAccessor headerAccessor) {
-        // El UID se deriva SIEMPRE del token Firebase verificado, nunca de un payload
-        // del cliente: de lo contrario cualquier usuario conectado podría suplantar a
-        // otro mandando un firebaseUid ajeno y cambiarle el estado.
-        String firebaseUid = extractFirebaseUid(headerAccessor);
-
-        if (firebaseUid == null) {
-            logger.warn("❌ Autenticación WS rechazada: token ausente o inválido");
+    public void authenticate(Principal principal) {
+        if (principal == null) {
+            logger.warn("❌ Autenticación WS rechazada: sin principal autenticado en el CONNECT");
             return;
         }
 
+        String firebaseUid = principal.getName();
         logger.info("✅ Autenticación recibida para UID: {}", firebaseUid);
-
-        if (headerAccessor.getSessionAttributes() != null) {
-            headerAccessor.getSessionAttributes().put("firebaseUid", firebaseUid);
-        }
 
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
