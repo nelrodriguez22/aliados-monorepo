@@ -70,6 +70,10 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 17. **Localidad case-sensitive inconsistente:** query usa `=`, otro código usa `equalsIgnoreCase`. → normalizar al guardar.
 18. **`getMudanzasPendientesProveedor` devuelve todas las RESERVADO a cualquier proveedor** (provisional, no escala).
 19. **Config riesgosa en prod:** `ddl-auto=update`, `logging.level.org.hibernate.SQL=DEBUG`. → Flyway + bajar logging.
+20. **🟠 Fotos en base64 → payload gigante (2026-06-18).** El front (`ServiceRequest.tsx` con `FileReader.readAsDataURL`) guarda las fotos del trabajo como **data URLs base64** en `trabajo.fotos` (hasta 3, ~MB c/u). `/api/trabajos/cliente` (y demás listados) devolvía `fotos` de **todo el historial sin paginar** → 1.5MB. Doble problema: (a) almacenamiento base64 en Postgres, (b) payload de respuesta.
+    - **[x] Mitigación A (hecha):** `mapToDTOOptimized` ya NO incluye `fotos` (las listas no las muestran; el detalle vía `mapToDTO` las conserva). Baja drásticamente el payload de los 4 endpoints de lista.
+    - **[ ] Fix de fondo C (pendiente):** subir las fotos a **Cloudinary** (ya está en el stack) y guardar solo URLs en `fotos`. Toca el flujo de upload (front + posible endpoint de firma/upload backend) + migración de datos base64 existentes. Recomendado diseñarlo con brainstorming.
+    - **[ ] Adicional:** paginar el endpoint de historial (`Pageable`).
 
 ### 🟢 Menores
 

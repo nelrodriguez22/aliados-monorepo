@@ -449,7 +449,9 @@ public class TrabajoService {
         dto.setLongitudDestino(trabajo.getLongitudDestino());
         dto.setTiempoEstimadoMinutos(trabajo.getTiempoEstimadoMinutos());
         dto.setPrecioEstimado(trabajo.getPrecioEstimado());
-        dto.setFotos(trabajo.getFotos());
+        // fotos NO se incluye en listados: hoy se guardan en base64 y pesan ~MB. Las vistas de
+        // lista no las muestran (solo el detalle, vía mapToDTO). Quitarlo acá baja drásticamente
+        // el payload de /api/trabajos/cliente (y demás listas). Ver #20 del informe (migrar a Cloudinary).
         dto.setCreatedAt(trabajo.getCreatedAt());
         dto.setAcceptedAt(trabajo.getAcceptedAt());
         dto.setCompletedAt(trabajo.getCompletedAt());
