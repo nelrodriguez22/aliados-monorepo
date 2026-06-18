@@ -17,9 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -505,7 +507,8 @@ public class TrabajoService {
         trabajo.setEstado(TrabajoEstado.PROPUESTO);
         trabajo.setProveedor(proveedor);
         trabajo.setTiempoEstimadoMinutos(tiempoEstimadoMinutos);
-        trabajo.setTarifaVisita(tarifaVisita != null ? tarifaVisita : new BigDecimal("15000"));
+        BigDecimal tarifaEfectiva = tarifaVisita != null ? tarifaVisita : new BigDecimal("15000");
+        trabajo.setTarifaVisita(tarifaEfectiva);
         trabajo.setPropuestoAt(LocalDateTime.now());
         if (latitud != null && longitud != null) {
             trabajo.setLatitudProveedor(latitud);
@@ -514,11 +517,13 @@ public class TrabajoService {
 
         trabajo = trabajoRepository.save(trabajo);
 
+        // Formato AR: 15000 → "15.000". Usa la tarifa real, no un texto fijo.
+        String tarifaFmt = NumberFormat.getIntegerInstance(Locale.of("es", "AR")).format(tarifaEfectiva);
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
                 "PROPUESTA_RECIBIDA",
                 "Propuesta de Profesional",
-                proveedor.getNombre() + " puede llegar en " + tiempoEstimadoMinutos + " minutos. Tarifa de visita: $15.000",
+                proveedor.getNombre() + " puede llegar en " + tiempoEstimadoMinutos + " minutos. Tarifa de visita: $" + tarifaFmt,
                 trabajo.getId(),
                 "/cliente/propuesta/" + trabajo.getId()
         );
