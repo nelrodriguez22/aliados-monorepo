@@ -118,7 +118,7 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - [x] #3 Fix spoofing WS `/authenticate`: UID derivado del token verificado (`extractFirebaseUid`), ya no del payload; + null-check de `getSessionAttributes`. ⚠️ Requiere que el front mande el header `Authorization: Bearer` en el frame `/authenticate` (igual que ya hace para `/status` y `/heartbeat`).
 - [x] #5 Refactor `ProviderScoreService.ordenarPorScore` (score cacheado 1 vez por proveedor, en vez de O(n·log n) reevaluaciones).
 - [x] #4 Migrar dinero a `BigDecimal` (entidades + DTOs + aritmética).
-- [x] #2 Constraint único `(fecha_confirmada, turno)` creado en V1. _Pendiente endurecer el código para capturar la violación en vez de solo el chequeo previo._
+- [x] #2 Doble-booking cerrado (2026-06-18). Constraint: índice único parcial `uq_mudanzas_fecha_turno (fecha_confirmada, turno) WHERE estado NOT IN ('CANCELADO','COMPLETADO')` en V1. Código endurecido en `aceptarMudanza` y `aceptarContrapropuesta`: `save` → `saveAndFlush` envuelto en `try/catch (DataIntegrityViolationException)` → relanza `ConflictException` (409 amigable). El pre-check (`existsBy...`) se mantiene como camino feliz; el catch es el backstop que cierra la race TOCTOU si dos requests pasan el chequeo a la vez. `compileJava` OK.
 
 ### Fase 3 — Rendimiento
 - [x] #6 Índices (incluidos en `V1__init_schema.sql`).

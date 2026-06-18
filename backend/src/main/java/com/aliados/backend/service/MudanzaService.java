@@ -6,6 +6,7 @@ import com.aliados.backend.exception.ConflictException;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.MudanzaRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.aliados.backend.repository.MudanzaTierRepository;
 import com.aliados.backend.repository.UserRepository;
 import org.slf4j.Logger;
@@ -179,7 +180,15 @@ public class MudanzaService {
         mudanza.setFechaConfirmada(fechaAgendar);
         mudanza.setTurno(turno);
         mudanza.setAcceptedAt(LocalDateTime.now());
-        mudanza = mudanzaRepository.save(mudanza);
+        try {
+            // saveAndFlush fuerza el UPDATE ahora: si dos requests pasaron el pre-check a la
+            // vez, el índice único parcial (fecha_confirmada, turno) rechaza al segundo acá y
+            // lo convertimos en un 409 limpio. Cierra la race TOCTOU (#2 del informe).
+            mudanza = mudanzaRepository.saveAndFlush(mudanza);
+        } catch (DataIntegrityViolationException e) {
+            String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
+            throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya está ocupado.");
+        }
 
         String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
@@ -311,7 +320,14 @@ public class MudanzaService {
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setFechaConfirmada(fechaAgendar);
         mudanza.setAcceptedAt(LocalDateTime.now());
-        mudanza = mudanzaRepository.save(mudanza);
+        try {
+            // Mismo blindaje anti doble-booking que aceptarMudanza: el índice único parcial
+            // resuelve la race si dos contrapropuestas del mismo turno se aceptan a la vez.
+            mudanza = mudanzaRepository.saveAndFlush(mudanza);
+        } catch (DataIntegrityViolationException e) {
+            String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
+            throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya no está disponible.");
+        }
 
         // Notificar proveedor
         notificacionService.enviarNotificacion(
