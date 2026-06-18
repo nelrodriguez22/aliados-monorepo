@@ -3,6 +3,8 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.CrearTrabajoDTO;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.entity.*;
+import com.aliados.backend.exception.ForbiddenException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
@@ -62,10 +64,10 @@ public class TrabajoService {
     @Transactional
     public TrabajoResponseDTO crearTrabajo(String clienteFirebaseUid, CrearTrabajoDTO dto) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Oficio oficio = oficioRepository.findById(dto.getOficioId())
-                .orElseThrow(() -> new RuntimeException("Oficio no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Oficio no encontrado"));
 
         Trabajo trabajo = new Trabajo();
         trabajo.setCliente(cliente);
@@ -100,7 +102,7 @@ public class TrabajoService {
 
     public List<TrabajoResponseDTO> getTrabajosPendientes(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         if (proveedor.getOficio() == null) {
             throw new RuntimeException("El proveedor no tiene un oficio asignado");
@@ -124,17 +126,17 @@ public class TrabajoService {
 
     public TrabajoResponseDTO getTrabajoById(Long id) {
         Trabajo trabajo = trabajoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
         return mapToDTO(trabajo);
     }
 
     @Transactional
     public void rechazarTrabajo(Long trabajoId, String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.PENDIENTE)) {
             throw new RuntimeException("El trabajo ya no está disponible");
@@ -150,17 +152,17 @@ public class TrabajoService {
     @Transactional
     public TrabajoResponseDTO completarTrabajo(Long trabajoId, String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.EN_CURSO)) {
             throw new RuntimeException("El trabajo no está en curso");
         }
 
         if (!trabajo.getProveedor().getId().equals(proveedor.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         trabajo.setEstado(TrabajoEstado.COMPLETADO);
@@ -221,7 +223,7 @@ public class TrabajoService {
 
     public List<TrabajoResponseDTO> getTrabajosByCliente(String firebaseUid) {
         User cliente = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         List<Trabajo> trabajos = trabajoRepository.findByClienteFirebaseUidOrderByCreatedAtDesc(firebaseUid);
 
@@ -363,7 +365,7 @@ public class TrabajoService {
 
     public TrabajoResponseDTO getTrabajoActivo(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findTrabajoEnCursoByProveedorId(proveedor.getId());
 
@@ -376,7 +378,7 @@ public class TrabajoService {
 
     public List<TrabajoResponseDTO> getTrabajosCompletados(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         List<Trabajo> trabajos = trabajoRepository.findByProveedorIdAndEstadoOrderByCompletedAtDesc(
                 proveedor.getId(),
@@ -458,13 +460,13 @@ public class TrabajoService {
     @Transactional
     public TrabajoResponseDTO cancelarTrabajo(Long trabajoId, String clienteFirebaseUid, String motivo) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!trabajo.getEstado().equals(TrabajoEstado.PENDIENTE)) {
@@ -485,17 +487,17 @@ public class TrabajoService {
     public TrabajoResponseDTO proponerTrabajo(Long trabajoId, String proveedorFirebaseUid,
                                               Integer tiempoEstimadoMinutos, Double latitud, Double longitud, BigDecimal tarifaVisita) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.PENDIENTE)) {
             throw new RuntimeException("El trabajo ya no está disponible");
         }
 
         if (trabajo.getProveedorNotificadoId() == null || !trabajo.getProveedorNotificadoId().equals(proveedor.getId())) {
-            throw new RuntimeException("No estás asignado a este trabajo");
+            throw new ForbiddenException("No estás asignado a este trabajo");
         }
 
         trabajo.setEstado(TrabajoEstado.PROPUESTO);
@@ -525,17 +527,17 @@ public class TrabajoService {
     @Transactional
     public TrabajoResponseDTO aceptarPropuesta(Long trabajoId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.PROPUESTO)) {
             throw new RuntimeException("El trabajo no tiene una propuesta activa");
         }
 
         if (!trabajo.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         User proveedor = trabajo.getProveedor();
@@ -587,17 +589,17 @@ public class TrabajoService {
     @Transactional
     public void rechazarPropuesta(Long trabajoId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.PROPUESTO)) {
             throw new RuntimeException("El trabajo no tiene una propuesta activa");
         }
 
         if (!trabajo.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         User proveedorRechazado = trabajo.getProveedor();
@@ -625,7 +627,7 @@ public class TrabajoService {
 
     public List<TrabajoResponseDTO> getTrabajosEnCola(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         List<Trabajo> trabajos = trabajoRepository.findTrabajosEnCola(proveedor.getId());
 

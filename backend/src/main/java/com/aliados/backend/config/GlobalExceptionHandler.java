@@ -1,6 +1,8 @@
 package com.aliados.backend.config;
 
-import com.aliados.backend.exception.UserNotFoundException;
+import com.aliados.backend.exception.ConflictException;
+import com.aliados.backend.exception.ForbiddenException;
+import com.aliados.backend.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -26,10 +28,28 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException e) {
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "error", "Not Found",
+                "message", e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "Forbidden",
+                "message", e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "Conflict",
                 "message", e.getMessage(),
                 "timestamp", LocalDateTime.now().toString()
         ));

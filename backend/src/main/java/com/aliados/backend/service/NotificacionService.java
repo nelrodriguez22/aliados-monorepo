@@ -4,6 +4,8 @@ import com.aliados.backend.dto.NotificacionDTO;
 import com.aliados.backend.dto.NotificacionResponseDTO;
 import com.aliados.backend.entity.Notificacion;
 import com.aliados.backend.entity.User;
+import com.aliados.backend.exception.ForbiddenException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.NotificacionRepository;
 import com.aliados.backend.repository.UserRepository;
 import org.slf4j.Logger;
@@ -39,7 +41,7 @@ public class NotificacionService {
     public void enviarNotificacion(String firebaseUid, String tipo, String titulo, String mensaje, Long trabajoId, String actionUrl) {
         // Guardar en DB
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         Notificacion notificacion = new Notificacion();
         notificacion.setUsuario(usuario);
@@ -60,7 +62,7 @@ public class NotificacionService {
     }
     public List<NotificacionResponseDTO> getNotificaciones(String firebaseUid) {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         return notificacionRepository.findByUsuarioIdOrderByCreatedAtDesc(usuario.getId())
                 .stream()
@@ -70,7 +72,7 @@ public class NotificacionService {
 
     public Long getUnreadCount(String firebaseUid) {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         return notificacionRepository.countByUsuarioIdAndLeidaFalse(usuario.getId());
     }
@@ -78,10 +80,10 @@ public class NotificacionService {
     @Transactional
     public void marcarComoLeida(Long notificacionId, String firebaseUid) {
         Notificacion notificacion = notificacionRepository.findById(notificacionId)
-                .orElseThrow(() -> new RuntimeException("Notificación no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Notificación no encontrada"));
 
         if (!notificacion.getUsuario().getFirebaseUid().equals(firebaseUid)) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         notificacion.setLeida(true);
@@ -91,7 +93,7 @@ public class NotificacionService {
     @Transactional
     public void marcarTodasComoLeidas(String firebaseUid) {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         notificacionRepository.marcarTodasComoLeidas(usuario.getId());
     }

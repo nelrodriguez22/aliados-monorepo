@@ -6,6 +6,8 @@ import com.aliados.backend.entity.Calificacion;
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.User;
+import com.aliados.backend.exception.ForbiddenException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
@@ -36,17 +38,17 @@ public class CalificacionService {
     @Transactional
     public CalificacionResponseDTO crearCalificacion(Long trabajoId, String clienteFirebaseUid, CrearCalificacionDTO dto) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Trabajo no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
         if (!trabajo.getEstado().equals(TrabajoEstado.COMPLETADO)) {
             throw new RuntimeException("Solo se pueden calificar trabajos completados");
         }
 
         if (!trabajo.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("Solo el cliente del trabajo puede calificarlo");
+            throw new ForbiddenException("Solo el cliente del trabajo puede calificarlo");
         }
 
         if (calificacionRepository.existsByTrabajoId(trabajoId)) {
@@ -94,7 +96,7 @@ public class CalificacionService {
 
     public CalificacionResponseDTO getCalificacionByTrabajo(Long trabajoId) {
         Calificacion calificacion = calificacionRepository.findByTrabajoId(trabajoId)
-                .orElseThrow(() -> new RuntimeException("Calificación no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Calificación no encontrada"));
         return mapToDTO(calificacion);
     }
 
@@ -112,7 +114,7 @@ public class CalificacionService {
 
     public List<Map<String, Object>> getCalificacionesByProveedor(String firebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         List<Calificacion> calificaciones = calificacionRepository.findByProveedorIdOrderByCreatedAtDesc(proveedor.getId());
 

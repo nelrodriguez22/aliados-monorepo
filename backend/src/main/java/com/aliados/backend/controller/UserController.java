@@ -6,6 +6,7 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.repository.UserRepository;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.service.TrabajoService;
 import com.aliados.backend.service.UserService;
 import com.google.firebase.auth.FirebaseAuth;
@@ -55,10 +56,9 @@ public class UserController {
         } catch (FirebaseAuthException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Token inválido: " + e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
         }
+        // ConflictException→409, NotFoundException→404 y RuntimeException→400
+        // los maneja GlobalExceptionHandler (no los atrapamos acá).
     }
 
     @PostMapping("/resend-verification")
@@ -90,7 +90,7 @@ public class UserController {
 
         UserStatus status = UserStatus.valueOf(statusStr);
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         userService.updateUserStatus(firebaseUid, status);
 

@@ -6,6 +6,7 @@ import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.service.UserService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
@@ -91,7 +92,7 @@ public class UserStatusController {
         }
 
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         if (user.getRole() == UserRole.PROVIDER) {
             int trabajosActivos = trabajoRepository.countTrabajosActivosYCola(user.getId());

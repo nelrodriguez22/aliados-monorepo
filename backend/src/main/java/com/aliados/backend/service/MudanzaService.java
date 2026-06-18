@@ -2,6 +2,9 @@ package com.aliados.backend.service;
 
 import com.aliados.backend.dto.*;
 import com.aliados.backend.entity.*;
+import com.aliados.backend.exception.ConflictException;
+import com.aliados.backend.exception.ForbiddenException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.MudanzaRepository;
 import com.aliados.backend.repository.MudanzaTierRepository;
 import com.aliados.backend.repository.UserRepository;
@@ -64,10 +67,10 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO crearMudanza(String clienteFirebaseUid, CrearMudanzaDTO dto) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         MudanzaTier tier = mudanzaTierRepository.findById(dto.getTierId())
-                .orElseThrow(() -> new RuntimeException("Tier no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Tier no encontrado"));
 
         // Validar región Rosario
         double lat = dto.getLatitudOrigen();
@@ -121,13 +124,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO reservarMudanza(Long mudanzaId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.PENDIENTE)) {
@@ -153,10 +156,10 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO aceptarMudanza(Long mudanzaId, String proveedorFirebaseUid, MudanzaTurno turno) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getEstado().equals(MudanzaEstado.RESERVADO)) {
             throw new RuntimeException("La mudanza no está disponible para aceptar");
@@ -168,7 +171,7 @@ public class MudanzaService {
                 fechaAgendar, turno, List.of(MudanzaEstado.CANCELADO, MudanzaEstado.COMPLETADO));
         if (turnoOcupado) {
             String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
-            throw new RuntimeException("El " + turnoLabel + " del " + fechaAgendar + " ya está ocupado.");
+            throw new ConflictException("El " + turnoLabel + " del " + fechaAgendar + " ya está ocupado.");
         }
 
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
@@ -201,10 +204,10 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO contraproponer(Long mudanzaId, String proveedorFirebaseUid, ContrapropuestaMudanzaDTO dto) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getEstado().equals(MudanzaEstado.RESERVADO)) {
             throw new RuntimeException("La mudanza no está disponible para contraproponer");
@@ -223,7 +226,7 @@ public class MudanzaService {
         // Contrapropuesta de tier
         if (dto.getTierSugeridoId() != null) {
             MudanzaTier tierSugerido = mudanzaTierRepository.findById(dto.getTierSugeridoId())
-                    .orElseThrow(() -> new RuntimeException("Tier sugerido no encontrado"));
+                    .orElseThrow(() -> new NotFoundException("Tier sugerido no encontrado"));
 
             if (tierSugerido.getId().equals(mudanza.getTier().getId())) {
                 throw new RuntimeException("El tier sugerido es el mismo que el actual");
@@ -282,13 +285,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO aceptarContrapropuesta(Long mudanzaId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.CONTRAPROPUESTO)) {
@@ -302,7 +305,7 @@ public class MudanzaService {
                 fechaAgendar, turno, List.of(MudanzaEstado.CANCELADO, MudanzaEstado.COMPLETADO));
         if (turnoOcupado) {
             String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
-            throw new RuntimeException("El " + turnoLabel + " del " + fechaAgendar + " ya no está disponible.");
+            throw new ConflictException("El " + turnoLabel + " del " + fechaAgendar + " ya no está disponible.");
         }
 
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
@@ -332,13 +335,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO rechazarContrapropuesta(Long mudanzaId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.CONTRAPROPUESTO)) {
@@ -372,17 +375,17 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO iniciarMudanza(Long mudanzaId, String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getEstado().equals(MudanzaEstado.ACEPTADO)) {
             throw new RuntimeException("La mudanza no está lista para iniciar");
         }
 
         if (!mudanza.getProveedor().getId().equals(proveedor.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         mudanza.setEstado(MudanzaEstado.EN_CURSO);
@@ -411,17 +414,17 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO finalizarMudanza(Long mudanzaId, String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getEstado().equals(MudanzaEstado.EN_CURSO)) {
             throw new RuntimeException("La mudanza no está en curso");
         }
 
         if (!mudanza.getProveedor().getId().equals(proveedor.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         LocalDateTime ahora = LocalDateTime.now();
@@ -501,13 +504,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO pagarExtra(Long mudanzaId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.PENDIENTE_PAGO_EXTRA)) {
@@ -531,13 +534,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO completarMudanza(Long mudanzaId, String clienteFirebaseUid) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.FINALIZADO)) {
@@ -572,13 +575,13 @@ public class MudanzaService {
     @Transactional
     public MudanzaResponseDTO cancelarMudanza(Long mudanzaId, String clienteFirebaseUid, String motivo) {
         User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
 
         Mudanza mudanza = mudanzaRepository.findById(mudanzaId)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
 
         if (!mudanza.getCliente().getId().equals(cliente.getId())) {
-            throw new RuntimeException("No autorizado");
+            throw new ForbiddenException("No autorizado");
         }
 
         if (!mudanza.getEstado().equals(MudanzaEstado.PENDIENTE) &&
@@ -602,7 +605,7 @@ public class MudanzaService {
 
     public MudanzaResponseDTO getMudanzaById(Long id) {
         Mudanza mudanza = mudanzaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mudanza no encontrada"));
+                .orElseThrow(() -> new NotFoundException("Mudanza no encontrada"));
         return mapToDTO(mudanza);
     }
 
@@ -623,7 +626,7 @@ public class MudanzaService {
 
     public MudanzaResponseDTO getMudanzaActivaProveedor(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         Mudanza enCurso = mudanzaRepository.findMudanzaEnCursoByProveedorId(proveedor.getId());
         if (enCurso == null) return null;
@@ -632,7 +635,7 @@ public class MudanzaService {
 
     public List<MudanzaResponseDTO> getMudanzasConfirmadasProveedor(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         List<Mudanza> confirmadas = mudanzaRepository.findByProveedorIdAndEstadoIn(
                 proveedor.getId(),
@@ -643,7 +646,7 @@ public class MudanzaService {
 
     public List<MudanzaResponseDTO> getMudanzasCompletadasProveedor(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
         return mudanzaRepository.findByProveedorIdAndEstadoOrderByCompletedAtDesc(
                         proveedor.getId(), MudanzaEstado.COMPLETADO)

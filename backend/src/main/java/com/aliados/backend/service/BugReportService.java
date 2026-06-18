@@ -6,6 +6,7 @@ import com.aliados.backend.entity.BugCategoria;
 import com.aliados.backend.entity.BugReport;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.BugReportRepository;
 import com.aliados.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,7 @@ public class BugReportService {
     @Transactional
     public BugReportResponseDTO crear(String firebaseUid, CrearBugReportDTO dto) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         BugReport report = new BugReport();
         report.setUser(user);
@@ -43,7 +44,7 @@ public class BugReportService {
 
     public List<BugReportResponseDTO> listar(String firebaseUid) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         if (user.getRole() != UserRole.ADMIN) {
             throw new AccessDeniedException("No tenés permisos para ver los reportes");
         }

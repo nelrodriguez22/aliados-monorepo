@@ -5,6 +5,7 @@ import com.aliados.backend.dto.CrearCalificacionDTO;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.UserRepository;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.service.CalificacionService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +68,7 @@ public class CalificacionController {
     public ResponseEntity<?> getPromedioProveedor(Authentication authentication) {
         String uid = authentication.getName();
         User proveedor = userRepository.findByFirebaseUid(uid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         Double promedio = calificacionRepository.getPromedioByProveedorId(proveedor.getId());
         Long total = calificacionRepository.countByProveedorId(proveedor.getId());

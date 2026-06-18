@@ -8,6 +8,8 @@ import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
+import com.aliados.backend.exception.ConflictException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.exception.UserNotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.OficioRepository;
@@ -68,11 +70,11 @@ public class UserService {
     public UserResponseDTO registerUser(RegisterDTO dto) {
         // Verificar que no exista el usuario
         if (userRepository.existsByFirebaseUid(dto.getFirebaseUid())) {
-            throw new RuntimeException("Usuario ya registrado con este Firebase UID");
+            throw new ConflictException("Usuario ya registrado con este Firebase UID");
         }
 
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Usuario ya registrado con este email");
+            throw new ConflictException("Usuario ya registrado con este email");
         }
 
         // Crear usuario
@@ -170,7 +172,7 @@ public class UserService {
     @Transactional
     public void updateUserStatus(String firebaseUid, UserStatus status) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         user.setStatus(status);
         user.setLastSeenAt(LocalDateTime.now());
@@ -196,7 +198,7 @@ public class UserService {
     @Transactional
     public void saveFcmToken(String firebaseUid, String fcmToken) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         user.setFcmToken(fcmToken);
         userRepository.save(user);
     }
@@ -204,7 +206,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO updateProfile(String firebaseUid, Map<String, String> body) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         if (body.containsKey("nombre")) user.setNombre(body.get("nombre"));
         if (body.containsKey("telefono")) user.setTelefono(body.get("telefono"));
