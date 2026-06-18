@@ -135,7 +135,7 @@ export function useGeocode() {
         });
       }
     } catch {
-      console.error('Error geocodificando sugerencia');
+      // sugerencia inválida: se ignora
     }
   }, []);
 

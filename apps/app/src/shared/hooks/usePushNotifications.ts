@@ -58,13 +58,11 @@ export function usePushNotifications() {
         if (fcmToken) {
           // Enviar token al backend
           await apiClient.post('/api/users/fcm-token', { token: fcmToken });
-          console.log('✅ FCM token registrado');
         }
         return true;
       }
       return false;
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
+    } catch {
       return false;
     }
   };

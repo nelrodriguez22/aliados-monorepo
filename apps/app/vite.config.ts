@@ -66,6 +66,14 @@ export default defineConfig({
     // manualChunks objeto ya no se soporta, se usa codeSplitting
     rolldownOptions: {
       output: {
+        // Elimina console.* y debugger de TODO el bundle de prod (incluidas dependencias
+        // como Firebase/SockJS). Oxc minifier — solo aplica en build; en dev se mantienen.
+        minify: {
+          compress: {
+            dropConsole: true,
+            dropDebugger: true,
+          },
+        },
         codeSplitting: {
           groups: [
             {

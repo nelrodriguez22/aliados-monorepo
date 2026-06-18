@@ -90,7 +90,6 @@ export const useWebSocket = () => {
           },
 
           onStompError: (frame) => {
-            console.error('Error STOMP:', frame);
             setError(frame.headers['message'] || 'Error de conexión');
           },
 
@@ -102,8 +101,7 @@ export const useWebSocket = () => {
 
         client.activate();
         clientRef.current = client;
-      } catch (err) {
-        console.error('Error al conectar WebSocket:', err);
+      } catch {
         setError('Error al conectar');
       }
     };
@@ -247,7 +245,7 @@ export const useWebSocket = () => {
         break;
 
       default:
-        console.log('Notificación no manejada:', tipo);
+        break;
     }
   };
 

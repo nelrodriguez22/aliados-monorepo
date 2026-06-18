@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // No queremos NINGÚN console.* en el bundle (logs visibles en prod).
+      'no-console': 'error',
+    },
   },
 ])

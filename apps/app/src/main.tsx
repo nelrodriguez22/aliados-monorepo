@@ -7,6 +7,20 @@ import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
+// En producción silenciamos toda salida de consola: cubre los console.* de dependencias
+// (Firebase/SockJS) y las referencias tipo `.catch(console.error)` que el minifier no puede
+// eliminar. El build (Oxc dropConsole) ya quita la mayoría; esto garantiza cero salida.
+if (import.meta.env.PROD) {
+  /* eslint-disable no-console */
+  const noop = () => {};
+  console.log = noop;
+  console.warn = noop;
+  console.error = noop;
+  console.info = noop;
+  console.debug = noop;
+  /* eslint-enable no-console */
+}
+
 // Detectar chunks viejos después de un deploy
 if ('serviceWorker' in navigator) {
   const handleStaleChunk = () => {
