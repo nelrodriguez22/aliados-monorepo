@@ -1,7 +1,7 @@
 # Informe de mejoras — Backend Aliados
 
 > Documento vivo para retomar entre sesiones. Marcá los TODOs a medida que se resuelven.
-> Última actualización: 2026-06-17
+> Última actualización: 2026-06-18
 
 Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket STOMP · SendGrid · FCM.
 
@@ -144,7 +144,7 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - [ ] Opcional futuro: envío `@Async`; cooldown a Redis si se escala a >1 instancia.
 
 ### Fase 4 — Robustez / calidad
-- [ ] #10 Excepciones tipadas + códigos HTTP correctos.
+- [~] #10 Excepciones tipadas + códigos HTTP correctos. **Parcial (2026-06-18):** creada `UserNotFoundException` (extends `RuntimeException`) → `getUserByFirebaseUid` la lanza y `GlobalExceptionHandler` la mapea a **404** (antes todo `RuntimeException`=400). Se hizo para el onboarding de Google (front necesitaba distinguir "usuario nuevo"). **Falta:** "no autorizado" → 403, y migrar el resto de `RuntimeException` genéricos a excepciones tipadas con su código HTTP.
 - [x] #11 Geocoding endurecido (2026-06-17, sesión 2): sacado de `permitAll` → ahora requiere auth (el front ya manda token vía `apiClient.get`, no rompe nada); URLs con `UriComponentsBuilder...encode()` (cierra inyección de params en `address`/`input`); `RestTemplate` bean compartido con timeouts (5s connect / 10s read) en `RestClientConfig`. Rate-limit por-usuario añadido: `RateLimiter` (ventana fija en memoria, `config/RateLimiter.java`), 60 req/min por UID en los 3 endpoints → 429 al exceder. `EmailService` migrado al `RestTemplate` bean (ya no usa `new`). _RateLimiter es in-memory → a Redis si se escala a >1 instancia._
 - [ ] #12 WS event listener (pool, lastSeenAt).
 - [ ] #13 Reusar Principal en heartbeat.
