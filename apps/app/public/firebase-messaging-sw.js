@@ -3,7 +3,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 firebase.initializeApp({
   apiKey: "AIzaSyDHJI3pa11uJwmP_Mw744M-HdZAhP5qrDU",
-  authDomain: "aliados-web-22.firebaseapp.com",
+  authDomain: "aliados-app.convivirtech.com.ar",
   projectId: "aliados-web-22",
   storageBucket: "aliados-web-22.appspot.com",
   messagingSenderId: "578160153411",
