@@ -9,6 +9,7 @@ import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.aliados.backend.repository.OficioRepository;
+import com.aliados.backend.util.RegionRosario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,9 +90,7 @@ public class TrabajoService {
             trabajo.setLongitudDestino(dto.getLongitudDestino());
         }
 
-        double lat = dto.getLatitudCliente();
-        double lng = dto.getLongitudCliente();
-        if (lat < -33.05 || lat > -32.85 || lng < -60.80 || lng > -60.55) {
+        if (!RegionRosario.contiene(dto.getLatitudCliente(), dto.getLongitudCliente())) {
             throw new RuntimeException("Por el momento, Aliados solo está disponible en Rosario, Santa Fe.");
         }
 
@@ -181,7 +180,7 @@ public class TrabajoService {
 
             notificacionService.enviarNotificacion(
                     proveedor.getFirebaseUid(),
-                    "TRABAJO_COLA_ACTIVADO",
+                    TipoNotificacion.TRABAJO_COLA_ACTIVADO,
                     "Nuevo Trabajo Activo",
                     "El servicio de " + siguiente.getOficio().getNombre() + " para " + siguiente.getCliente().getNombre() + " pasó a estar en curso.",
                     siguiente.getId(),
@@ -190,7 +189,7 @@ public class TrabajoService {
 
             notificacionService.enviarNotificacion(
                     siguiente.getCliente().getFirebaseUid(),
-                    "TRABAJO_EN_CURSO",
+                    TipoNotificacion.TRABAJO_EN_CURSO,
                     "Profesional en Camino",
                     "Tu profesional de " + siguiente.getOficio().getNombre() + " está listo para atenderte.",
                     siguiente.getId(),
@@ -204,7 +203,7 @@ public class TrabajoService {
 
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
-                "TRABAJO_COMPLETADO",
+                TipoNotificacion.TRABAJO_COMPLETADO,
                 "Trabajo Completado",
                 "El servicio de " + trabajo.getOficio().getNombre() + " fue completado. ¡Calificá a tu profesional!",
                 trabajo.getId(),
@@ -213,7 +212,7 @@ public class TrabajoService {
 
         notificacionService.enviarNotificacion(
                 proveedor.getFirebaseUid(),
-                "TRABAJO_COMPLETADO_PROVEEDOR",
+                TipoNotificacion.TRABAJO_COMPLETADO_PROVEEDOR,
                 "Trabajo Completado",
                 "Completaste el servicio de " + trabajo.getOficio().getNombre() + " exitosamente",
                 trabajo.getId(),
@@ -261,7 +260,7 @@ public class TrabajoService {
 
         notificacionService.enviarNotificacion(
                 mejorProveedor.getFirebaseUid(),
-                "NUEVO_TRABAJO",
+                TipoNotificacion.NUEVO_TRABAJO,
                 "Nueva Solicitud de Trabajo",
                 "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
                 trabajo.getId(),
@@ -356,7 +355,7 @@ public class TrabajoService {
             trabajoRepository.save(trabajo);
             notificacionService.enviarNotificacion(
                     proveedor.getFirebaseUid(),
-                    "NUEVO_TRABAJO",
+                    TipoNotificacion.NUEVO_TRABAJO,
                     "Nueva Solicitud de Trabajo",
                     "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
                     trabajo.getId(),
@@ -521,7 +520,7 @@ public class TrabajoService {
         String tarifaFmt = NumberFormat.getIntegerInstance(Locale.of("es", "AR")).format(tarifaEfectiva);
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
-                "PROPUESTA_RECIBIDA",
+                TipoNotificacion.PROPUESTA_RECIBIDA,
                 "Propuesta de Profesional",
                 proveedor.getNombre() + " puede llegar en " + tiempoEstimadoMinutos + " minutos. Tarifa de visita: $" + tarifaFmt,
                 trabajo.getId(),
@@ -583,7 +582,7 @@ public class TrabajoService {
 
         notificacionService.enviarNotificacion(
                 proveedor.getFirebaseUid(),
-                "PROPUESTA_ACEPTADA",
+                TipoNotificacion.PROPUESTA_ACEPTADA,
                 "Propuesta Aceptada",
                 mensaje,
                 trabajo.getId(),
@@ -612,7 +611,7 @@ public class TrabajoService {
         User proveedorRechazado = trabajo.getProveedor();
         notificacionService.enviarNotificacion(
                 proveedorRechazado.getFirebaseUid(),
-                "PROPUESTA_RECHAZADA",
+                TipoNotificacion.PROPUESTA_RECHAZADA,
                 "Propuesta Rechazada",
                 "El cliente rechazó tu propuesta de " + trabajo.getOficio().getNombre(),
                 trabajo.getId(),

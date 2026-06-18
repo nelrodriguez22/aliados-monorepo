@@ -3,7 +3,9 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.NotificacionDTO;
 import com.aliados.backend.dto.NotificacionResponseDTO;
 import com.aliados.backend.entity.Notificacion;
+import com.aliados.backend.entity.TipoNotificacion;
 import com.aliados.backend.entity.User;
+import com.aliados.backend.event.NotificacionCreatedEvent;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.NotificacionRepository;
@@ -11,7 +13,7 @@ import com.aliados.backend.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,16 +31,13 @@ public class NotificacionService {
     private UserRepository userRepository;
 
     @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    @Autowired
-    private PushNotificationService pushNotificationService;
+    private ApplicationEventPublisher eventPublisher;
 
     private static final Logger logger = LoggerFactory.getLogger(NotificacionService.class);
 
 
     @Transactional
-    public void enviarNotificacion(String firebaseUid, String tipo, String titulo, String mensaje, Long trabajoId, String actionUrl) {
+    public void enviarNotificacion(String firebaseUid, TipoNotificacion tipo, String titulo, String mensaje, Long trabajoId, String actionUrl) {
         // Guardar en DB
         User usuario = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
@@ -53,12 +52,10 @@ public class NotificacionService {
         notificacion.setLeida(false);
         notificacionRepository.save(notificacion);
 
-        // Enviar por WebSocket
+        // Publicar evento: WS y push se emiten AFTER_COMMIT (evita notificaciones "fantasma")
         NotificacionResponseDTO dto = mapToDTO(notificacion);
-        messagingTemplate.convertAndSendToUser(firebaseUid, "/queue/notifications", dto);
-
-        // Enviar push notification (async)
-        pushNotificationService.enviarPush(usuario, titulo, mensaje, actionUrl);
+        eventPublisher.publishEvent(
+                new NotificacionCreatedEvent(firebaseUid, dto, usuario, titulo, mensaje, actionUrl));
     }
     public List<NotificacionResponseDTO> getNotificaciones(String firebaseUid) {
         User usuario = userRepository.findByFirebaseUid(firebaseUid)

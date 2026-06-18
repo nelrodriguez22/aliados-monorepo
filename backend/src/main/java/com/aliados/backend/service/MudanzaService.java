@@ -9,6 +9,7 @@ import com.aliados.backend.repository.MudanzaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.aliados.backend.repository.MudanzaTierRepository;
 import com.aliados.backend.repository.UserRepository;
+import com.aliados.backend.util.RegionRosario;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,11 @@ public class MudanzaService {
     @Value("${mudanza.ratio-tiempo:1.0}")
     private Double ratioTiempo;
 
+    // Comisión de la plataforma (%). Global por config; se persiste por mudanza para
+    // conservar el histórico de lo cobrado aunque el valor cambie a futuro.
+    @Value("${app.mudanza.comision-porcentaje:10.00}")
+    private BigDecimal comisionPorcentaje;
+
     // ════════════════════════════════════════════
     // TIERS
     // ════════════════════════════════════════════
@@ -74,9 +80,7 @@ public class MudanzaService {
                 .orElseThrow(() -> new NotFoundException("Tier no encontrado"));
 
         // Validar región Rosario
-        double lat = dto.getLatitudOrigen();
-        double lng = dto.getLongitudOrigen();
-        if (lat < -33.05 || lat > -32.85 || lng < -60.80 || lng > -60.55) {
+        if (!RegionRosario.contiene(dto.getLatitudOrigen(), dto.getLongitudOrigen())) {
             throw new RuntimeException("Por el momento, Aliados solo está disponible en Rosario, Santa Fe.");
         }
 
@@ -109,6 +113,7 @@ public class MudanzaService {
 
         // Montos
         mudanza.setMontoBase(tier.getPrecioBase());
+        mudanza.setComisionPorcentaje(comisionPorcentaje);
 
         mudanza = mudanzaRepository.save(mudanza);
 
@@ -193,7 +198,7 @@ public class MudanzaService {
         String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
-                "MUDANZA_ACEPTADA",
+                TipoNotificacion.MUDANZA_ACEPTADA,
                 "Mudanza Confirmada",
                 "Fletes Bay aceptó tu mudanza " + mudanza.getTier().getEmoji() + " " + mudanza.getTier().getNombre() +
                         " para el " + fechaAgendar + " - " + turnoLabel,
@@ -271,7 +276,7 @@ public class MudanzaService {
 
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
-                "MUDANZA_CONTRAPROPUESTA",
+                TipoNotificacion.MUDANZA_CONTRAPROPUESTA,
                 "Cambio Sugerido",
                 mensaje,
                 mudanza.getId(),
@@ -332,7 +337,7 @@ public class MudanzaService {
         // Notificar proveedor
         notificacionService.enviarNotificacion(
                 mudanza.getProveedor().getFirebaseUid(),
-                "MUDANZA_CONTRAPROPUESTA_ACEPTADA",
+                TipoNotificacion.MUDANZA_CONTRAPROPUESTA_ACEPTADA,
                 "Contrapropuesta Aceptada",
                 cliente.getNombre() + " aceptó los cambios. Agendada para el " + fechaAgendar,
                 mudanza.getId(),
@@ -372,7 +377,7 @@ public class MudanzaService {
         // Notificar proveedor
         notificacionService.enviarNotificacion(
                 mudanza.getProveedor().getFirebaseUid(),
-                "MUDANZA_CONTRAPROPUESTA_RECHAZADA",
+                TipoNotificacion.MUDANZA_CONTRAPROPUESTA_RECHAZADA,
                 "Contrapropuesta Rechazada",
                 cliente.getNombre() + " rechazó el cambio de plan. Mudanza cancelada.",
                 mudanza.getId(),
@@ -411,7 +416,7 @@ public class MudanzaService {
         // Notificar al cliente
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
-                "MUDANZA_INICIADA",
+                TipoNotificacion.MUDANZA_INICIADA,
                 "Mudanza en Curso",
                 "Fletes Bay inició tu mudanza. El cronómetro está corriendo.",
                 mudanza.getId(),
@@ -499,7 +504,7 @@ public class MudanzaService {
 
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
-                "MUDANZA_FINALIZADA",
+                TipoNotificacion.MUDANZA_FINALIZADA,
                 "Mudanza Finalizada",
                 mensajeCliente,
                 mudanza.getId(),
@@ -570,7 +575,7 @@ public class MudanzaService {
         // Notificar proveedor
         notificacionService.enviarNotificacion(
                 mudanza.getProveedor().getFirebaseUid(),
-                "MUDANZA_COMPLETADA",
+                TipoNotificacion.MUDANZA_COMPLETADA,
                 "Mudanza Completada",
                 String.format("Mudanza completada. Neto: $%,.0f", mudanza.getMontoProveedor()),
                 mudanza.getId(),
@@ -705,7 +710,7 @@ public class MudanzaService {
         for (User proveedor : proveedoresFletes) {
             notificacionService.enviarNotificacion(
                     proveedor.getFirebaseUid(),
-                    "NUEVA_MUDANZA",
+                    TipoNotificacion.NUEVA_MUDANZA,
                     "Nueva Solicitud de Mudanza",
                     "Nueva mudanza " + mudanza.getTier().getEmoji() + " " + mudanza.getTier().getNombre() +
                             " de " + mudanza.getDireccionOrigen() + " a " + mudanza.getDireccionDestino(),

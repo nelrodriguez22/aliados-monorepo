@@ -3,6 +3,7 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.CalificacionResponseDTO;
 import com.aliados.backend.dto.CrearCalificacionDTO;
 import com.aliados.backend.entity.Calificacion;
+import com.aliados.backend.entity.TipoNotificacion;
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.User;
@@ -65,7 +66,7 @@ public class CalificacionService {
         calificacion = calificacionRepository.save(calificacion);
         notificacionService.enviarNotificacion(
                 calificacion.getProveedor().getFirebaseUid(),
-                "CALIFICACION_RECIBIDA",
+                TipoNotificacion.CALIFICACION_RECIBIDA,
                 "Nueva Calificación Recibida",
                 calificacion.getCliente().getNombre() + " te calificó con " + calificacion.getEstrellas() + " estrella" + (calificacion.getEstrellas() > 1 ? "s" : ""),
                 calificacion.getTrabajo().getId(),

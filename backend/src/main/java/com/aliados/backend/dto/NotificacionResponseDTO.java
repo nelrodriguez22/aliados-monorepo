@@ -1,5 +1,6 @@
 package com.aliados.backend.dto;
 
+import com.aliados.backend.entity.TipoNotificacion;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -7,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class NotificacionResponseDTO {
     private Long id;
-    private String tipo;
+    private TipoNotificacion tipo;
     private String titulo;
     private String mensaje;
     private Long trabajoId;

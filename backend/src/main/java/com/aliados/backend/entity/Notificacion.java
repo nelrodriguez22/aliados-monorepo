@@ -19,8 +19,9 @@ public class Notificacion {
     @JoinColumn(name = "user_id", nullable = false)
     private User usuario;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String tipo; // NUEVO_TRABAJO, PROVEEDOR_ASIGNADO, TRABAJO_COMPLETADO
+    private TipoNotificacion tipo;
 
     @Column(nullable = false)
     private String titulo;
