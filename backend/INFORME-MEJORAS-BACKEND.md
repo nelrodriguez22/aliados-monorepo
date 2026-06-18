@@ -148,7 +148,7 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - [x] #11 Geocoding endurecido (2026-06-17, sesión 2): sacado de `permitAll` → ahora requiere auth (el front ya manda token vía `apiClient.get`, no rompe nada); URLs con `UriComponentsBuilder...encode()` (cierra inyección de params en `address`/`input`); `RestTemplate` bean compartido con timeouts (5s connect / 10s read) en `RestClientConfig`. Rate-limit por-usuario añadido: `RateLimiter` (ventana fija en memoria, `config/RateLimiter.java`), 60 req/min por UID en los 3 endpoints → 429 al exceder. `EmailService` migrado al `RestTemplate` bean (ya no usa `new`). _RateLimiter es in-memory → a Redis si se escala a >1 instancia._
 - [ ] #12 WS event listener (pool, lastSeenAt).
 - [ ] #13 Reusar Principal en heartbeat.
-- [ ] #15 Limpieza de tokens FCM muertos.
+- [x] #15 Limpieza de tokens FCM muertos (2026-06-18). `PushNotificationService.enviarPush` (único sender FCM, llamado desde `NotificacionService`) ahora captura `FirebaseMessagingException`: si el `MessagingErrorCode` es `UNREGISTERED` o `INVALID_ARGUMENT` → `userRepository.clearFcmToken(id)` (query `@Modifying @Transactional`, propia porque el caller es `@Async`). El resto de errores FCM solo se loguean. `compileJava` OK.
 - [ ] #16–#19 + menores.
 
 ---

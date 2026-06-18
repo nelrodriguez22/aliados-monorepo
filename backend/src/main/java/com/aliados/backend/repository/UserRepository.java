@@ -4,9 +4,11 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,4 +39,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // traeria a cualquier usuario (incluso clientes o inactivos) cuyo oficio contenga "lete".
     @Query("SELECT u FROM User u WHERE u.role = 'PROVIDER' AND u.activo = true AND (u.oficio.nombre LIKE '%udanza%' OR u.oficio.nombre LIKE '%lete%')")
     List<User> findProveedoresFletes();
+
+    // Limpia el token FCM de un usuario cuando FCM lo reporta muerto (UNREGISTERED/INVALID_ARGUMENT).
+    // @Transactional propio porque se llama desde un método @Async (sin tx del caller).
+    @Modifying
+    @Transactional
+    @Query("UPDATE User u SET u.fcmToken = null WHERE u.id = :id")
+    void clearFcmToken(@Param("id") Long id);
 }

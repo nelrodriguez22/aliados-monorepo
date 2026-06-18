@@ -1,6 +1,12 @@
 package com.aliados.backend.service;
 
 import com.aliados.backend.entity.User;
+import com.aliados.backend.repository.UserRepository;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.MessagingErrorCode;
+import com.google.firebase.messaging.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -11,22 +17,38 @@ public class PushNotificationService {
 
     private static final Logger logger = LoggerFactory.getLogger(PushNotificationService.class);
 
+    private final UserRepository userRepository;
+
+    public PushNotificationService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
     @Async
     public void enviarPush(User usuario, String titulo, String mensaje, String actionUrl) {
         if (usuario.getFcmToken() == null || usuario.getFcmToken().isEmpty()) return;
 
         try {
-            com.google.firebase.messaging.Message message = com.google.firebase.messaging.Message.builder()
+            Message message = Message.builder()
                     .setToken(usuario.getFcmToken())
-                    .setNotification(com.google.firebase.messaging.Notification.builder()
+                    .setNotification(Notification.builder()
                             .setTitle(titulo)
                             .setBody(mensaje)
                             .build())
                     .putData("actionUrl", actionUrl != null ? actionUrl : "/")
                     .build();
 
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().send(message);
+            FirebaseMessaging.getInstance().send(message);
             logger.info("📱 Push enviada a {}", usuario.getEmail());
+        } catch (FirebaseMessagingException e) {
+            // Token muerto (app desinstalada / token rotado o malformado): lo limpiamos para
+            // no seguir intentando en cada notificación. (#15 del informe)
+            MessagingErrorCode code = e.getMessagingErrorCode();
+            if (code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT) {
+                logger.warn("🧹 Token FCM inválido ({}) para {} — limpiando", code, usuario.getEmail());
+                userRepository.clearFcmToken(usuario.getId());
+            } else {
+                logger.error("❌ Error enviando push (FCM {}): {}", code, e.getMessage());
+            }
         } catch (Exception e) {
             logger.error("❌ Error enviando push: {}", e.getMessage());
         }
