@@ -8,6 +8,7 @@ import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
+import com.aliados.backend.exception.UserNotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.OficioRepository;
 import com.aliados.backend.repository.TrabajoRepository;
@@ -122,7 +123,7 @@ public class UserService {
 
     public UserResponseDTO getUserByFirebaseUid(String firebaseUid) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         return mapToDTO(user);
     }
