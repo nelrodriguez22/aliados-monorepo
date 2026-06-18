@@ -632,12 +632,28 @@ public class MudanzaService {
                 .collect(Collectors.toList());
     }
 
-    public List<MudanzaResponseDTO> getMudanzasPendientesProveedor() {
-        // Por ahora devuelve todas las RESERVADO (para Ricky Bay)
+    public List<MudanzaResponseDTO> getMudanzasPendientesProveedor(String proveedorFirebaseUid) {
+        User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
+
+        // Solo proveedores de fletes/mudanzas pueden ver las pendientes (antes las veía
+        // cualquier usuario autenticado, incluso clientes). #18 del informe.
+        if (proveedor.getRole() != UserRole.PROVIDER || !esProveedorDeFletes(proveedor)) {
+            throw new ForbiddenException("No autorizado");
+        }
+
+        // Modelo actual: broadcast de todas las RESERVADO (hay un solo proveedor de fletes).
+        // La distribución entre múltiples proveedores queda pendiente de diseño (#18).
         return mudanzaRepository.findByEstadoOrderByCreatedAtAsc(MudanzaEstado.RESERVADO)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private boolean esProveedorDeFletes(User proveedor) {
+        if (proveedor.getOficio() == null || proveedor.getOficio().getNombre() == null) return false;
+        String oficio = proveedor.getOficio().getNombre().toLowerCase();
+        return oficio.contains("udanza") || oficio.contains("lete");
     }
 
     public MudanzaResponseDTO getMudanzaActivaProveedor(String proveedorFirebaseUid) {

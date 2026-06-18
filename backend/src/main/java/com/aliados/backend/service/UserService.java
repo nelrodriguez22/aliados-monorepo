@@ -86,7 +86,7 @@ public class UserService {
         user.setTelefono(dto.getTelefono());
         user.setActivo(true);
         user.setStatus(UserStatus.OFFLINE); // Por defecto offline
-        user.setLocalidad(dto.getLocalidad() != null ? dto.getLocalidad() : "Rosario");
+        user.setLocalidad(normalizeLocalidad(dto.getLocalidad() != null ? dto.getLocalidad() : "Rosario"));
         user.setMatricula(dto.getMatricula());
 
         if (dto.getOficioId() != null) {
@@ -210,10 +210,26 @@ public class UserService {
 
         if (body.containsKey("nombre")) user.setNombre(body.get("nombre"));
         if (body.containsKey("telefono")) user.setTelefono(body.get("telefono"));
-        if (body.containsKey("localidad")) user.setLocalidad(body.get("localidad"));
+        if (body.containsKey("localidad")) user.setLocalidad(normalizeLocalidad(body.get("localidad")));
 
         userRepository.save(user);
         return mapToDTO(user);
+    }
+
+    // Normaliza la localidad para que el match exacto (=) del query de proveedores sea
+    // consistente sin importar cómo la escriba el usuario: trim + Title Case por palabra
+    // ("rosario"/"ROSARIO"/" Rosario " → "Rosario"). #17 del informe.
+    private static String normalizeLocalidad(String localidad) {
+        if (localidad == null) return null;
+        String trimmed = localidad.trim();
+        if (trimmed.isEmpty()) return null;
+        String[] words = trimmed.toLowerCase().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+        }
+        return sb.toString();
     }
 
     private String extractParam(String url, String param) {

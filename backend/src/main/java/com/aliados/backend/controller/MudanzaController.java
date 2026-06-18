@@ -155,8 +155,8 @@ public class MudanzaController {
     }
 
     @GetMapping("/proveedor/pendientes")
-    public ResponseEntity<List<MudanzaResponseDTO>> getMudanzasPendientesProveedor() {
-        return ResponseEntity.ok(mudanzaService.getMudanzasPendientesProveedor());
+    public ResponseEntity<List<MudanzaResponseDTO>> getMudanzasPendientesProveedor(Authentication authentication) {
+        return ResponseEntity.ok(mudanzaService.getMudanzasPendientesProveedor(authentication.getName()));
     }
 
     @GetMapping("/proveedor/activa")
