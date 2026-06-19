@@ -321,7 +321,7 @@ export function MudanzaRequest() {
                         border-slate-200 dark:border-dark-border
                         hover:border-brand-400 dark:hover:border-dark-brand
                         hover:bg-brand-50 dark:hover:bg-dark-elevated`}>
-                        {uploading ? <Loader2 className={`h-5 w-5 animate-spin ${tw.text.faint}`} /> : <Plus className={`h-5 w-5 ${tw.text.faint}`} />}
+                        {uploading ? <Loader2 className={`h-5 w-5 animate-spin ${tw.text.brand}`} /> : <Plus className={`h-5 w-5 ${tw.text.faint}`} />}
                         <span className={`text-[10px] ${tw.text.muted}`}>{uploading ? "Subiendo..." : "Agregar"}</span>
                       </div>
                     </label>

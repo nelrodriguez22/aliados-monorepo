@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
-import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCircle, Camera } from "lucide-react";
+import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCircle, Camera, Loader2 } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
 import { useMutation } from "@tanstack/react-query";
@@ -130,8 +130,14 @@ export function ClientProfile() {
 
                 {/* Fila inferior: avatar + info */}
                 <div className="flex items-center gap-3">
-                  <div className="relative shrink-0">
-                    <div className={`flex h-12 w-12 min-[375px]:h-16 min-[375px]:w-16 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    aria-label="Cambiar foto de perfil"
+                    className={`group relative h-12 w-12 min-[375px]:h-16 min-[375px]:w-16 shrink-0 rounded-2xl cursor-pointer disabled:cursor-not-allowed ${tw.iconBg.brand}`}
+                  >
+                    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl">
                       {user?.fotoPerfil ? (
                         <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-2xl object-cover" />
                       ) : (
@@ -140,23 +146,29 @@ export function ClientProfile() {
                         </span>
                       )}
                     </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingAvatar}
-                      aria-label="Cambiar foto de perfil"
-                      className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow-md ring-2 ring-white dark:ring-dark-surface hover:bg-brand-700 disabled:opacity-50 cursor-pointer"
-                    >
+
+                    {/* Oscurecido al pasar el mouse: indica que toda la foto es editable */}
+                    <div className="absolute inset-0 rounded-2xl bg-black/0 transition group-hover:bg-black/25" />
+
+                    {/* Badge cámara siempre visible (afford. de editar) */}
+                    <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow-md ring-2 ring-white dark:ring-dark-surface group-hover:bg-brand-700">
                       <Camera className="h-3 w-3" />
-                    </button>
-                  </div>
+                    </span>
+
+                    {/* Spinner mientras sube */}
+                    {uploadingAvatar && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/45">
+                        <Loader2 className="h-5 w-5 min-[375px]:h-6 min-[375px]:w-6 animate-spin text-white" />
+                      </div>
+                    )}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <div className="flex-1 min-w-0">
                     <h2 className={`text-base min-[375px]:text-lg font-bold truncate ${tw.text.primary}`}>{user?.name}</h2>
                     <p className={`text-xs min-[375px]:text-sm truncate ${tw.text.secondary}`}>{user?.email}</p>
