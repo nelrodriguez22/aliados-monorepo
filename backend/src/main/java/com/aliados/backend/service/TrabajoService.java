@@ -267,7 +267,7 @@ public class TrabajoService {
                 .collect(Collectors.toList());
 
         long sinCalificar = trabajoRepository.countSinCalificarByCliente(firebaseUid);
-        return new PagedTrabajosResponse(content, page.hasNext(), sinCalificar);
+        return new PagedTrabajosResponse(content, page.hasNext(), page.getTotalElements(), sinCalificar);
     }
 
     private void notificarProveedorDisponible(Trabajo trabajo) {
@@ -427,21 +427,23 @@ public class TrabajoService {
         return mapToDTO(trabajo);
     }
 
-    public List<TrabajoResponseDTO> getTrabajosCompletados(String proveedorFirebaseUid) {
+    // Historial paginado de completados del proveedor (#20-B). sinCalificar no aplica → 0.
+    public PagedTrabajosResponse getTrabajosCompletados(String proveedorFirebaseUid, Pageable pageable) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
-        List<Trabajo> trabajos = trabajoRepository.findByProveedorIdAndEstadoOrderByCompletedAtDesc(
-                proveedor.getId(),
-                TrabajoEstado.COMPLETADO
-        );
+        Page<Trabajo> page = trabajoRepository.findByProveedorIdAndEstado(
+                proveedor.getId(), TrabajoEstado.COMPLETADO, pageable);
 
+        List<Trabajo> trabajos = page.getContent();
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
 
-        return trabajos.stream()
+        List<TrabajoResponseDTO> content = trabajos.stream()
                 .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
+
+        return new PagedTrabajosResponse(content, page.hasNext(), page.getTotalElements(), 0);
     }
 
     // Batch helpers: arman en pocas queries los datos que el mapeo necesita por

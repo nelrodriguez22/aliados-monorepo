@@ -86,11 +86,16 @@ public class TrabajoController {
         return ResponseEntity.ok(trabajo);
     }
 
+    // Historial paginado de completados del proveedor (#20-B). page base 0, size acotado a 50.
     @GetMapping("/completados")
-    public ResponseEntity<List<TrabajoResponseDTO>> getTrabajosCompletados(Authentication authentication) {
+    public ResponseEntity<PagedTrabajosResponse> getTrabajosCompletados(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         String uid = authentication.getName();
-        List<TrabajoResponseDTO> trabajos = trabajoService.getTrabajosCompletados(uid);
-        return ResponseEntity.ok(trabajos);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "completedAt"));
+        return ResponseEntity.ok(trabajoService.getTrabajosCompletados(uid, pageable));
     }
 
     @PatchMapping("/{id}/cancelar")

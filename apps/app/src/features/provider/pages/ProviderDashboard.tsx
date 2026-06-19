@@ -8,7 +8,7 @@ import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { useEffect } from "react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
@@ -113,7 +113,6 @@ export function ProviderDashboard() {
   const { user } = useStore();
   const { isSupported, permission, requestPermission } = usePushNotifications();
   const [showNotifBanner, setShowNotifBanner] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const [agendaMesActivo, setAgendaMesActivo] = useState<string>('');
   const queryClient = useQueryClient();
@@ -157,11 +156,22 @@ export function ProviderDashboard() {
     refetchInterval: wsConnected ? 120000 : 30000,
   });
 
-  const { data: trabajosCompletados = [], isLoading: loadingCompletados } = useQuery({
+  // Historial completado paginado vía "Cargar más" (#20-B).
+  const {
+    data: historialData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: loadingCompletados,
+  } = useInfiniteQuery({
     queryKey: ['trabajos-completados'],
-    queryFn: () => apiClient.get('/api/trabajos/completados'),
+    queryFn: ({ pageParam }) => apiClient.get(`/api/trabajos/completados?page=${pageParam}&size=10`),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: any, allPages: any[]) => (lastPage?.hasNext ? allPages.length : undefined),
     refetchInterval: false,
   });
+  const trabajosCompletados = historialData?.pages.flatMap((p: any) => p.content) ?? [];
+  const totalCompletados = historialData?.pages[0]?.total ?? 0;
 
   const { data: mudanzasPendientes = [] } = useQuery({
     queryKey: ['mudanzas-pendientes-prov'],
@@ -286,7 +296,7 @@ export function ProviderDashboard() {
                 </button>
                 <div className={`h-4 w-px border-l ${tw.dividerLight}`} />
                 <div className="flex items-center gap-1">
-                  <span className={`text-sm font-bold ${tw.text.brand}`}>{trabajosCompletados.length}</span>
+                  <span className={`text-sm font-bold ${tw.text.brand}`}>{totalCompletados}</span>
                   <span className={`text-xs ${tw.text.muted}`}>completados</span>
                 </div>
               </div>
@@ -538,17 +548,11 @@ export function ProviderDashboard() {
                 <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                   Historial
                 </h2>
-                {trabajosCompletados.length > 3 && (
-                  <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className={`text-xs font-medium cursor-pointer transition ${tw.text.brand} hover:opacity-70`}
-                  >
-                    {showHistory ? 'Ver menos' : `Ver todos (${trabajosCompletados.length})`}
-                  </button>
-                )}
               </div>
 
-              {trabajosCompletados.length === 0 ? (
+              {loadingCompletados ? (
+                <div className="space-y-2 min-[375px]:space-y-3"><SkeletonCard /><SkeletonCard /></div>
+              ) : trabajosCompletados.length === 0 ? (
                 <EmptyState
                   icon={ClipboardList}
                   title="Sin trabajos completados"
@@ -556,7 +560,7 @@ export function ProviderDashboard() {
                 />
               ) : (
                 <div className="space-y-2 min-[375px]:space-y-3">
-                  {(showHistory ? trabajosCompletados : trabajosCompletados.slice(0, 3)).map((trabajo: any) => (
+                  {trabajosCompletados.map((trabajo: any) => (
                     <TrabajoCard
                       key={trabajo.id}
                       trabajo={trabajo}
@@ -578,6 +582,15 @@ export function ProviderDashboard() {
                       }
                     />
                   ))}
+                  {hasNextPage && (
+                    <button
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                      className={`mx-auto mt-1 block text-xs font-medium cursor-pointer disabled:opacity-50 transition ${tw.text.brand} hover:opacity-70`}
+                    >
+                      {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+                    </button>
+                  )}
                 </div>
               )}
             </section>

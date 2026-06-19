@@ -42,6 +42,10 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, TrabajoEstado estado);
 
+    // Historial del proveedor paginado (#20-B). El orden lo define el Pageable (completedAt DESC).
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
+    Page<Trabajo> findByProveedorIdAndEstado(Long proveedorId, TrabajoEstado estado, Pageable pageable);
+
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")
     Trabajo findTrabajoEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
