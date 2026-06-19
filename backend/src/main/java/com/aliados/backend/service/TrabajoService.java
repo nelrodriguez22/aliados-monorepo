@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -150,7 +151,8 @@ public class TrabajoService {
         trabajo.setProveedorNotificadoId(null);
         trabajoRepository.save(trabajo);
 
-        notificarProveedorDisponible(trabajo);
+        // Excluir a quien rechaza para no re-ofrecérselo de inmediato (loop con un solo proveedor).
+        notificarProveedorDisponible(trabajo, proveedor.getId());
     }
 
     @Transactional
@@ -240,12 +242,28 @@ public class TrabajoService {
     }
 
     private void notificarProveedorDisponible(Trabajo trabajo) {
+        notificarProveedorDisponible(trabajo, null);
+    }
+
+    /**
+     * Re-ofrece el trabajo al mejor proveedor disponible.
+     * @param excluirProveedorId si no es null, ese proveedor queda fuera del re-ofrecimiento
+     *        (ej. el que acaba de rechazar). Si tras excluirlo no queda nadie, el trabajo
+     *        queda PENDIENTE sin notificar (no reaparece en el dashboard de quien rechazó).
+     */
+    private void notificarProveedorDisponible(Trabajo trabajo, Long excluirProveedorId) {
         String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
         int limite = getLimiteTrabajos(trabajo.getOficio());
-        List<User> proveedores = userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite);
+        List<User> proveedores = new ArrayList<>(
+                userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite));
+
+        if (excluirProveedorId != null) {
+            proveedores.removeIf(p -> p.getId().equals(excluirProveedorId));
+        }
 
         if (proveedores.isEmpty()) {
-            logger.warn("No hay proveedores disponibles para el oficio {}", trabajo.getOficio().getNombre());
+            logger.info("No hay (otro) proveedor disponible para el oficio {}; el trabajo {} queda sin asignar",
+                    trabajo.getOficio().getNombre(), trabajo.getId());
             return;
         }
 
