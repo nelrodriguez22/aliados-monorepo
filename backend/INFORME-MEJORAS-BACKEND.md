@@ -174,6 +174,24 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 
 ---
 
+## Load testing / Capacidad (2026-06-19)
+
+Tests con **k6** (`/loadtest/`) contra prod (Railway + Neon pooled), tras las mejoras de esta semana. Scripts: `dashboard.js` (lecturas), `websocket.js` (conexiones STOMP), `write.js` (transaccional, opcional).
+
+**Resultados (no se alcanzó el techo en ninguno):**
+
+| Test | Carga | Resultado |
+|---|---|---|
+| **Lecturas** (`dashboard.js`) | 600 VUs, SLEEP=4s → 62 batches/s (~**7.500 usuarios-equivalente** a polling 120s) | p95 **541ms**, p99 786ms, **0% errores** (125k checks). No es el cuello. |
+| **WebSocket** (`websocket.js`) | **1.000 conexiones STOMP simultáneas** (HOLD 120s) | **0 errores**, handshake p95 680ms, time-to-CONNECTED p95 936ms. No se cayó ninguna. |
+| Baseline (50 VUs) | 50 VUs, SLEEP=5s | p95 285ms, avg≈min (sin contención) |
+
+**Conclusión:** la plataforma soporta **≥1.000 usuarios online simultáneos** (límite real = conexiones WS = RAM de la instancia) en una sola instancia, sin errores y con margen (no se rompió). El throughput de requests no es restricción (~7.500 equiv). Valida —por el lado optimista— la estimación de 500-1.500.
+
+**Señales de saturación incipiente:** a 600 VUs el `avg` de requests se despegó del `min` (288 vs 117ms) y a 1.000 WS el tiempo de conexión subió a ~0.9s p95. Son la "rampa" antes del knee; el techo está por encima.
+
+**Caveats:** dataset de un solo usuario de prueba (optimista vs datos reales variados); una sola instancia (escala vertical → más RAM = más conexiones; horizontal recién con Redis/broker, ver Email opcional y notas de in-memory state). El escenario de **escritura** no se corrió (rate de creación bajo en este negocio → no es riesgo de capacidad).
+
 ## Orden sugerido de impacto/esfuerzo
 1. #1, #3 (fix rápido, alto impacto)
 2. #5 (refactor acotado, gran ganancia)
