@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -337,7 +336,8 @@ public class TrabajoService {
         if (trabajo.getProveedor() != null) {
             dto.setProveedorId(trabajo.getProveedor().getId());
             dto.setProveedorNombre(trabajo.getProveedor().getNombre());
-            Double promedio = calificacionRepository.getPromedioByProveedorId(trabajo.getProveedor().getId());
+            // #8: promedio denormalizado en la entidad proveedor (sin query).
+            Double promedio = trabajo.getProveedor().getPromedioCalificacion();
             dto.setProveedorPromedioCalificacion(promedio != null ? promedio : 0.0);
         }
 
@@ -455,17 +455,15 @@ public class TrabajoService {
                 .collect(Collectors.toMap(c -> c.getTrabajo().getId(), c -> c, (a, b) -> a));
     }
 
+    // #8: el promedio está denormalizado en la entidad proveedor (ya cargada vía EntityGraph),
+    // así que se arma desde memoria sin la query batch que se usaba antes.
     private Map<Long, Double> promediosPorProveedor(List<Trabajo> trabajos) {
-        List<Long> proveedorIds = trabajos.stream()
-                .map(Trabajo::getProveedor)
-                .filter(Objects::nonNull)
-                .map(User::getId)
-                .distinct()
-                .collect(Collectors.toList());
-        if (proveedorIds.isEmpty()) return Map.of();
         Map<Long, Double> promedios = new HashMap<>();
-        for (Object[] row : calificacionRepository.getPromediosByProveedorIds(proveedorIds)) {
-            promedios.put((Long) row[0], (Double) row[1]);
+        for (Trabajo t : trabajos) {
+            User p = t.getProveedor();
+            if (p != null && p.getId() != null) {
+                promedios.put(p.getId(), p.getPromedioCalificacion() != null ? p.getPromedioCalificacion() : 0.0);
+            }
         }
         return promedios;
     }

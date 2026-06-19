@@ -19,11 +19,6 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, Long
     @Query("SELECT AVG(c.estrellas) FROM Calificacion c WHERE c.proveedor.id = :proveedorId")
     Double getPromedioByProveedorId(Long proveedorId);
 
-    // Promedios de varios proveedores en un solo query (evita N+1 al armar listas).
-    // Devuelve filas [proveedorId(Long), promedio(Double)].
-    @Query("SELECT c.proveedor.id, AVG(c.estrellas) FROM Calificacion c WHERE c.proveedor.id IN :ids GROUP BY c.proveedor.id")
-    List<Object[]> getPromediosByProveedorIds(@Param("ids") List<Long> ids);
-
     @Query("SELECT COUNT(c) FROM Calificacion c WHERE c.proveedor.id = :proveedorId")
     Long getCantidadByProveedorId(Long proveedorId);
 

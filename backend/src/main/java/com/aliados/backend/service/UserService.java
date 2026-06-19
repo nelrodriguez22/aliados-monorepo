@@ -278,10 +278,9 @@ public class UserService {
         // no puede serializar). Null-safe (clientes no tienen oficio).
         dto.setOficio((Oficio) Hibernate.unproxy(user.getOficio()));
         if (user.getRole() == UserRole.PROVIDER) {
-            Double promedio = calificacionRepository.getPromedioByProveedorId(user.getId());
-            Long cantidad = calificacionRepository.getCantidadByProveedorId(user.getId());
-            dto.setPromedioCalificacion(promedio != null ? promedio : 0.0);
-            dto.setCantidadCalificaciones(cantidad != null ? cantidad : 0L);
+            // #8: denormalizado en `users` (se mantiene al crear calificación) → sin queries.
+            dto.setPromedioCalificacion(user.getPromedioCalificacion() != null ? user.getPromedioCalificacion() : 0.0);
+            dto.setCantidadCalificaciones(user.getCantidadCalificaciones() != null ? user.getCantidadCalificaciones() : 0L);
             Long completados = trabajoRepository.countByProveedorIdAndEstado(user.getId(), TrabajoEstado.COMPLETADO);
             dto.setTotalTrabajosCompletados(completados != null ? completados : 0L);
         }

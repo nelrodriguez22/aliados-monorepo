@@ -73,6 +73,18 @@ public class CalificacionService {
                 "/proveedor/completado/" + calificacion.getTrabajo().getId()
         );
 
+        // #8: recalcular y persistir el promedio/cantidad denormalizado del proveedor.
+        // Recompute-on-write (la query ya incluye esta calificación recién guardada) →
+        // las lecturas (DTOs, scoring) leen la columna sin recalcular. Cero drift.
+        Long proveedorId = calificacion.getProveedor().getId();
+        Double prom = calificacionRepository.getPromedioByProveedorId(proveedorId);
+        Long cant = calificacionRepository.getCantidadByProveedorId(proveedorId);
+        userRepository.findById(proveedorId).ifPresent(prov -> {
+            prov.setPromedioCalificacion(prom != null ? prom : 0.0);
+            prov.setCantidadCalificaciones(cant != null ? cant : 0L);
+            userRepository.save(prov);
+        });
+
         return mapToDTO(calificacion);
     }
 

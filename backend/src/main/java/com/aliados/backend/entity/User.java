@@ -64,4 +64,11 @@ public class User {
     @Column(name = "fcm_token")
     private String fcmToken;
 
+    // Denormalizado (#8): se recalcula al crear una calificación (CalificacionService).
+    @Column(name = "promedio_calificacion", nullable = false)
+    private Double promedioCalificacion = 0.0;
+
+    @Column(name = "cantidad_calificaciones", nullable = false)
+    private Long cantidadCalificaciones = 0L;
+
 }

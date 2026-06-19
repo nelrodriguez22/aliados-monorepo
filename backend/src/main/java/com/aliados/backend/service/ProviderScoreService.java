@@ -1,7 +1,6 @@
 package com.aliados.backend.service;
 
 import com.aliados.backend.entity.User;
-import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +28,6 @@ public class ProviderScoreService {
     private static final double TIEMPO_MAX_RESPUESTA_MIN = 30.0;
 
     @Autowired
-    private CalificacionRepository calificacionRepository;
-
-    @Autowired
     private TrabajoRepository trabajoRepository;
 
     /**
@@ -44,7 +40,7 @@ public class ProviderScoreService {
      * - velocidadRespuesta: inversamente proporcional al tiempo promedio de respuesta (0-100)
      */
     public double calcularScore(User proveedor) {
-        double calificacionNorm = calcularCalificacionNormalizada(proveedor.getId());
+        double calificacionNorm = calcularCalificacionNormalizada(proveedor);
         double tasaAceptacion = calcularTasaAceptacion(proveedor.getId());
         double velocidadRespuesta = calcularVelocidadRespuesta(proveedor.getId());
 
@@ -83,9 +79,12 @@ public class ProviderScoreService {
      * Calificación promedio normalizada a 0-100.
      * Sin calificaciones → 50 (neutral, no penalizar proveedores nuevos).
      */
-    private double calcularCalificacionNormalizada(Long proveedorId) {
-        Double promedio = calificacionRepository.getPromedioByProveedorId(proveedorId);
-        if (promedio == null) {
+    private double calcularCalificacionNormalizada(User proveedor) {
+        // #8: promedio/cantidad denormalizados en la entidad. Sin calificaciones
+        // (cantidad 0) → 50 neutral, igual que antes cuando el AVG era null.
+        Long cantidad = proveedor.getCantidadCalificaciones();
+        Double promedio = proveedor.getPromedioCalificacion();
+        if (cantidad == null || cantidad == 0 || promedio == null) {
             return 50.0; // Proveedores nuevos arrancan en el medio
         }
         // 1 estrella = 0, 5 estrellas = 100
