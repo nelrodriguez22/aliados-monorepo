@@ -1,4 +1,5 @@
 import { useState, type JSX } from "react";
+import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
@@ -54,6 +55,7 @@ export function ServiceRequest() {
   );
   const [description, setDescription] = useState("");
   const [imagenes, setImagenes] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const geo = useGeocode();
   const geoDestino = useGeocode();
@@ -117,15 +119,22 @@ export function ServiceRequest() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     if (imagenes.length + files.length > 3) { toast.error('Máximo 3 fotos permitidas'); return; }
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagenes((prev) => [...prev, reader.result as string]);
-      reader.readAsDataURL(file);
-    });
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadToCloudinary(file, 'TRABAJO');
+        setImagenes((prev) => [...prev, url]);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo subir la imagen. Intentá de nuevo.');
+    } finally {
+      setUploading(false);
+      e.target.value = ''; // permite re-seleccionar el mismo archivo
+    }
   };
 
   const removeImage = (index: number) =>
@@ -374,13 +383,13 @@ export function ServiceRequest() {
                   ))}
                   {imagenes.length < 3 && (
                     <label className="aspect-square cursor-pointer">
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" multiple />
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" multiple disabled={uploading} />
                       <div className={`flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition
                         border-slate-200 dark:border-dark-border
                         hover:border-brand-400 dark:hover:border-dark-brand
                         hover:bg-brand-50 dark:hover:bg-dark-elevated`}>
                         <Plus className={`h-5 w-5 min-[375px]:h-6 min-[375px]:w-6 ${tw.text.faint}`} />
-                        <span className={`text-xs ${tw.text.muted}`}>Agregar</span>
+                        <span className={`text-xs ${tw.text.muted}`}>{uploading ? 'Subiendo...' : 'Agregar'}</span>
                       </div>
                     </label>
                   )}

@@ -9,6 +9,7 @@ import { useGeocode } from "@/shared/hooks/useGeocode";
 import { MapPin, Loader2, Plus, X, CheckCircle, ArrowLeft, ArrowRight, Truck, Building2, Camera, Calendar, Home } from "lucide-react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/shared/constants/routes";
+import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
 
 interface Tier {
   id: number;
@@ -54,6 +55,7 @@ export function MudanzaRequest() {
 
   // Form data
   const [imagenes, setImagenes] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [pisos, setPisos] = useState(0);
   const [tieneAscensor, setTieneAscensor] = useState(false);
   const [notas, setNotas] = useState("");
@@ -110,18 +112,22 @@ export function MudanzaRequest() {
   });
 
   // Image handling
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    if (imagenes.length + files.length > 5) {
-      toast.error("Máximo 5 fotos");
-      return;
+    if (imagenes.length + files.length > 5) { toast.error("Máximo 5 fotos"); return; }
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadToCloudinary(file, 'MUDANZA');
+        setImagenes((prev) => [...prev, url]);
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message ?? 'No se pudo subir la imagen. Intentá de nuevo.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
     }
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagenes((prev) => [...prev, reader.result as string]);
-      reader.readAsDataURL(file);
-    });
   };
 
   const removeImage = (index: number) =>
@@ -309,19 +315,19 @@ export function MudanzaRequest() {
                     </div>
                   ))}
                   {imagenes.length < 5 && (
-                    <label className="aspect-square cursor-pointer">
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" multiple />
+                    <label className={`aspect-square ${uploading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" multiple disabled={uploading} />
                       <div className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition
                         border-slate-200 dark:border-dark-border
                         hover:border-brand-400 dark:hover:border-dark-brand
                         hover:bg-brand-50 dark:hover:bg-dark-elevated`}>
-                        <Plus className={`h-5 w-5 ${tw.text.faint}`} />
-                        <span className={`text-[10px] ${tw.text.muted}`}>Agregar</span>
+                        {uploading ? <Loader2 className={`h-5 w-5 animate-spin ${tw.text.faint}`} /> : <Plus className={`h-5 w-5 ${tw.text.faint}`} />}
+                        <span className={`text-[10px] ${tw.text.muted}`}>{uploading ? "Subiendo..." : "Agregar"}</span>
                       </div>
                     </label>
                   )}
                 </div>
-                <p className={`mt-1.5 text-xs ${tw.text.muted}`}>Máximo 5 fotos</p>
+                <p className={`mt-1.5 text-xs ${tw.text.muted}`}>{uploading ? "Subiendo..." : "Máximo 5 fotos"}</p>
               </Card>
 
               {/* Notas */}

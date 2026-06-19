@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { tw } from "@/shared/styles/design-system";
-import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCircle } from "lucide-react";
+import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCircle, Camera } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
+import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
 import toast from "react-hot-toast";
 
 export function ClientProfile() {
@@ -15,6 +16,25 @@ export function ClientProfile() {
   const { user, login } = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const isProvider = user?.role === 'PROVIDER';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadToCloudinary(file, 'AVATAR');
+      await apiClient.put('/api/users/me', { fotoPerfil: url });
+      login({ ...user!, fotoPerfil: url });
+      toast.success('Foto actualizada');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la foto.');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
 
   const [formData, setFormData] = useState({
     nombre: user?.name || "",
@@ -110,14 +130,32 @@ export function ClientProfile() {
 
                 {/* Fila inferior: avatar + info */}
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 min-[375px]:h-16 min-[375px]:w-16 shrink-0 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
-                    {user?.fotoPerfil ? (
-                      <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-2xl object-cover" />
-                    ) : (
-                      <span className="text-base min-[375px]:text-xl font-bold text-brand-600 dark:text-dark-brand">
-                        {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                      </span>
-                    )}
+                  <div className="relative shrink-0">
+                    <div className={`flex h-12 w-12 min-[375px]:h-16 min-[375px]:w-16 items-center justify-center rounded-2xl ${tw.iconBg.brand}`}>
+                      {user?.fotoPerfil ? (
+                        <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-2xl object-cover" />
+                      ) : (
+                        <span className="text-base min-[375px]:text-xl font-bold text-brand-600 dark:text-dark-brand">
+                          {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      aria-label="Cambiar foto de perfil"
+                      className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow-md ring-2 ring-white dark:ring-dark-surface hover:bg-brand-700 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Camera className="h-3 w-3" />
+                    </button>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className={`text-base min-[375px]:text-lg font-bold truncate ${tw.text.primary}`}>{user?.name}</h2>

@@ -57,6 +57,9 @@ public class UserService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
@@ -211,6 +214,15 @@ public class UserService {
         if (body.containsKey("nombre")) user.setNombre(body.get("nombre"));
         if (body.containsKey("telefono")) user.setTelefono(body.get("telefono"));
         if (body.containsKey("localidad")) user.setLocalidad(normalizeLocalidad(body.get("localidad")));
+
+        if (body.containsKey("fotoPerfil")) {
+            String nueva = body.get("fotoPerfil");
+            String anterior = user.getFotoPerfil();
+            if (anterior != null && !anterior.equals(nueva)) {
+                cloudinaryService.borrarUrl(anterior); // borra el avatar viejo
+            }
+            user.setFotoPerfil(nueva);
+        }
 
         userRepository.save(user);
         return mapToDTO(user);

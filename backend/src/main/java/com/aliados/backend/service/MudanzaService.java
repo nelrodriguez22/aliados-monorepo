@@ -43,6 +43,9 @@ public class MudanzaService {
     @Autowired
     private NotificacionService notificacionService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     private static final int MAX_MUDANZAS_POR_DIA = 2;
 
     // Ratio de tiempo para testing: 1 min real = ratioTiempo minutos de servicio
@@ -614,6 +617,8 @@ public class MudanzaService {
         mudanza.setCancelledAt(LocalDateTime.now());
         mudanza.setMotivoCancelacion(motivo);
         mudanza = mudanzaRepository.save(mudanza);
+
+        cloudinaryService.borrarFotos(mudanza.getFotos());
 
         logger.info("Mudanza {} cancelada por cliente - Motivo: {}", mudanza.getId(), motivo);
 

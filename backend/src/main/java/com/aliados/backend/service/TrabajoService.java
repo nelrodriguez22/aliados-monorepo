@@ -52,6 +52,9 @@ public class TrabajoService {
     @Autowired
     private ProviderScoreService providerScoreService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     private static final int LIMITE_TRABAJOS_DEFAULT = 3;
@@ -482,6 +485,8 @@ public class TrabajoService {
         trabajo.setMotivoCancelacion(motivo);
 
         trabajo = trabajoRepository.save(trabajo);
+
+        cloudinaryService.borrarFotos(trabajo.getFotos());
 
         return mapToDTO(trabajo);
     }
