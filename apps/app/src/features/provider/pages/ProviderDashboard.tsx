@@ -124,6 +124,12 @@ export function ProviderDashboard() {
   const isOnline   = userStatus === 'ONLINE';
   const isBusy     = userStatus === 'BUSY';
 
+  // Solo los proveedores de fletes/mudanzas usan los endpoints de mudanzas.
+  // Mismo criterio que el backend (esProveedorDeFletes): evita el 403 "No autorizado"
+  // y requests innecesarios para el resto de los oficios (ej. plomero).
+  const oficioNombre = user?.oficio?.nombre?.toLowerCase() ?? '';
+  const isFlete = oficioNombre.includes('flete') || oficioNombre.includes('mudanza');
+
   const { data: trabajoActivo, isLoading: loadingActivo } = useQuery({
     queryKey: ['trabajo-activo'],
     queryFn: () => apiClient.get('/api/trabajos/activo'),
@@ -163,7 +169,7 @@ export function ProviderDashboard() {
       try { return await apiClient.get('/api/mudanzas/proveedor/pendientes'); }
       catch { return []; }
     },
-    enabled: isOnline || isBusy,
+    enabled: isFlete && (isOnline || isBusy),
     refetchOnMount: 'always',
     refetchInterval: wsConnected ? 120000 : 30000,
   });
@@ -176,6 +182,7 @@ export function ProviderDashboard() {
         return data && data.id ? data : null;
       } catch { return null; }
     },
+    enabled: isFlete,
     refetchOnMount: 'always',
   });
 
@@ -185,10 +192,10 @@ export function ProviderDashboard() {
       try { return await apiClient.get('/api/mudanzas/proveedor/confirmadas'); }
       catch { return []; }
     },
+    enabled: isFlete,
     refetchOnMount: 'always',
   });
 
-  const isFlete = user?.oficio?.nombre?.toLowerCase() === 'flete';
   const limiteTrabajos = isFlete ? 8 : 3;
   const colaLlena     = (trabajoActivo ? 1 : 0) + trabajosEnCola.length >= limiteTrabajos;
   const isMainLoading = loadingCompletados;
