@@ -2,10 +2,14 @@ package com.aliados.backend.controller;
 
 import com.aliados.backend.dto.CancelarTrabajoDTO;
 import com.aliados.backend.dto.CrearTrabajoDTO;
+import com.aliados.backend.dto.PagedTrabajosResponse;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.service.TrabajoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -58,6 +62,18 @@ public class TrabajoController {
         String uid = authentication.getName();
         List<TrabajoResponseDTO> trabajos = trabajoService.getTrabajosByCliente(uid);
         return ResponseEntity.ok(trabajos);
+    }
+
+    // Historial paginado de completados del cliente (#20-B). page base 0, size acotado a 50.
+    @GetMapping("/cliente/historial")
+    public ResponseEntity<PagedTrabajosResponse> getHistorialCliente(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        String uid = authentication.getName();
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "completedAt"));
+        return ResponseEntity.ok(trabajoService.getHistorialCliente(uid, pageable));
     }
 
     @GetMapping("/activo")

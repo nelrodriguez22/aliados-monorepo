@@ -2,6 +2,8 @@ package com.aliados.backend.repository;
 
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +18,20 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     // @EntityGraph: trae cliente/proveedor/oficio en la misma query (evita N+1 al mapear).
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByClienteFirebaseUidOrderByCreatedAtDesc(String firebaseUid);
+
+    // Trabajos activos del cliente (lista chica, no paginada): se usa en el dashboard.
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
+    List<Trabajo> findByClienteFirebaseUidAndEstadoInOrderByCreatedAtDesc(
+            String firebaseUid, List<TrabajoEstado> estados);
+
+    // Historial del cliente paginado (crece sin límite → #20-B).
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
+    Page<Trabajo> findByClienteFirebaseUidAndEstado(String firebaseUid, TrabajoEstado estado, Pageable pageable);
+
+    // Cantidad de trabajos completados del cliente que aún no tienen calificación (badge "sin calificar").
+    @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.cliente.firebaseUid = :uid AND t.estado = 'COMPLETADO' " +
+           "AND NOT EXISTS (SELECT c FROM Calificacion c WHERE c.trabajo.id = t.id)")
+    long countSinCalificarByCliente(@Param("uid") String uid);
 
     List<Trabajo> findByEstadoAndOficioId(TrabajoEstado estado, Long oficioId);
 

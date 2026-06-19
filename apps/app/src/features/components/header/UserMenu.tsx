@@ -52,7 +52,7 @@ export function UserMenu({ variant }: UserMenuProps) {
     await signOut(auth);
     logout();
     [
-      'auth-profile','trabajos-cliente','trabajos-pendientes','trabajo-activo',
+      'auth-profile','trabajos-cliente','trabajos-historial','trabajos-pendientes','trabajo-activo',
       'trabajos-en-cola','trabajos-completados','calificacion-promedio','notificaciones-unread',
     ].forEach((k) => queryClient.removeQueries({ queryKey: [k] }));
     toast.success('Sesión cerrada');
@@ -92,10 +92,14 @@ export function UserMenu({ variant }: UserMenuProps) {
       <button
         onClick={() => setShow(!show)}
         aria-label="Menú de usuario"
-        className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition
+        className={`flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-full transition
           ${tw.iconBg.brand} hover:opacity-80`}
       >
-        <span className={`text-sm font-semibold text-brand-600 dark:text-dark-brand`}>{initials}</span>
+        {user?.fotoPerfil ? (
+          <img src={user.fotoPerfil} alt="Avatar" className="h-full w-full rounded-full object-cover" />
+        ) : (
+          <span className={`text-sm font-semibold text-brand-600 dark:text-dark-brand`}>{initials}</span>
+        )}
       </button>
 
       {show && (

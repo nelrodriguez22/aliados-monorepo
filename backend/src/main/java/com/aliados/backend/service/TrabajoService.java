@@ -1,6 +1,7 @@
 package com.aliados.backend.service;
 
 import com.aliados.backend.dto.CrearTrabajoDTO;
+import com.aliados.backend.dto.PagedTrabajosResponse;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.entity.*;
 import com.aliados.backend.exception.ForbiddenException;
@@ -11,6 +12,8 @@ import com.aliados.backend.repository.UserRepository;
 import com.aliados.backend.repository.OficioRepository;
 import com.aliados.backend.util.RegionRosario;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.hibernate.Hibernate;
@@ -227,11 +230,17 @@ public class TrabajoService {
         return mapToDTO(trabajo);
     }
 
+    // Solo los trabajos ACTIVOS del cliente (lista chica). El historial completado va
+    // por getHistorialCliente (paginado) para no traer todo el historial sin límite (#20-B).
+    private static final List<TrabajoEstado> ESTADOS_ACTIVOS_CLIENTE = List.of(
+            TrabajoEstado.PENDIENTE, TrabajoEstado.EN_CURSO, TrabajoEstado.PROPUESTO, TrabajoEstado.EN_COLA);
+
     public List<TrabajoResponseDTO> getTrabajosByCliente(String firebaseUid) {
         User cliente = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
-        List<Trabajo> trabajos = trabajoRepository.findByClienteFirebaseUidOrderByCreatedAtDesc(firebaseUid);
+        List<Trabajo> trabajos = trabajoRepository.findByClienteFirebaseUidAndEstadoInOrderByCreatedAtDesc(
+                firebaseUid, ESTADOS_ACTIVOS_CLIENTE);
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
@@ -239,6 +248,26 @@ public class TrabajoService {
         return trabajos.stream()
                 .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
+    }
+
+    // Historial paginado de trabajos COMPLETADOS del cliente + total sin calificar (badge).
+    public PagedTrabajosResponse getHistorialCliente(String firebaseUid, Pageable pageable) {
+        userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        Page<Trabajo> page = trabajoRepository.findByClienteFirebaseUidAndEstado(
+                firebaseUid, TrabajoEstado.COMPLETADO, pageable);
+
+        List<Trabajo> trabajos = page.getContent();
+        Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
+        Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+
+        List<TrabajoResponseDTO> content = trabajos.stream()
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .collect(Collectors.toList());
+
+        long sinCalificar = trabajoRepository.countSinCalificarByCliente(firebaseUid);
+        return new PagedTrabajosResponse(content, page.hasNext(), sinCalificar);
     }
 
     private void notificarProveedorDisponible(Trabajo trabajo) {

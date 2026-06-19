@@ -32,6 +32,7 @@ export function JobCompleted() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajo', jobId] });
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['trabajos-historial'] });
       toast.success('¡Gracias por tu calificación!');
       navigate(ROUTES.CLIENT.DASHBOARD);
     },

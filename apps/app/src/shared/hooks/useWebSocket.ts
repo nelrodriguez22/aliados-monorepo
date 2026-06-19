@@ -166,7 +166,7 @@ export const useWebSocket = () => {
           return old.filter((t: any) => t.id !== trabajoId);
         });
         queryClient.refetchQueries({ queryKey: ['trabajo', String(trabajoId)] });
-        queryClient.refetchQueries({ queryKey: ['trabajos-cliente-completados'] });
+        queryClient.invalidateQueries({ queryKey: ['trabajos-historial'] });
         break;
 
       case 'TRABAJO_EN_CURSO':

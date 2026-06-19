@@ -6,7 +6,7 @@ import { tw } from "@/shared/styles/design-system";
 import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
@@ -137,7 +137,6 @@ export function ClientDashboard() {
   const historialRef = useRef<HTMLDivElement>(null);
   const { isSupported, permission, requestPermission } = usePushNotifications();
   const [showNotificationBanner, setShowNotificationBanner] = useState(false);
-  const [showHistory, setShowHistory] = useState(() => searchParams.get('view') === 'all');
 
   // Oficios desde la API para el buscador
   const { data: oficiosApi = [] } = useOficios();
@@ -171,8 +170,24 @@ export function ClientDashboard() {
   const trabajosActivos = todosTrabajos.filter((t: any) =>
     ['PENDIENTE', 'EN_CURSO', 'PROPUESTO', 'EN_COLA'].includes(t.estado)
   );
-  const trabajosCompletados = todosTrabajos.filter((t: any) => t.estado === 'COMPLETADO');
-  const sinCalificar = trabajosCompletados.filter((t: any) => !t.calificado).length;
+
+  // Historial completado: paginado vía "Cargar más" (#20-B). /cliente ya solo trae activos.
+  const {
+    data: historialData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: loadingHistorial,
+  } = useInfiniteQuery({
+    queryKey: ['trabajos-historial'],
+    queryFn: ({ pageParam }) => apiClient.get(`/api/trabajos/cliente/historial?page=${pageParam}&size=10`),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: any, allPages: any[]) => (lastPage?.hasNext ? allPages.length : undefined),
+    staleTime: 30000,
+    refetchOnMount: true,
+  });
+  const trabajosCompletados = historialData?.pages.flatMap((p: any) => p.content) ?? [];
+  const sinCalificar = historialData?.pages[0]?.sinCalificar ?? 0;
 
   const removeAccents = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -213,7 +228,6 @@ export function ClientDashboard() {
 
   useEffect(() => {
     if (searchParams.get('view') === 'all') {
-      setShowHistory(true);
       setTimeout(() => historialRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
     }
   }, [searchParams]);
@@ -468,19 +482,13 @@ export function ClientDashboard() {
                     </p>
                   )}
                 </div>
-                {trabajosCompletados.length > 3 && (
-                  <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className={`text-xs font-medium cursor-pointer ${tw.text.brand}`}
-                  >
-                    {showHistory ? 'Ver menos' : `Ver todos (${trabajosCompletados.length})`}
-                  </button>
-                )}
               </div>
 
-              {trabajosCompletados.length > 0 ? (
+              {loadingHistorial ? (
+                <SkeletonHistorial />
+              ) : trabajosCompletados.length > 0 ? (
                 <div className="space-y-2 min-[375px]:space-y-3">
-                  {(showHistory ? trabajosCompletados : trabajosCompletados.slice(0, 3)).map((trabajo: any) => (
+                  {trabajosCompletados.map((trabajo: any) => (
                     <Card key={trabajo.id} hover onClick={() => navigate(ROUTES.CLIENT.COMPLETED(trabajo.id))}>
                       <div className="flex items-center gap-2 min-[375px]:gap-3">
                         {/* Icono */}
@@ -514,6 +522,15 @@ export function ClientDashboard() {
                       </div>
                     </Card>
                   ))}
+                  {hasNextPage && (
+                    <button
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                      className={`mx-auto mt-1 block text-xs font-medium cursor-pointer disabled:opacity-50 ${tw.text.brand}`}
+                    >
+                      {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <Card>
