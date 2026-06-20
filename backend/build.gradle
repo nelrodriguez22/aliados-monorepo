@@ -48,6 +48,9 @@ dependencies {
 	// Cache en memoria (rol uid→ROLE_* en FirebaseAuthFilter). Version vía Spring Boot.
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
+	// Sentry (error monitoring + tracing). Spring Boot 3 = starter Jakarta.
+	implementation 'io.sentry:sentry-spring-boot-starter-jakarta:8.44.1'
+
 	// Email: se envía vía la API HTTP de Resend (RestTemplate), sin SDK propietario.
 
 	compileOnly 'org.projectlombok:lombok'

@@ -285,6 +285,16 @@ export function ClientProfile() {
                 </div>
               </Card>
             )}
+
+            {/* ⚠️ TEMPORAL — botón de prueba de Sentry. BORRAR este bloque una vez
+                verificado que el error aparece en el dashboard de Sentry. */}
+            <button
+              type="button"
+              onClick={() => { throw new Error('Sentry test — Break the world (ClientProfile)'); }}
+              className="mx-auto block text-xs text-red-400 underline hover:text-red-500 cursor-pointer"
+            >
+              ⚠️ Probar Sentry (lanzar error de prueba)
+            </button>
           </div>
         </div>
       </div>

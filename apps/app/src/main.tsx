@@ -1,5 +1,7 @@
+import './instrument' // ← Sentry: debe ser el primer import (init antes que nada)
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { reactErrorHandler } from '@sentry/react'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './shared/components/AuthProvider'
@@ -53,7 +55,12 @@ const queryClient = new QueryClient({
   },
 })
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  // React 19: reporta a Sentry los errores capturados por React.
+  onUncaughtError: reactErrorHandler(),
+  onCaughtError: reactErrorHandler(),
+  onRecoverableError: reactErrorHandler(),
+}).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

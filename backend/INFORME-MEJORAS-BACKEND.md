@@ -192,6 +192,15 @@ Tests con **k6** (`/loadtest/`) contra prod (Railway + Neon pooled), tras las me
 
 **Caveats:** dataset de un solo usuario de prueba (optimista vs datos reales variados); una sola instancia (escala vertical → más RAM = más conexiones; horizontal recién con Redis/broker, ver Email opcional y notas de in-memory state). El escenario de **escritura** no se corrió (rate de creación bajo en este negocio → no es riesgo de capacidad).
 
+## Observabilidad (2026-06-19)
+
+**Sentry** integrado en backend y frontend (error monitoring + tracing). Se activa por **env var**; si el DSN está vacío queda apagado (cero overhead).
+
+- **Backend** (`sentry-spring-boot-starter-jakarta` 8.44.1): config en `application.properties` (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, `SENTRY_TRACES_SAMPLE_RATE` default 0.2, `send-default-pii=false`). **NO se incluyó `sentry-logback`** a propósito: el `GlobalExceptionHandler` loguea los errores de negocio (400) en ERROR, así que capturar por logback sería ruido. En su lugar, captura explícita: `handleGenericException` (500) siempre; `handleRuntimeException` solo si es **subclase** de RuntimeException (NPE/IllegalState = bugs reales), no el `new RuntimeException("msg")` pelado (negocio).
+- **Frontend** (`@sentry/react` 10.59): `src/instrument.ts` (init gateado por `VITE_SENTRY_DSN`), importado primero en `main.tsx`; `reactErrorHandler` en `createRoot` (React 19); tracing de navegación con `reactRouterV7BrowserTracingIntegration` (+ `withSentryReactRouterV7Routing` en `AppRouter`); Session Replay (10% sesiones / 100% con error, texto y media enmascarados); `tracePropagationTargets` a los dominios del backend (trace distribuido front→back). Source maps vía `@sentry/vite-plugin` **condicional** a `SENTRY_AUTH_TOKEN` (no rompe el build local).
+- **Pendiente de activación (env vars):** crear cuenta Sentry + 2 proyectos → setear `SENTRY_DSN` en Railway y `VITE_SENTRY_DSN` en el build del front; opcional `SENTRY_AUTH_TOKEN/ORG/PROJECT` para subir source maps.
+- **Uptime monitor** (BetterStack/UptimeRobot) sobre `/actuator/health` → pendiente de configurar (fuera del repo).
+
 ## Orden sugerido de impacto/esfuerzo
 1. #1, #3 (fix rápido, alto impacto)
 2. #5 (refactor acotado, gran ganancia)

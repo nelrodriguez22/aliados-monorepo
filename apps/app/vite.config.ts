@@ -4,6 +4,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig({
   plugins: [
@@ -58,6 +59,17 @@ export default defineConfig({
         ],
       },
     }),
+    // Sube los source maps a Sentry (stack traces legibles). Solo se activa cuando
+    // hay SENTRY_AUTH_TOKEN (CI/build de prod); en build local sin token no hace nada.
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? [
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+          }),
+        ]
+      : []),
   ],
   build: {
     outDir: "dist",

@@ -1,5 +1,10 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import * as Sentry from "@sentry/react";
+
+// Routes instrumentado: nombra las transacciones de tracing por patrón de ruta
+// (ej. "/proveedor/trabajo/:id" en vez de la URL concreta). No-op si Sentry está apagado.
+const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 import { MainLayout } from "@/features/pages/MainLayout";
 import { AuthLayout } from "@/features/pages/AuthLayout";
 import { Login } from "@/features/auth/pages/Login";
@@ -53,7 +58,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
-        <Routes>
+        <SentryRoutes>
 
           {/* ── Root ── */}
           <Route path="/" element={<RootRedirect />} />
@@ -115,7 +120,7 @@ export function AppRouter() {
           {/* ── 404 ── */}
           <Route path="*" element={<Navigate to="/" replace />} />
 
-        </Routes>
+        </SentryRoutes>
       </Suspense>
     </BrowserRouter>
   );

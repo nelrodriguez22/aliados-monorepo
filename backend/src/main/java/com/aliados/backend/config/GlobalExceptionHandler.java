@@ -3,6 +3,7 @@ package com.aliados.backend.config;
 import com.aliados.backend.exception.ConflictException;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
+import io.sentry.Sentry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -58,6 +59,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException e) {
         logger.error("RuntimeException: {}", e.getMessage());
+        // Heurística: los errores de negocio se lanzan como `new RuntimeException("msg")`
+        // (clase exacta RuntimeException) → no son bugs, no van a Sentry. Las SUBCLASES
+        // (NPE, IllegalState, etc.) sí son bugs reales → capturarlas.
+        if (e.getClass() != RuntimeException.class) {
+            Sentry.captureException(e);
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "error", "Bad Request",
                 "message", e.getMessage(),
@@ -77,6 +84,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
         logger.error("Unexpected error: {}", e.getMessage(), e);
+        Sentry.captureException(e); // 500 inesperado → siempre a Sentry
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "error", "Internal Server Error",
                 "message", "Ocurrió un error inesperado",
