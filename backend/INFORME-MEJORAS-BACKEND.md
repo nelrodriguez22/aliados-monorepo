@@ -8,7 +8,10 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 ---
 
 ## ⏭️ Próxima sesión (pendiente)
-- [ ] **Login con botón de Google sigue sin funcionar.** Se debuggeó el `authDomain` en `firebase.json` (2026-06-18) pero el problema persiste. Retomar a fondo una vez cerrada la observabilidad (Sentry + uptime): revisar flujo OAuth (popup vs redirect), `authDomain`/dominios autorizados en Firebase Console, y errores que ahora deberían quedar capturados en Sentry.
+- [ ] **Login con botón de Google — causa raíz encontrada (2026-06-20).** Dos capas:
+  1. **CSP `frame-src`** no permitía el iframe de Firebase Auth → **arreglado** en `firebase.json` (agregado `https://aliados-web-22.firebaseapp.com` + `https://apis.google.com`). Falta deploy.
+  2. **Bloqueante real: `Error 400 redirect_uri_mismatch`** de Google. El cliente OAuth `578160153411-ljsbkclja4rnl0up65kkqkit61qirfn4` no tiene registrada la `redirect_uri` `https://aliados-web-22.firebaseapp.com/__/auth/handler`. **Acción (consola, no código):** agregarla en Google Cloud Console → Credentials → ese cliente OAuth (+ JS origins de los 3 dominios), y verificar Authorized domains en Firebase Console.
+  - Mejora opcional a futuro: usar `authDomain` = dominio propio (`aliados-app.convivirtech.com.ar`) para evitar el hop a `firebaseapp.com` (requiere registrar el handler de ese dominio en Google + authorized domains).
 
 ---
 
