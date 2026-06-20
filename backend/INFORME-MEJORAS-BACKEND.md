@@ -7,6 +7,11 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 
 ---
 
+## ⏭️ Próxima sesión (pendiente)
+- [ ] **Login con botón de Google sigue sin funcionar.** Se debuggeó el `authDomain` en `firebase.json` (2026-06-18) pero el problema persiste. Retomar a fondo una vez cerrada la observabilidad (Sentry + uptime): revisar flujo OAuth (popup vs redirect), `authDomain`/dominios autorizados en Firebase Console, y errores que ahora deberían quedar capturados en Sentry.
+
+---
+
 ## Decisiones tomadas
 
 - ✅ **La base se limpia** (drop & recreate). Hecho: `DROP SCHEMA public CASCADE` corrido en Neon.
@@ -200,6 +205,8 @@ Tests con **k6** (`/loadtest/`) contra prod (Railway + Neon pooled), tras las me
 - **Frontend** (`@sentry/react` 10.59): `src/instrument.ts` (init gateado por `VITE_SENTRY_DSN`), importado primero en `main.tsx`; `reactErrorHandler` en `createRoot` (React 19); tracing de navegación con `reactRouterV7BrowserTracingIntegration` (+ `withSentryReactRouterV7Routing` en `AppRouter`); Session Replay (10% sesiones / 100% con error, texto y media enmascarados); `tracePropagationTargets` a los dominios del backend (trace distribuido front→back). Source maps vía `@sentry/vite-plugin` **condicional** a `SENTRY_AUTH_TOKEN` (no rompe el build local).
 - **Pendiente de activación (env vars):** crear cuenta Sentry + 2 proyectos → setear `SENTRY_DSN` en Railway y `VITE_SENTRY_DSN` en el build del front; opcional `SENTRY_AUTH_TOKEN/ORG/PROJECT` para subir source maps.
 - **Uptime monitor** (BetterStack/UptimeRobot) sobre `/actuator/health` → pendiente de configurar (fuera del repo).
+- **Activación (2026-06-19):** el DSN del front se inyecta en el build de CI vía `deploy.yml` (estaba fallando porque `.env.production` está gitignoreado y el CI buildea con secrets, no con ese archivo). Proyectos Sentry: `convivir/<react>` (front, DSN ...4511298063761408) y `convivir/java-backend` (back, DSN ...4511595138777088 → env `SENTRY_DSN` en Railway). ⚠️ **NO usar** el agente OTel (`-javaagent`) — usamos el starter de Spring; **`send-default-pii=false`** (no el `true` que sugiere el wizard).
+- ⚠️ **Source context de Java descartado:** el plugin `io.sentry.jvm.gradle` 6.12.0 rompe el build con Gradle 8.x del proyecto (`Could not create task ':sentryUploadSourceBundleJava' … SentryCliExecTask.setIgnoreExitValue`). Se removió. Error monitoring funciona igual (vía starter); los stacktraces de Java van sin snippets de fuente. Revisar una versión compatible del plugin a futuro si se quiere source context.
 
 ## Orden sugerido de impacto/esfuerzo
 1. #1, #3 (fix rápido, alto impacto)
