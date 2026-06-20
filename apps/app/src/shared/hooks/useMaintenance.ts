@@ -9,7 +9,8 @@ const OFF: MaintenanceState = {
   level: "off",
   title: "",
   message: "",
-  eta: "",
+  schedule: "",
+  duration: "",
 };
 
 export function useMaintenance() {

@@ -7,9 +7,12 @@ import {
 
 const DEFAULTS = {
   maintenance_level: "off",
-  maintenance_title: "Estamos actualizando",
-  maintenance_message: "Volvemos en unos minutos. ¡Gracias por la paciencia!",
-  maintenance_eta: "",
+  // Pantalla de bloqueo (blocked)
+  maintenance_title: "Estamos en mantenimiento",
+  maintenance_message: "Estamos realizando tareas de mantenimiento, volveremos a la brevedad.",
+  // Banner de aviso previo (warning)
+  maintenance_schedule: "",
+  maintenance_duration: "",
 };
 
 let rc: ReturnType<typeof getRemoteConfig> | null = null;
@@ -32,14 +35,16 @@ export async function fetchMaintenance(): Promise<MaintenanceState> {
       level: resolveLevel(getValue(instance, "maintenance_level").asString()),
       title: getValue(instance, "maintenance_title").asString(),
       message: getValue(instance, "maintenance_message").asString(),
-      eta: getValue(instance, "maintenance_eta").asString(),
+      schedule: getValue(instance, "maintenance_schedule").asString(),
+      duration: getValue(instance, "maintenance_duration").asString(),
     };
   } catch {
     return {
       level: "off",
       title: DEFAULTS.maintenance_title,
       message: DEFAULTS.maintenance_message,
-      eta: "",
+      schedule: "",
+      duration: "",
     };
   }
 }

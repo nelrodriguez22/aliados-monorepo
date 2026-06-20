@@ -3,6 +3,7 @@ import {
   resolveLevel,
   readBypassFlag,
   getMaintenanceView,
+  formatBannerText,
   BYPASS_KEY,
 } from '@/shared/lib/maintenance';
 
@@ -54,4 +55,27 @@ describe('getMaintenanceView', () => {
     expect(getMaintenanceView('blocked', false)).toBe('block'));
   it('blocked con bypass → app', () =>
     expect(getMaintenanceView('blocked', true)).toBe('app'));
+});
+
+describe('formatBannerText', () => {
+  it('arma la frase completa con hora y duración', () => {
+    expect(formatBannerText('22:00 hs', '30 minutos')).toBe(
+      'Vamos a tener una actualización programada para las 22:00 hs. El tiempo estimado del mantenimiento es de 30 minutos.',
+    );
+  });
+  it('solo hora', () => {
+    expect(formatBannerText('22:00 hs', '')).toBe(
+      'Vamos a tener una actualización programada para las 22:00 hs.',
+    );
+  });
+  it('solo duración', () => {
+    expect(formatBannerText('', '30 minutos')).toBe(
+      'El tiempo estimado del mantenimiento es de 30 minutos.',
+    );
+  });
+  it('sin datos → fallback genérico', () => {
+    expect(formatBannerText('', '  ')).toBe(
+      'Vamos a actualizar la app pronto, puede haber interrupciones.',
+    );
+  });
 });
