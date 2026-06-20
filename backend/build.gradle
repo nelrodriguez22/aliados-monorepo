@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.4.2'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'io.sentry.jvm.gradle' version '6.12.0'
 }
 
 group = 'com.aliados'
@@ -22,6 +23,19 @@ configurations {
 
 repositories {
 	mavenCentral()
+}
+
+sentry {
+	// Sube el "source bundle" → los stacktraces en Sentry muestran tu código fuente.
+	// Solo cuando hay SENTRY_AUTH_TOKEN (CI). Sin token no sube y el build NO falla.
+	includeSourceContext = System.getenv("SENTRY_AUTH_TOKEN") != null
+	org = "convivir"
+	projectName = "java-backend"
+	authToken = System.getenv("SENTRY_AUTH_TOKEN")
+	// La dependencia del SDK la gestionamos manual (versión pineada 8.44.1) → que el
+	// plugin no agregue/override deps. El tracing ya lo da el starter de Spring.
+	autoInstallation { enabled = false }
+	tracingInstrumentation { enabled = false }
 }
 
 dependencies {
