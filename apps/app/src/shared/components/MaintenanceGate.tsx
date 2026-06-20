@@ -1,7 +1,24 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { useMaintenance } from "@/shared/hooks/useMaintenance";
-import { getMaintenanceView } from "@/shared/lib/maintenance";
+import { getMaintenanceView, type MaintenanceState } from "@/shared/lib/maintenance";
 import icono from "@/assets/icono.png";
+
+interface MaintenanceContextValue {
+  state: MaintenanceState;
+  bypass: boolean;
+  refetch: () => void;
+}
+
+const MaintenanceContext = createContext<MaintenanceContextValue | null>(null);
+
+// Estado de mantenimiento compartido (un solo poll en el Gate, leído donde se necesite).
+export function useMaintenanceState(): MaintenanceContextValue {
+  const ctx = useContext(MaintenanceContext);
+  if (!ctx) {
+    throw new Error("useMaintenanceState debe usarse dentro de <MaintenanceGate>");
+  }
+  return ctx;
+}
 
 export function MaintenanceGate({ children }: { children: ReactNode }) {
   const { state, bypass, refetch } = useMaintenance();
@@ -32,15 +49,11 @@ export function MaintenanceGate({ children }: { children: ReactNode }) {
     );
   }
 
+  // El banner de `warning` se renderiza dentro del layout (ver MaintenanceBanner),
+  // para que quede debajo del header fijo y no tapado por él.
   return (
-    <>
-      {view === "banner" && (
-        <div className="w-full bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white">
-          {state.message || "Vamos a actualizar la app pronto, puede haber interrupciones."}
-          {state.eta && <span className="ml-1 font-semibold">({state.eta})</span>}
-        </div>
-      )}
+    <MaintenanceContext.Provider value={{ state, bypass, refetch }}>
       {children}
-    </>
+    </MaintenanceContext.Provider>
   );
 }
