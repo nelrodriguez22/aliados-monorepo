@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "pnpm": {
     "peerDependencyRules": {
@@ -53,6 +55,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.4",
     "vite": "8.0.16",
-    "vite-plugin-pwa": "1.2.0"
+    "vite-plugin-pwa": "1.2.0",
+    "vitest": "^3"
   }
 }

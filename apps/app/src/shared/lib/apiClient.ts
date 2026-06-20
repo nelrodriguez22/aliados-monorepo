@@ -11,6 +11,14 @@ class ApiError extends Error {
   }
 }
 
+const RETRY_STATUSES = new Set([502, 503, 504]);
+const MAX_RETRIES = 2;
+const RETRY_BACKOFF_MS = [300, 800];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const isIdempotent = (method?: string) =>
+  !method || method.toUpperCase() === 'GET';
+
 async function request<T = any>(
   endpoint: string,
   options: RequestInit = {},
@@ -29,29 +37,52 @@ async function request<T = any>(
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const method = (options.method || 'GET').toString();
+  let attempt = 0;
 
-  if (!response.ok) {
-    let message: string;
+  // Reintenta solo GET (idempotente) ante 5xx transitorio o error de red.
+  while (true) {
+    let response: Response;
     try {
-      const errorData = await response.json();
-      message = errorData.message || errorData.error || response.statusText;
-    } catch {
-      message = await response.text().catch(() => response.statusText);
+      response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    } catch (err) {
+      if (isIdempotent(method) && attempt < MAX_RETRIES) {
+        await sleep(RETRY_BACKOFF_MS[attempt]);
+        attempt++;
+        continue;
+      }
+      throw err;
     }
-    throw new ApiError(message, response.status);
-  }
 
-  // Handle empty responses (204, etc.)
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    return {} as T;
-  }
+    if (
+      !response.ok &&
+      RETRY_STATUSES.has(response.status) &&
+      isIdempotent(method) &&
+      attempt < MAX_RETRIES
+    ) {
+      await sleep(RETRY_BACKOFF_MS[attempt]);
+      attempt++;
+      continue;
+    }
 
-  return response.json();
+    if (!response.ok) {
+      let message: string;
+      try {
+        const errorData = await response.json();
+        message = errorData.message || errorData.error || response.statusText;
+      } catch {
+        message = await response.text().catch(() => response.statusText);
+      }
+      throw new ApiError(message, response.status);
+    }
+
+    // Handle empty responses (204, etc.)
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return {} as T;
+    }
+    return response.json();
+  }
 }
 
 export const apiClient = {
