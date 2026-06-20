@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/queue/**",        // Suscripciones a queues
                                 "/user/**",          // Mensajes a usuarios específicos
                                 "/api/mudanzas/tiers",
-                                "/api/users/resend-verification"
+                                "/api/users/resend-verification",
+                                "/api/_sentry-test"   // ⚠️ TEMPORAL — verificación de Sentry. BORRAR.
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
