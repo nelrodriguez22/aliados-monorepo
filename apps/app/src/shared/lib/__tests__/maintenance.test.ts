@@ -60,27 +60,22 @@ describe('getMaintenanceView', () => {
 describe('formatBannerText', () => {
   it('hora y duración en líneas separadas + disculpa al final', () => {
     expect(formatBannerText('22:00 hs', '30 minutos')).toBe(
-      'Vamos a tener una actualización programada para las 22:00 hs.\n' +
-        'El tiempo estimado del mantenimiento es de 30 minutos.\n' +
-        'Perdón por las molestias.',
+      'Vamos a tener una actualización programada para las 22:00 hs. El tiempo estimado del mantenimiento es de 30 minutos. Perdón por las molestias.',
     );
   });
   it('solo hora', () => {
     expect(formatBannerText('22:00 hs', '')).toBe(
-      'Vamos a tener una actualización programada para las 22:00 hs.\n' +
-        'Perdón por las molestias.',
+      'Vamos a tener una actualización programada para las 22:00 hs. Perdón por las molestias.',
     );
   });
   it('solo duración', () => {
     expect(formatBannerText('', '30 minutos')).toBe(
-      'El tiempo estimado del mantenimiento es de 30 minutos.\n' +
-        'Perdón por las molestias.',
+      'El tiempo estimado del mantenimiento es de 30 minutos. Perdón por las molestias.',
     );
   });
   it('sin datos → fallback genérico + disculpa', () => {
     expect(formatBannerText('', '  ')).toBe(
-      'Vamos a actualizar la app pronto, puede haber interrupciones.\n' +
-        'Perdón por las molestias.',
+      'Vamos a actualizar la app pronto, puede haber interrupciones. Perdón por las molestias.',
     );
   });
 });

@@ -42,18 +42,18 @@ export function getMaintenanceView(
 }
 
 // Arma el texto del banner de aviso a partir de la hora programada y la duración
-// estimada (ambas desde Remote Config). Cada frase va en su propia línea (se separan
-// con "\n", el componente las renderiza con whitespace-pre-line) y cierra con la
-// disculpa. Degrada elegante si falta algún dato.
+// estimada (ambas desde Remote Config). Las frases fluyen en un solo párrafo
+// (envuelven solas según el ancho) y cierra con la disculpa. Degrada elegante
+// si falta algún dato.
 export function formatBannerText(schedule: string, duration: string): string {
   const s = schedule.trim();
   const d = duration.trim();
-  const lines: string[] = [];
-  if (s) lines.push(`Vamos a tener una actualización programada para las ${s}.`);
-  if (d) lines.push(`El tiempo estimado del mantenimiento es de ${d}.`);
-  if (lines.length === 0) {
-    lines.push('Vamos a actualizar la app pronto, puede haber interrupciones.');
+  const parts: string[] = [];
+  if (s) parts.push(`Vamos a tener una actualización programada para las ${s}.`);
+  if (d) parts.push(`El tiempo estimado del mantenimiento es de ${d}.`);
+  if (parts.length === 0) {
+    parts.push('Vamos a actualizar la app pronto, puede haber interrupciones.');
   }
-  lines.push('Perdón por las molestias.');
-  return lines.join('\n');
+  parts.push('Perdón por las molestias.');
+  return parts.join(' ');
 }
