@@ -8,10 +8,12 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 ---
 
 ## ⏭️ Próxima sesión (pendiente)
-- [ ] **Login con botón de Google — causa raíz encontrada (2026-06-20).** Dos capas:
-  1. **CSP `frame-src`** no permitía el iframe de Firebase Auth → **arreglado** en `firebase.json` (agregado `https://aliados-web-22.firebaseapp.com` + `https://apis.google.com`). Falta deploy.
-  2. **Bloqueante real: `Error 400 redirect_uri_mismatch`** de Google. El cliente OAuth `578160153411-ljsbkclja4rnl0up65kkqkit61qirfn4` no tiene registrada la `redirect_uri` `https://aliados-web-22.firebaseapp.com/__/auth/handler`. **Acción (consola, no código):** agregarla en Google Cloud Console → Credentials → ese cliente OAuth (+ JS origins de los 3 dominios), y verificar Authorized domains en Firebase Console.
-  - Mejora opcional a futuro: usar `authDomain` = dominio propio (`aliados-app.convivirtech.com.ar`) para evitar el hop a `firebaseapp.com` (requiere registrar el handler de ese dominio en Google + authorized domains).
+- [x] **Login con botón de Google — RESUELTO (2026-06-20).** Tenía **3 capas** que se fueron destapando una por una:
+  1. **CSP `frame-src`**: no permitía el iframe de Firebase Auth → agregado `https://aliados-web-22.firebaseapp.com` + `https://apis.google.com` en `firebase.json` (ambas políticas).
+  2. **Google Cloud Console (`redirect_uri_mismatch`)**: el cliente OAuth `578160153411-...` no tenía registrado el redirect URI `https://aliados-web-22.firebaseapp.com/__/auth/handler` ni los JavaScript origins (los 3 dominios + localhost). Se habían "perdido"; se re-registraron.
+  3. **App auth-flow (código)**: el post-login se manejaba **solo en el `.then()` del popup**, pero en mobile/incógnito Google cae a **signInWithRedirect** → recarga la página → ese callback nunca corría → el usuario nuevo quedaba en `/login`. Fix: `Login.tsx` rutea reactivamente a onboarding cuando `useProfile` detecta usuario nuevo (404), y `OnboardingGoogle.tsx` usa `useFirebaseAuth()` reactivo (en vez de `auth.currentUser` síncrono que rebotaba durante el limbo de init tras el reload).
+  - Verificado end-to-end: Google → onboarding (rol → teléfono → zona) → registro OK.
+  - Mejora opcional a futuro: usar `authDomain` = dominio propio (`aliados-app.convivirtech.com.ar`) para evitar el hop a `firebaseapp.com`.
 
 ---
 

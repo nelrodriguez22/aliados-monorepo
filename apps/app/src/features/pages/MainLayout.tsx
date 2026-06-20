@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Header } from "@/features/components/Header";
 import { Footer } from "@/features/components/Footer";
 import { FloatingActions } from "@/shared/components/FloatingActions";
+import { InstallBanner } from "@/shared/components/InstallBanner";
 
 export function MainLayout() {
   return (
@@ -12,6 +13,7 @@ export function MainLayout() {
       </main>
       <Footer />
       <FloatingActions />
+      <InstallBanner />
     </section>
   );
 }
