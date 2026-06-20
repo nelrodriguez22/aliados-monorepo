@@ -67,6 +67,11 @@ export default defineConfig({
             org: process.env.SENTRY_ORG,
             project: process.env.SENTRY_PROJECT,
             authToken: process.env.SENTRY_AUTH_TOKEN,
+            sourcemaps: {
+              // Sube los .map a Sentry y los BORRA de dist/ antes del deploy, para
+              // que el código fuente no quede público en Firebase Hosting.
+              filesToDeleteAfterUpload: ["./dist/**/*.map"],
+            },
           }),
         ]
       : []),
