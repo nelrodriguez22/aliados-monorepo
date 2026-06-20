@@ -10,6 +10,7 @@ import icono from "@/assets/icono.png";
 import { ROUTES } from "@/shared/constants/routes";
 import { tw } from "@/shared/styles/design-system";
 import { useOficios } from "@/shared/hooks/useOficios";
+import { useFirebaseAuth } from "@/shared/hooks/useFirebaseAuth";
 import toast from "react-hot-toast";
 
 type UserRole = "CLIENT" | "PROVIDER";
@@ -17,7 +18,10 @@ type UserRole = "CLIENT" | "PROVIDER";
 export function OnboardingGoogle() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const firebaseUser = auth.currentUser;
+  // Reactivo (no `auth.currentUser` síncrono): tras un signInWithRedirect la página
+  // recarga y Firebase restaura la sesión de forma asíncrona. Snapshotear currentUser
+  // daba null por un instante y rebotaba a login. Esperamos a que Firebase resuelva.
+  const { firebaseUser, isLoading: authLoading } = useFirebaseAuth();
 
   const [step, setStep] = useState<"role" | "form">("role");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
@@ -29,12 +33,13 @@ export function OnboardingGoogle() {
 
   const { data: oficios = [] } = useOficios({ enabled: selectedRole === "PROVIDER" });
 
-  // Si no hay sesión Firebase (entró directo a la URL), volver al login.
+  // Solo rebotar a login si Firebase YA resolvió y no hay sesión (no durante el limbo
+  // de inicialización tras un redirect).
   useEffect(() => {
-    if (!firebaseUser) navigate(ROUTES.LOGIN, { replace: true });
-  }, [firebaseUser, navigate]);
+    if (!authLoading && !firebaseUser) navigate(ROUTES.LOGIN, { replace: true });
+  }, [authLoading, firebaseUser, navigate]);
 
-  if (!firebaseUser) return null;
+  if (authLoading || !firebaseUser) return null;
 
   const handleSubmit = async () => {
     const fieldErrors: Record<string, string> = {};

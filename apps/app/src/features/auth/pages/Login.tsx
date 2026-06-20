@@ -1,4 +1,4 @@
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import {
   signInWithEmailAndPassword,
@@ -8,6 +8,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/shared/lib/firebase';
 import { useStore } from '@/shared/store/useStore';
+import { useFirebaseAuth } from '@/shared/hooks/useFirebaseAuth';
+import { useProfile } from '@/shared/hooks/useProfile';
 import { ROUTES } from '@/shared/constants/routes';
 import icono from '@/assets/icono.png';
 import toast from 'react-hot-toast';
@@ -44,6 +46,17 @@ const GoogleIcon = () => (
 export function Login() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useStore();
+
+  // Maneja el flujo de REDIRECT (Google en mobile/incógnito cae a signInWithRedirect →
+  // recarga la página y el .then() del popup nunca corre). Acá, de forma reactiva:
+  // usuario nuevo (no registrado en backend) → onboarding. El usuario existente lo
+  // redirige el bloque `isAuthenticated && user` de más abajo (useProfile setea el store).
+  const { firebaseUser } = useFirebaseAuth();
+  const { isNewUser } = useProfile(firebaseUser);
+  useEffect(() => {
+    if (isNewUser) navigate(ROUTES.ONBOARDING, { replace: true });
+  }, [isNewUser, navigate]);
+
   const [showPassword, setShowPassword] = useState(false);
 
   const [, submitAction, isPending] = useActionState(
