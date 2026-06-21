@@ -1,26 +1,42 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFirebaseAuth } from '@/shared/hooks/useFirebaseAuth';
 import { useProfile } from '@/shared/hooks/useProfile';
 import { useStore } from '@/shared/store/useStore';
+import { ProfileError } from '@/shared/lib/fetchProfile';
+import { AuthErrorScreen } from '@/shared/components/AuthErrorScreen';
 
-const Spinner = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-dark-bg">
-    <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-brand-600 dark:border-dark-brand border-t-transparent" />
-  </div>
-);
+// Spinner con texto demorado: si la espera supera ~3s, tranquiliza al usuario.
+const Spinner = () => {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-dark-bg">
+      <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-brand-600 dark:border-dark-brand border-t-transparent" />
+      {slow && (
+        <p className="px-6 text-center text-sm text-slate-500 dark:text-dark-text-secondary">
+          Esto está tardando más de lo normal, por favor aguardá…
+        </p>
+      )}
+    </div>
+  );
+};
 
 /**
- * AuthProvider — Orquestador simple de 2 capas
+ * AuthProvider — Orquestador de 2 capas (Firebase + perfil backend)
  *
- * Flujo determinístico:
- * 1. Firebase resolviendo → Splash (spinner)
- * 2. Firebase sin usuario → render children (login/registro)
- * 3. Firebase con usuario, perfil cargando → Spinner
- * 4. Firebase con usuario, perfil listo → render children
+ * 1. Firebase resolviendo → Spinner
+ * 2. Firebase sin usuario / sin email verificado / usuario nuevo → children
+ * 3. Perfil falló por backend caído (timeout/server) → AuthErrorScreen (con salida)
+ * 4. Perfil cargando → Spinner
+ * 5. Perfil listo → children
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { firebaseUser, isLoading: firebaseLoading } = useFirebaseAuth();
-  const { data: profile, isNewUser } = useProfile(firebaseUser);
+  const { data: profile, isNewUser, isError, error, refetch, isFetching } =
+    useProfile(firebaseUser);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const logout = useStore((s) => s.logout);
 
@@ -30,17 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [firebaseLoading, firebaseUser, isAuthenticated, logout]);
 
-  if (firebaseLoading)        return <Spinner />;
-  if (!firebaseUser)          return <>{children}</>;
+  // Error recuperable (backend caído/colgado): timeout o server.
+  // NO unauthorized (ya desloguea) ni not-registered (va a onboarding).
+  const isRecoverableError =
+    isError &&
+    error instanceof ProfileError &&
+    (error.kind === 'timeout' || error.kind === 'server');
 
-  // Si el email no está verificado, no bloqueamos — dejamos pasar
+  if (firebaseLoading)             return <Spinner />;
+  if (!firebaseUser)               return <>{children}</>;
   if (!firebaseUser.emailVerified) return <>{children}</>;
-
-  // Usuario nuevo (Google sin registro en backend): dejamos pasar para que
-  // la ruta de onboarding pueda renderizar en vez de spinear para siempre.
-  if (isNewUser)              return <>{children}</>;
-
-  if (!profile)               return <Spinner />;
+  if (isNewUser)                   return <>{children}</>;
+  if (isRecoverableError)
+    return <AuthErrorScreen onRetry={() => refetch()} retrying={isFetching} />;
+  if (!profile)                    return <Spinner />;
 
   return <>{children}</>;
 }
