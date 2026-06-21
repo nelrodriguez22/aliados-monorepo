@@ -1,137 +1,187 @@
-# Turborepo starter
+# Aliados
 
-This Turborepo starter is maintained by the Turborepo core team.
+Plataforma que conecta **clientes** con **profesionales de confianza** (oficios y mudanzas): el cliente pide un servicio, el proveedor lo toma, y la app coordina el trabajo en tiempo real (seguimiento, notificaciones, calificaciones).
 
-## Using this example
+> **Estado:** pre-launch. El único entorno activo es producción, sin usuarios reales todavía (dev + testers).
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
-```
+## Tabla de contenidos
 
-## What's inside?
+- [Arquitectura](#arquitectura)
+- [Estructura del repo](#estructura-del-repo)
+- [Stack](#stack)
+- [Funcionalidades](#funcionalidades)
+- [Requisitos](#requisitos)
+- [Puesta en marcha](#puesta-en-marcha)
+- [Variables de entorno](#variables-de-entorno)
+- [Scripts](#scripts)
+- [Tests](#tests)
+- [Deploy](#deploy)
+- [Notas operativas](#notas-operativas)
 
-This Turborepo includes the following packages/apps:
+---
 
-### Apps and Packages
+## Arquitectura
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+Monorepo (**pnpm workspaces + Turborepo**) con el frontend, y un backend Spring Boot aparte.
 
 ```
-cd my-turborepo
+Cliente / Proveedor / Admin (PWA React)
+        │  HTTPS + WebSocket (STOMP/SockJS)
+        ▼
+Backend Spring Boot (Railway)  ──► PostgreSQL (Neon, vía Flyway)
+        │
+        ├─ Firebase Admin (verificación de tokens, FCM push)
+        ├─ Cloudinary (imágenes)
+        ├─ Resend (emails de registración / verificación)
+        └─ Sentry (errores)
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Auth: Firebase Auth (Google + email/password)
+Config en runtime: Firebase Remote Config (modo mantenimiento)
+Hosting frontend: Firebase Hosting (app + landing)
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Estructura del repo
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+apps/
+  app/        PWA principal (clientes, proveedores, admin) — React + Vite
+  landing/    Landing pública — Astro
+  mobile/     Placeholder (app mobile nativa, aún no implementada)
+packages/
+  ui/                  Componentes React compartidos (@repo/ui)
+  eslint-config/       Config de ESLint compartida
+  typescript-config/   tsconfig base compartido
+  api/ stores/ types/  Placeholders para código compartido (aún vacíos)
+backend/      API Spring Boot (Java 21, Gradle) + migraciones Flyway
+loadtest/     Scripts de prueba de carga (k6)
+docs/         Specs y planes de diseño (docs/superpowers/)
+firebase.json Hosting (targets app/landing), headers de seguridad y CSP
+turbo.json    Pipeline de Turborepo
 ```
 
-### Develop
+## Stack
 
-To develop all apps and packages, run the following command:
+**Frontend (`apps/app`)**
+- React 19 + TypeScript, Vite (con React Compiler), Tailwind CSS
+- React Router, TanStack Query (datos del server), Zustand (estado global; persistido y cifrado con crypto-js)
+- Firebase Web SDK: Auth, Remote Config, Cloud Messaging (FCM)
+- PWA: `vite-plugin-pwa` (Workbox service worker)
+- Realtime: STOMP sobre SockJS
+- UI: lucide-react (íconos), react-hot-toast, dayjs
+- Observabilidad: Sentry
+- Tests: Vitest (lógica pura, entorno node)
 
+**Landing (`apps/landing`)**
+- Astro + Tailwind
+
+**Backend (`backend`)**
+- Java 21, Spring Boot 3.4.2 (Web, Data JPA, Security, Validation, WebSocket, Actuator)
+- PostgreSQL gestionado en **Neon** (neon.tech) + Flyway (migraciones versionadas)
+- Firebase Admin (verificación de ID tokens, envío de push FCM)
+- Cloudinary (subida/gestión de imágenes), Caffeine (cache en memoria), Sentry
+- Resend (envío de emails de registración / verificación, vía su API HTTP)
+- Build: Gradle
+
+**Infra / CI**
+- Frontend: Firebase Hosting (deploy automático por GitHub Actions)
+- Backend: Railway (Docker, con healthcheck y graceful shutdown)
+
+## Funcionalidades
+
+- **Roles:** cliente, proveedor y admin, cada uno con su dashboard.
+- **Servicios (oficios):** búsqueda, pedido, seguimiento del trabajo en curso, historial, calificaciones.
+- **Mudanzas:** flujo propio con tiers de precio y comisión de plataforma.
+- **Proveedor:** toggle online/offline (recibe trabajos), trabajos disponibles, historial.
+- **Tiempo real:** estado del proveedor y avance del trabajo vía WebSocket; push con FCM.
+- **Onboarding:** tour spotlight de 3 pasos por dashboard (cliente/proveedor), una sola vez (localStorage).
+- **Modo mantenimiento:** banner de aviso o pantalla de bloqueo, toggleable en runtime desde Firebase Remote Config (sin redeploy). Bypass con `?nomaint=1`.
+- **Resiliencia:** retry de GETs ante errores transitorios, timeout + pantalla de error con "Reintentar / Cerrar sesión" si el backend no responde.
+- **PWA:** instalable, con service worker.
+
+## Requisitos
+
+- Node.js ≥ 18 (CI usa 22) y **pnpm 9**
+- Para el backend: JDK 21 (incluye `./gradlew`)
+- Cuentas/servicios: Firebase, Neon (Postgres), Cloudinary, Railway, Google Maps API, Sentry
+
+## Puesta en marcha
+
+```bash
+# 1. Instalar dependencias (desde la raíz)
+pnpm install
+
+# 2. Configurar variables de entorno del frontend
+cp apps/app/.env.example apps/app/.env
+# completar los valores (ver sección Variables de entorno)
+
+# 3. Levantar el frontend en dev
+pnpm dev --filter app          # o: cd apps/app && pnpm dev
+
+# Landing
+pnpm dev --filter landing
 ```
-cd my-turborepo
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+Backend:
+```bash
+cd backend
+./gradlew bootRun          # requiere las env vars del backend (DB, Firebase, Cloudinary, etc.)
+./gradlew build            # compila + tests
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Variables de entorno
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+Frontend (`apps/app/.env`, ver `.env.example`):
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+| Variable | Para qué |
+|----------|----------|
+| `VITE_FIREBASE_API_KEY` … `VITE_FIREBASE_MEASUREMENT_ID` | Config del Firebase Web SDK |
+| `VITE_FIREBASE_AUTH_DOMAIN` | **Debe ser el dominio custom (mismo origen que la app)**, ej. `aliados-app.convivirtech.com.ar`, para que el OAuth de Google no entre en loop |
+| `VITE_STORAGE_KEY` | Clave para cifrar el store persistido |
+| `VITE_API_URL` | URL del backend |
+| `VITE_GOOGLE_MAPS_API_KEY` | Mapas / geocoding |
+| `VITE_SENTRY_DSN`, `VITE_SENTRY_TRACES_SAMPLE_RATE` | Sentry frontend |
+| `VITE_APP_VERSION` | Versión (en CI = commit SHA) |
 
-### Remote Caching
+> Los `.env` están gitignoreados. En CI los valores salen de **GitHub Secrets** (ver `.github/workflows/deploy.yml`).
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Scripts
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+Desde la raíz (Turborepo orquesta todos los workspaces):
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+pnpm dev           # dev de todo
+pnpm build         # build de todo
+pnpm lint          # lint
+pnpm check-types   # typecheck
+pnpm format        # prettier
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+Filtrar a un workspace: agregar `--filter app` / `--filter landing`.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+App (`apps/app`):
+```bash
+pnpm test          # Vitest (una corrida)
+pnpm test:watch    # Vitest watch
+pnpm build         # tsc -b && vite build
 ```
 
-## Useful Links
+## Tests
 
-Learn more about the power of Turborepo:
+- **Frontend:** Vitest en entorno **node** (sin jsdom) → se testea **lógica pura** (helpers, clasificación de errores, etc.). Componentes y posicionamiento se verifican con typecheck + build + manual.
+- **Backend:** `./gradlew test` (JUnit / Spring Boot Test).
+- **Carga:** scripts k6 en `loadtest/`.
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+## Deploy
 
+- **Frontend → Firebase Hosting:** automático vía GitHub Actions (`.github/workflows/deploy.yml`) en cada push a `main` que toque `apps/app/**`, `apps/landing/**` o `packages/**`. Buildea con las env vars de GitHub Secrets y corre `firebase deploy --only hosting`.
+- **Backend → Railway:** deploy por push; usa `backend/railway.json` (healthcheck en `/api/health`) + graceful shutdown para deploys sin downtime.
 
+## Notas operativas
+
+- **Modo mantenimiento:** en Firebase Console → Remote Config, parámetros `maintenance_level` (`off`/`warning`/`blocked`), `maintenance_schedule`, `maintenance_duration`, `maintenance_title`, `maintenance_message`. Publicar para aplicar en runtime.
+- **Migraciones:** la base se versiona con Flyway (`backend/src/main/resources/db/migration`). No editar migraciones ya aplicadas; agregar nuevas.
+- **Auth de Google:** el `authDomain` debe ser el dominio custom (mismo origen que la app). El service worker excluye `/__/` del fallback para no interceptar el handler de Firebase.
+- **Antes de lanzar:** revisar flags de testing (p. ej. `MUDANZA_RATIO_TIEMPO` debe ir en su valor real de producción).
+- **Docs de diseño:** las decisiones y planes de features viven en `docs/superpowers/`.
