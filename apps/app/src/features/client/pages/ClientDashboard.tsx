@@ -298,7 +298,7 @@ export function ClientDashboard() {
           <h1 className={`mb-1 text-2xl min-[375px]:text-3xl font-bold ${tw.text.primary}`}>
             Hola, {user?.name || 'Usuario'}
           </h1>
-          <p className={`text-sm ${tw.text.secondary}`}>¿Qué servicio necesitás hoy?</p>
+          {/* <p className={`text-sm ${tw.text.secondary}`}>¿Qué servicio necesitás hoy?</p> */}
         </div>
 
         {/* Buscador */}
