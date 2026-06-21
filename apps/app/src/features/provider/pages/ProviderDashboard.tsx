@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { OnboardingTour } from "@/shared/components/OnboardingTour";
+import { ONBOARDING_KEYS, PROVIDER_TOUR_STEPS } from "@/shared/lib/onboarding";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
@@ -229,6 +231,11 @@ export function ProviderDashboard() {
 
   return (
     <div className={tw.pageBg}>
+      <OnboardingTour
+        storageKey={ONBOARDING_KEYS.provider}
+        steps={PROVIDER_TOUR_STEPS}
+        ready={!loadingActivo && !loadingCompletados}
+      />
       <div className={tw.container}>
 
         {/* Notif banner */}
@@ -312,7 +319,7 @@ export function ProviderDashboard() {
           <div className="space-y-8">
 
             {/* Disponibles */}
-            <section>
+            <section data-onboarding="provider-available">
               <div className="mb-3">
                 <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                   Trabajos disponibles
@@ -543,7 +550,7 @@ export function ProviderDashboard() {
             )}
 
             {/* Historial */}
-            <section>
+            <section data-onboarding="provider-history">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                   Historial

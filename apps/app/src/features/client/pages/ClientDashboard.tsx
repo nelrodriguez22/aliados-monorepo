@@ -13,6 +13,8 @@ import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { useOficios } from "@/shared/hooks/useOficios";
+import { OnboardingTour } from "@/shared/components/OnboardingTour";
+import { ONBOARDING_KEYS, CLIENT_TOUR_STEPS } from "@/shared/lib/onboarding";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number | string, JSX.Element> = {
@@ -255,6 +257,11 @@ export function ClientDashboard() {
 
   return (
     <div className={tw.pageBg}>
+      <OnboardingTour
+        storageKey={ONBOARDING_KEYS.client}
+        steps={CLIENT_TOUR_STEPS}
+        ready={!loadingTrabajos && !loadingHistorial}
+      />
       <div className={tw.container}>
 
         {/* Banner notificaciones */}
@@ -295,6 +302,7 @@ export function ClientDashboard() {
         </div>
 
         {/* Buscador */}
+        <div data-onboarding="client-search">
         <Card className="mb-6">
           <div className="relative" ref={searchRef}>
             <div className="flex flex-col gap-2 min-[375px]:flex-row">
@@ -335,6 +343,7 @@ export function ClientDashboard() {
             )}
           </div>
         </Card>
+        </div>
 
         {loadingTrabajos ? (
           <>
@@ -366,7 +375,7 @@ export function ClientDashboard() {
             </div>
 
             {/* Trabajos activos */}
-            <div className="mb-8">
+            <div className="mb-8" data-onboarding="client-active">
               <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                 Trabajos activos
               </h2>
@@ -470,7 +479,7 @@ export function ClientDashboard() {
             )}
 
             {/* Historial */}
-            <div ref={historialRef}>
+            <div ref={historialRef} data-onboarding="client-history">
               <div className="mb-3 flex items-start justify-between">
                 <div>
                   <h2 className={`text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>

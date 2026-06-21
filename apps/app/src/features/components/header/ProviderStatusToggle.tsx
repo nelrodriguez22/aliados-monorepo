@@ -46,7 +46,7 @@ export function ProviderStatusToggle() {
   // ── BUSY ──
   if (isBusy) {
     return (
-      <div className="hidden md:flex items-center gap-2 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/15 px-3 py-1.5">
+      <div data-onboarding="provider-toggle" className="flex items-center gap-2 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/15 px-3 py-1.5">
         <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
         <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">Ocupado</span>
       </div>
@@ -55,9 +55,9 @@ export function ProviderStatusToggle() {
 
   // ── ONLINE / OFFLINE ──
   return (
-    <div className="hidden md:flex items-center gap-2.5">
+    <div data-onboarding="provider-toggle" className="flex items-center gap-2 md:gap-2.5">
       {/* Label */}
-      <span className={`text-xs font-medium transition-colors duration-200
+      <span className={`hidden md:inline text-xs font-medium transition-colors duration-200
         ${isOnline ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-dark-text-secondary'}`}>
         {isOnline ? 'Disponible' : 'Desconectado'}
       </span>
