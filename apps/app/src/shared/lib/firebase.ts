@@ -8,7 +8,10 @@ import type { Messaging } from 'firebase/messaging';
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // authDomain debe ser el MISMO origen que la app (aliados-app.convivirtech.com.ar)
+  // para que el OAuth de Google no quede en loop por cruce de dominios. Fallback
+  // hardcodeado: el authDomain es público (no secreto) y así no depende del secret de CI.
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'aliados-app.convivirtech.com.ar',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
