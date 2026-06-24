@@ -15,6 +15,13 @@ import { OnboardingGoogle } from "@/features/auth/pages/OnboardingGoogle";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
+import { useAnalytics } from "@/shared/analytics/useAnalytics";
+
+// Dispara un page_view de GA en cada cambio de ruta. Debe ir dentro de <BrowserRouter>.
+function AnalyticsTracker() {
+  useAnalytics();
+  return null;
+}
 
 // ── Lazy pages ──
 const ClientDashboard     = lazy(() => import("@/features/client/pages/ClientDashboard").then(m => ({ default: m.ClientDashboard })));
@@ -57,6 +64,7 @@ function RootRedirect() {
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <AnalyticsTracker />
       <Suspense fallback={<PageLoader />}>
         <SentryRoutes>
 

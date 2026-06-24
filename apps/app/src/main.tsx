@@ -7,6 +7,10 @@ import App from './App.tsx'
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { initGtag } from './shared/analytics/gtag'
+
+// Google Analytics — carga gtag.js (no-op fuera de producción).
+initGtag()
 
 // En producción silenciamos toda salida de consola: cubre los console.* de dependencias
 // (Firebase/SockJS) y las referencias tipo `.catch(console.error)` que el minifier no puede
