@@ -16,7 +16,18 @@ if (dsn) {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    release: import.meta.env.VITE_APP_VERSION as string | undefined,
+    // El release lo inyecta @sentry/vite-plugin en el build (consistente con el
+    // upload de source maps). No lo seteamos a mano para evitar desajustes.
+
+    // Ruido que no aporta: el "stale chunk" tras un deploy (main.tsx ya recarga al
+    // detectarlo) y errores típicos de navegador/extensiones.
+    ignoreErrors: [
+      'Failed to fetch dynamically imported module',
+      'Importing a module script failed',
+      'Failed to load module script',
+      'ResizeObserver loop limit exceeded',
+      'ResizeObserver loop completed with undelivered notifications',
+    ],
 
     integrations: [
       // Tracing de navegación con React Router v7 (modo <Routes> / componentes).

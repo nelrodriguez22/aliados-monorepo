@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AES from 'crypto-js/aes';
 import encUtf8 from 'crypto-js/enc-utf8';
 import type { Store } from '@/shared/types/interfaces';
+import { setSentryUser, clearSentryUser } from '@/shared/lib/sentry';
 
 const ENCRYPTION_KEY = import.meta.env.VITE_STORAGE_KEY || 'aliados-key';
 
@@ -33,11 +34,15 @@ export const useStore = create<Store>()(
       isAuthenticated: false,
       theme: 'light',
 
-      login: (user) => set({ user, isAuthenticated: true }),
+      login: (user) => {
+        set({ user, isAuthenticated: true });
+        setSentryUser(user);
+      },
 
       logout: () => {
         set({ user: null, isAuthenticated: false });
         localStorage.removeItem('aliados-storage');
+        clearSentryUser();
       },
 
       setTheme: (theme) => {
@@ -59,6 +64,11 @@ export const useStore = create<Store>()(
         isAuthenticated: state.isAuthenticated,
         theme: state.theme,
       }),
+      // Tras un reload el user se rehidrata sin pasar por login(): re-seteamos el
+      // contexto de Sentry para que los errores post-reload tengan id + rol.
+      onRehydrateStorage: () => (state) => {
+        if (state?.user) setSentryUser(state.user);
+      },
     }
   )
 );
