@@ -3,6 +3,7 @@ package com.aliados.backend.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,5 +30,10 @@ public class FirebaseConfig {
                 .build();
 
         return FirebaseApp.initializeApp(options);
+    }
+
+    @Bean
+    public FirebaseRemoteConfig firebaseRemoteConfig(FirebaseApp app) {
+        return FirebaseRemoteConfig.getInstance(app);
     }
 }

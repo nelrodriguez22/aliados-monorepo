@@ -9,6 +9,7 @@ import {
   Wifi, AlertTriangle, TrendingUp, PowerOff, Truck,
 } from 'lucide-react';
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
+import { MaintenancePanel } from './MaintenancePanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
@@ -478,6 +479,11 @@ const AliadosDashboard = () => {
         {/* Feature flags */}
         <div className="mt-4">
           <FeatureFlagsPanel />
+        </div>
+
+        {/* Mantenimiento */}
+        <div className="mt-4">
+          <MaintenancePanel />
         </div>
 
       </div>
