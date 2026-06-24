@@ -11,13 +11,6 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowAny": [
-        "vite"
-      ]
-    }
-  },
   "dependencies": {
     "@sentry/react": "^10.59.0",
     "@stomp/stompjs": "7.3.0",
@@ -55,7 +48,9 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.4",
     "vite": "8.0.16",
-    "vite-plugin-pwa": "1.2.0",
-    "vitest": "^3"
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "^3",
+    "workbox-build": "7.4.1",
+    "workbox-window": "7.4.1"
   }
 }

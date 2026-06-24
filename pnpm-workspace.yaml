@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# apps/app corre rolldown-vite (reporta como vite 8). Permitimos cualquier vite
+# en los peers para no romper por plugins cuyo rango aún no incluye 8.
+peerDependencyRules:
+  allowAny:
+    - vite
