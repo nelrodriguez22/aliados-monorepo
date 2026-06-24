@@ -183,5 +183,5 @@ pnpm build         # tsc -b && vite build
 - **Modo mantenimiento:** en Firebase Console → Remote Config, parámetros `maintenance_level` (`off`/`warning`/`blocked`), `maintenance_schedule`, `maintenance_duration`, `maintenance_title`, `maintenance_message`. Publicar para aplicar en runtime.
 - **Migraciones:** la base se versiona con Flyway (`backend/src/main/resources/db/migration`). No editar migraciones ya aplicadas; agregar nuevas.
 - **Auth de Google:** el `authDomain` debe ser el dominio custom (mismo origen que la app). El service worker excluye `/__/` del fallback para no interceptar el handler de Firebase.
-- **Antes de lanzar:** revisar flags de testing (p. ej. `MUDANZA_RATIO_TIEMPO` debe ir en su valor real de producción).
+- **Antes de lanzar:** revisar feature flags de testing. El ratio de tiempo de mudanza (`mudanza_ratio_tiempo`) ya no es una variable de entorno; se gestiona desde el panel de administración y el seed lo deja en `1.0` (prod-seguro). Verificar que esté en `1.0` en prod y eliminar la variable `MUDANZA_RATIO_TIEMPO` de Railway si aún existe.
 - **Docs de diseño:** las decisiones y planes de features viven en `docs/superpowers/`.

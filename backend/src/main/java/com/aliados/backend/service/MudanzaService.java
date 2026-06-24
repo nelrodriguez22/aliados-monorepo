@@ -46,13 +46,10 @@ public class MudanzaService {
     @Autowired
     private CloudinaryService cloudinaryService;
 
-    private static final int MAX_MUDANZAS_POR_DIA = 2;
+    @Autowired
+    private FeatureFlagService featureFlagService;
 
-    // Ratio de tiempo para testing: 1 min real = ratioTiempo minutos de servicio
-    // En producción: 1.0 (1 min real = 1 min servicio)
-    // En testing: 180.0 (1 min real = 180 min servicio = 3 horas)
-    @Value("${mudanza.ratio-tiempo:1.0}")
-    private Double ratioTiempo;
+    private static final int MAX_MUDANZAS_POR_DIA = 2;
 
     // Comisión de la plataforma (%). Global por config; se persiste por mudanza para
     // conservar el histórico de lo cobrado aunque el valor cambie a futuro.
@@ -456,7 +453,9 @@ public class MudanzaService {
 
         // ── Cálculo de tiempo y costos ──
         long minutosReales = Duration.between(mudanza.getIniciadoAt(), ahora).toMinutes();
-        // Aplicar ratio de testing
+        // Ratio desde feature flag (default 1.0 = tiempo real). Reemplaza la env var
+        // MUDANZA_RATIO_TIEMPO: ahora se togglea desde el admin, sin redeploy.
+        double ratioTiempo = featureFlagService.getNumber("mudanza_ratio_tiempo", 1.0);
         long minutosServicio = Math.round(minutosReales * ratioTiempo);
 
         mudanza.setDuracionRealMinutos((int) minutosServicio);

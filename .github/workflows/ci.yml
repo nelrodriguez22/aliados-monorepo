@@ -1,0 +1,77 @@
+name: CI
+
+# Valida lint + typecheck/compilación + tests en cada PR y en push a main.
+# Independiente de deploy.yml (que solo deploya). Idealmente, a futuro, el deploy
+# podría gatear contra este workflow (ver workflow_run / needs).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancela corridas viejas del mismo ref si se pushea de nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint · build · test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Lint NO bloqueante por ahora: el código tiene ~109 errores pre-existentes
+      # (mayormente no-explicit-any en apiClient/fetchProfile/tests) que nunca se
+      # gatearon. Corre y deja el resultado en los logs, pero no falla el CI.
+      # Cuando se limpie la deuda, sacar `continue-on-error` para hacerlo bloqueante.
+      - name: Lint (informativo)
+        run: pnpm turbo run lint
+        continue-on-error: true
+
+      # build = typecheck real: tsc -b (app) + astro build (landing). No necesita
+      # los secrets de runtime; el plugin de Sentry solo sube source maps si está
+      # SENTRY_AUTH_TOKEN, así que en CI simplemente no los sube.
+      - name: Build (typecheck + compile)
+        run: pnpm turbo run build
+
+      - name: Unit tests (vitest)
+        run: pnpm --filter aliados-app test
+
+  backend:
+    name: Backend (compile)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # Compila main + test sources (caza errores de compilación y wiring).
+      # NO corre `./gradlew test` todavía: el único test es @SpringBootTest, que
+      # levanta el contexto completo y necesita Postgres + Firebase. Para correrlo
+      # de verdad hace falta Testcontainers (o un perfil de test con DB efímera) —
+      # pendiente como tarea aparte.
+      - name: Compile (main + tests)
+        working-directory: backend
+        run: ./gradlew compileJava compileTestJava --no-daemon

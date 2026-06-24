@@ -52,7 +52,7 @@ src/main/resources/
 | `SENTRY_DSN` | Sentry (errores) |
 | `SENTRY_AUTH_TOKEN` | Subida de source maps a Sentry en el build |
 | `MUDANZA_COMISION_PORCENTAJE` | Comisión de plataforma para mudanzas (%) |
-| `MUDANZA_RATIO_TIEMPO` | **Solo testing** (acelera el cobro por tiempo). Debe ir en su valor real (`1.0`) en prod |
+| ~~`MUDANZA_RATIO_TIEMPO`~~ | Ya no es variable de entorno. El ratio de tiempo es ahora un **feature flag** (`mudanza_ratio_tiempo`) gestionado desde el panel de administración (valor por defecto `1.0`, prod-seguro por seed). |
 
 > Railway inyecta automáticamente `PORT` y `RAILWAY_GIT_COMMIT_SHA` (este último se usa como release de Sentry). Las primeras 10 filas son las que están configuradas en Railway; `MUDANZA_COMISION_PORCENTAJE` y la config fina de Sentry (`SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` / `SENTRY_TRACES_SAMPLE_RATE`) tienen valor por defecto en `application.properties` y solo se setean si querés sobreescribirlas.
 
