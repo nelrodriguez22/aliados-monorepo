@@ -21,7 +21,7 @@
   "dependencies": {
     "@sentry/react": "^10.59.0",
     "@stomp/stompjs": "7.3.0",
-    "@tailwindcss/vite": "4.1.18",
+    "@tailwindcss/vite": "4.3.1",
     "@tanstack/react-query": "5.90.20",
     "@tanstack/react-query-devtools": "5.91.3",
     "crypto-js": "4.2.0",
@@ -33,7 +33,7 @@
     "react-hot-toast": "2.6.0",
     "react-router-dom": "7.17.0",
     "sockjs-client": "1.6.1",
-    "tailwindcss": "4.1.18",
+    "tailwindcss": "4.3.1",
     "zustand": "5.0.11"
   },
   "devDependencies": {
