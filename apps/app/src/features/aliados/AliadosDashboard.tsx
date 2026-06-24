@@ -8,6 +8,7 @@ import {
   FileText, Star, Loader2, Bug, ChevronDown, ExternalLink,
   Wifi, AlertTriangle, TrendingUp, PowerOff, Truck,
 } from 'lucide-react';
+import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
@@ -473,6 +474,11 @@ const AliadosDashboard = () => {
             </div>
           )}
         </SectionCard>
+
+        {/* Feature flags */}
+        <div className="mt-4">
+          <FeatureFlagsPanel />
+        </div>
 
       </div>
     </div>
