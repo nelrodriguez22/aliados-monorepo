@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
+import { BroadcastPanel } from './BroadcastPanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
@@ -484,6 +485,11 @@ const AliadosDashboard = () => {
         {/* Mantenimiento */}
         <div className="mt-4">
           <MaintenancePanel />
+        </div>
+
+        {/* Broadcast */}
+        <div className="mt-4">
+          <BroadcastPanel />
         </div>
 
       </div>

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,4 +47,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Transactional
     @Query("UPDATE User u SET u.fcmToken = null WHERE u.id = :id")
     void clearFcmToken(@Param("id") Long id);
+
+    List<User> findByRoleInAndActivoTrue(Collection<UserRole> roles);
 }
