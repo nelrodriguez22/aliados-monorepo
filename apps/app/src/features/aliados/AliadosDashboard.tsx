@@ -200,15 +200,15 @@ const AliadosDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-2">
+        <div className="mb-6 flex gap-6 border-b border-slate-200 dark:border-dark-border">
           {([['stats', 'Estadísticas'], ['config', 'Configuración']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`-mb-px border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
                 tab === key
-                  ? 'bg-brand-600 text-white'
-                  : `bg-slate-100 ${tw.text.secondary} hover:bg-slate-200 dark:bg-dark-bg dark:hover:bg-dark-elevated`
+                  ? 'border-brand-600 text-brand-600 dark:border-dark-brand dark:text-dark-brand'
+                  : `border-transparent ${tw.text.muted} hover:text-slate-700 dark:hover:text-slate-200`
               }`}
             >
               {label}
