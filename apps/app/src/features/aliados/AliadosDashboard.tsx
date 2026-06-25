@@ -112,6 +112,7 @@ const apiFetch = (path: string) => apiClient.get(path);
 
 const AliadosDashboard = () => {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<'stats' | 'config'>('stats');
 
   const { data: stats, isLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin-stats'],
@@ -197,6 +198,26 @@ const AliadosDashboard = () => {
           <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Panel de administración</h1>
           <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>Estadísticas en tiempo real de Aliados</p>
         </div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2">
+          {([['stats', 'Estadísticas'], ['config', 'Configuración']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                tab === key
+                  ? 'bg-brand-600 text-white'
+                  : `bg-slate-100 ${tw.text.secondary} hover:bg-slate-200 dark:bg-dark-bg dark:hover:bg-dark-elevated`
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'stats' && (
+          <>
 
         {/* Alertas — trabajos varados */}
         {trabajosVarados.length > 0 && (
@@ -477,20 +498,16 @@ const AliadosDashboard = () => {
           )}
         </SectionCard>
 
-        {/* Feature flags */}
-        <div className="mt-4">
-          <FeatureFlagsPanel />
-        </div>
+          </>
+        )}
 
-        {/* Mantenimiento */}
-        <div className="mt-4">
-          <MaintenancePanel />
-        </div>
-
-        {/* Broadcast */}
-        <div className="mt-4">
-          <BroadcastPanel />
-        </div>
+        {tab === 'config' && (
+          <div className="flex flex-col gap-4">
+            <FeatureFlagsPanel />
+            <MaintenancePanel />
+            <BroadcastPanel />
+          </div>
+        )}
 
       </div>
     </div>

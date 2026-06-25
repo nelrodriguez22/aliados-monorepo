@@ -80,16 +80,20 @@ export function MaintenancePanel() {
           ))}
         </div>
         <input
-          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg"
+          disabled={level === 'off'}
+          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg disabled:cursor-not-allowed disabled:opacity-50"
           value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título" />
         <textarea
-          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg"
+          disabled={level === 'off'}
+          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg disabled:cursor-not-allowed disabled:opacity-50"
           value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Mensaje" rows={2} />
         <input
-          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg"
+          disabled={level === 'off'}
+          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg disabled:cursor-not-allowed disabled:opacity-50"
           value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Horario (ej. 22:00 hs)" />
         <input
-          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg"
+          disabled={level === 'off'}
+          className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg disabled:cursor-not-allowed disabled:opacity-50"
           value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="Duración (ej. 30 minutos)" />
         <button
           onClick={handleSave}
