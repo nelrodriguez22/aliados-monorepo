@@ -88,4 +88,7 @@ public class Trabajo {
 
     @Column(precision = 12, scale = 2)
     private BigDecimal tarifaVisita;
+
+    @Column(nullable = false)
+    private Integer reintentos = 0;
 }

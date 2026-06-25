@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -526,16 +528,18 @@ public class TrabajoService {
             throw new RuntimeException("Solo se pueden cancelar trabajos pendientes");
         }
 
+        aplicarCancelacion(trabajo, motivo);
+        return mapToDTO(trabajo);
+    }
+
+    // Core de cancelación reusable (cliente y escalado automático).
+    private void aplicarCancelacion(Trabajo trabajo, String motivo) {
         trabajo.setEstado(TrabajoEstado.CANCELADO);
         trabajo.setProveedorNotificadoId(null);
         trabajo.setNotificadoAt(null);
         trabajo.setMotivoCancelacion(motivo);
-
-        trabajo = trabajoRepository.save(trabajo);
-
+        trabajoRepository.save(trabajo);
         cloudinaryService.borrarFotos(trabajo.getFotos());
-
-        return mapToDTO(trabajo);
     }
 
     @Transactional
@@ -695,5 +699,52 @@ public class TrabajoService {
         return trabajos.stream()
                 .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
                 .collect(Collectors.toList());
+    }
+
+    /** IDs de trabajos PENDIENTE. El scheduler los procesa de a uno, cada uno en su tx. */
+    @Transactional(readOnly = true)
+    public List<Long> idsTrabajosPendientes() {
+        return trabajoRepository.findByEstado(TrabajoEstado.PENDIENTE).stream()
+                .map(Trabajo::getId)
+                .toList();
+    }
+
+    /**
+     * Escala UN trabajo PENDIENTE sin respuesta del proveedor, en su propia transacción
+     * (REQUIRES_NEW): si algo falla, rollbackea solo este trabajo y el scheduler sigue con
+     * el resto. timeout1Min: minutos para re-ofrecer al siguiente (1 reintento).
+     * timeout2Min: minutos del reintento antes de cancelar.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void escalarUnTrabajo(Long trabajoId, int timeout1Min, int timeout2Min) {
+        Trabajo t = trabajoRepository.findById(trabajoId).orElse(null);
+        if (t == null || t.getEstado() != TrabajoEstado.PENDIENTE) {
+            return; // ya no aplica (tomado/cancelado entre la query y el procesamiento)
+        }
+        LocalDateTime ref = t.getNotificadoAt() != null ? t.getNotificadoAt() : t.getCreatedAt();
+        long mins = ChronoUnit.MINUTES.between(ref, LocalDateTime.now());
+        int reintentos = t.getReintentos() != null ? t.getReintentos() : 0;
+
+        if (reintentos == 0 && mins >= timeout1Min) {
+            Long excluir = t.getProveedorNotificadoId();
+            t.setReintentos(1);
+            trabajoRepository.save(t); // persiste el contador aunque no haya proveedor
+            notificarProveedorDisponible(t, excluir);
+            notificarCliente(t, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
+                    "Seguimos buscando",
+                    "Seguimos buscando un profesional para tu pedido de "
+                            + t.getOficio().getNombre() + ".");
+        } else if (reintentos >= 1 && mins >= timeout2Min) {
+            aplicarCancelacion(t, "No encontramos un profesional disponible");
+            notificarCliente(t, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
+                    "Pedido cancelado",
+                    "No encontramos un profesional disponible. Cancelamos tu pedido de "
+                            + t.getOficio().getNombre() + "; podés volver a intentarlo.");
+        }
+    }
+
+    private void notificarCliente(Trabajo t, TipoNotificacion tipo, String titulo, String mensaje) {
+        notificacionService.enviarNotificacion(
+                t.getCliente().getFirebaseUid(), tipo, titulo, mensaje, t.getId(), null);
     }
 }

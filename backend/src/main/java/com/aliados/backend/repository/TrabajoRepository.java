@@ -76,6 +76,8 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
 
     long countByEstado(TrabajoEstado estado);
 
+    List<Trabajo> findByEstado(TrabajoEstado estado);
+
     @Query("SELECT t FROM Trabajo t WHERE t.estado = 'PENDIENTE' AND t.createdAt < :umbral ORDER BY t.createdAt ASC")
     List<Trabajo> findTrabajosVarados(@Param("umbral") java.time.LocalDateTime umbral);
 
