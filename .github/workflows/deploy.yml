@@ -8,6 +8,14 @@ on:
       - 'apps/landing/**'
       - 'packages/**'
       - '.github/workflows/deploy.yml'
+
+# Un solo deploy a la vez: pushes seguidos cancelan el deploy en curso y corre el último.
+# Evita que dos corridas se solapen y choquen en el release de Firebase Hosting
+# ("supplied version is the current active version").
+concurrency:
+  group: deploy-hosting
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
