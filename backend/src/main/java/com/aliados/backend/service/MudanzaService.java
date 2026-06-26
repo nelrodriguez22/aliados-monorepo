@@ -13,7 +13,6 @@ import com.aliados.backend.util.RegionRosario;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,11 +49,6 @@ public class MudanzaService {
     private FeatureFlagService featureFlagService;
 
     private static final int MAX_MUDANZAS_POR_DIA = 2;
-
-    // Comisión de la plataforma (%). Global por config; se persiste por mudanza para
-    // conservar el histórico de lo cobrado aunque el valor cambie a futuro.
-    @Value("${app.mudanza.comision-porcentaje:10.00}")
-    private BigDecimal comisionPorcentaje;
 
     // ════════════════════════════════════════════
     // TIERS
@@ -113,6 +107,8 @@ public class MudanzaService {
 
         // Montos
         mudanza.setMontoBase(tier.getPrecioBase());
+        BigDecimal comisionPorcentaje = BigDecimal.valueOf(
+                featureFlagService.getNumber("mudanza_comision_porcentaje", 10.0));
         mudanza.setComisionPorcentaje(comisionPorcentaje);
 
         mudanza = mudanzaRepository.save(mudanza);

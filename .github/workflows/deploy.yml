@@ -64,5 +64,21 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
+      # Deploya ambos sites (app + landing). Si un site no cambió, Firebase devuelve
+      # 400 "is the current active version" — un no-op inofensivo (re-release de
+      # contenido idéntico al que ya está vivo). Lo toleramos para no romper el deploy;
+      # cualquier OTRO error sí falla. (También cubre el caso de dos corridas en carrera,
+      # que produce el mismo mensaje.)
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting --project aliados-web-22
+        run: |
+          set +e
+          OUT=$(firebase deploy --only hosting --project aliados-web-22 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -eq 0 ]; then exit 0; fi
+          OTHER=$(echo "$OUT" | grep -i "Error:" | grep -vi "is the current active version")
+          if echo "$OUT" | grep -qi "is the current active version" && [ -z "$OTHER" ]; then
+            echo "::warning::Algún site ya estaba en su versión actual (sin cambios). Deploy tratado como éxito."
+            exit 0
+          fi
+          exit $CODE

@@ -34,6 +34,7 @@ class TrabajoEscalacionTest {
     @Mock NotificacionService notificacionService;
     @Mock ProviderScoreService providerScoreService;
     @Mock CloudinaryService cloudinaryService;
+    @Mock com.aliados.backend.service.FeatureFlagService featureFlagService;
 
     @InjectMocks TrabajoService trabajoService;
 
@@ -145,6 +146,22 @@ class TrabajoEscalacionTest {
 
         verifyNoInteractions(notificacionService);
         verify(trabajoRepository, never()).save(any());
+    }
+
+    @Test
+    void getLimiteTrabajos_flete_usaFlagFlete() {
+        Oficio flete = new Oficio();
+        flete.setNombre("Flete");
+        when(featureFlagService.getNumber("limite_trabajos_flete", 8.0)).thenReturn(8.0);
+        assertThat(trabajoService.getLimiteTrabajos(flete)).isEqualTo(8);
+    }
+
+    @Test
+    void getLimiteTrabajos_otroOficio_usaFlagDefault() {
+        Oficio plomeria = new Oficio();
+        plomeria.setNombre("Plomería");
+        when(featureFlagService.getNumber("limite_trabajos_default", 3.0)).thenReturn(3.0);
+        assertThat(trabajoService.getLimiteTrabajos(plomeria)).isEqualTo(3);
     }
 }
 

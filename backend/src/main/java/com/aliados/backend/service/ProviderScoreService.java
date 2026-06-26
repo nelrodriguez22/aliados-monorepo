@@ -19,21 +19,17 @@ public class ProviderScoreService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProviderScoreService.class);
 
-    private static final double PESO_CALIFICACION = 0.40;
-    private static final double PESO_TASA_ACEPTACION = 0.35;
-    private static final double PESO_VELOCIDAD_RESPUESTA = 0.25;
-
-    // Tiempo máximo de referencia para normalizar velocidad (en minutos)
-    // Un proveedor que tarda 30+ min en responder obtiene 0 en velocidad
-    private static final double TIEMPO_MAX_RESPUESTA_MIN = 30.0;
-
     @Autowired
     private TrabajoRepository trabajoRepository;
+
+    @Autowired
+    private FeatureFlagService featureFlagService;
 
     /**
      * Calcula el score de un proveedor (0-100).
      *
-     * score = (calificacionNorm * 0.4) + (tasaAceptacion * 0.35) + (velocidadRespuesta * 0.25)
+     * score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, w1, w2, w3)
+     * donde w1/w2/w3 provienen de feature flags con fallback 0.40/0.35/0.25.
      *
      * - calificacionNorm: promedio de estrellas (1-5) normalizado a 0-100
      * - tasaAceptacion: propuestas aceptadas / propuestas enviadas (0-100)
@@ -44,9 +40,10 @@ public class ProviderScoreService {
         double tasaAceptacion = calcularTasaAceptacion(proveedor.getId());
         double velocidadRespuesta = calcularVelocidadRespuesta(proveedor.getId());
 
-        double score = (calificacionNorm * PESO_CALIFICACION)
-                     + (tasaAceptacion * PESO_TASA_ACEPTACION)
-                     + (velocidadRespuesta * PESO_VELOCIDAD_RESPUESTA);
+        double w1 = featureFlagService.getNumber("score_peso_calificacion", 0.40);
+        double w2 = featureFlagService.getNumber("score_peso_aceptacion", 0.35);
+        double w3 = featureFlagService.getNumber("score_peso_velocidad", 0.25);
+        double score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, w1, w2, w3);
 
         logger.debug("Score proveedor {} ({}): cal={} tasa={} vel={} → total={}",
                 proveedor.getId(), proveedor.getNombre(),
@@ -56,6 +53,19 @@ public class ProviderScoreService {
                 String.format("%.1f", score));
 
         return score;
+    }
+
+    /**
+     * Combina los 3 componentes con sus pesos, normalizando para que sumen 1.0.
+     * Si la suma de pesos es <= 0, usa los pesos por defecto (guard).
+     */
+    double combinarScore(double calif, double aceptacion, double velocidad,
+                         double w1, double w2, double w3) {
+        double suma = w1 + w2 + w3;
+        if (suma <= 0) {
+            w1 = 0.40; w2 = 0.35; w3 = 0.25; suma = 1.0;
+        }
+        return (calif * (w1 / suma)) + (aceptacion * (w2 / suma)) + (velocidad * (w3 / suma));
     }
 
     /**
@@ -106,7 +116,7 @@ public class ProviderScoreService {
 
     /**
      * Velocidad de respuesta normalizada a 0-100.
-     * 0 min → 100, TIEMPO_MAX_RESPUESTA_MIN+ min → 0.
+     * 0 min → 100, tiempoMax+ min → 0.
      * Sin datos → 50 (neutral).
      */
     private double calcularVelocidadRespuesta(Long proveedorId) {
@@ -117,7 +127,9 @@ public class ProviderScoreService {
         if (promedioMinutos <= 0) {
             return 100.0;
         }
-        double normalizado = (1.0 - (promedioMinutos / TIEMPO_MAX_RESPUESTA_MIN)) * 100.0;
+        double tiempoMax = featureFlagService.getNumber("score_tiempo_max_respuesta_min", 30.0);
+        if (tiempoMax <= 0) tiempoMax = 30.0; // guard: evita división por cero / Infinity
+        double normalizado = (1.0 - (promedioMinutos / tiempoMax)) * 100.0;
         return Math.max(0.0, Math.min(100.0, normalizado));
     }
 }

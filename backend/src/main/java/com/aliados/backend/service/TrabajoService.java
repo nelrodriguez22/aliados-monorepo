@@ -60,16 +60,17 @@ public class TrabajoService {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
+    private FeatureFlagService featureFlagService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
-    private static final int LIMITE_TRABAJOS_DEFAULT = 3;
-    private static final int LIMITE_TRABAJOS_FLETE = 8;
-
-    private int getLimiteTrabajos(Oficio oficio) {
+    // package-private para test; lee los límites de feature flags.
+    int getLimiteTrabajos(Oficio oficio) {
         if (oficio != null && oficio.getNombre().equalsIgnoreCase("Flete")) {
-            return LIMITE_TRABAJOS_FLETE;
+            return (int) featureFlagService.getNumber("limite_trabajos_flete", 8.0);
         }
-        return LIMITE_TRABAJOS_DEFAULT;
+        return (int) featureFlagService.getNumber("limite_trabajos_default", 3.0);
     }
 
     @Transactional
