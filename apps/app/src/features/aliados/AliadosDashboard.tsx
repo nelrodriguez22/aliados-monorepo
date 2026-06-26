@@ -11,6 +11,7 @@ import {
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
 import { BroadcastPanel } from './BroadcastPanel';
+import { OficiosPanel } from './OficiosPanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
@@ -506,6 +507,7 @@ const AliadosDashboard = () => {
             <FeatureFlagsPanel />
             <MaintenancePanel />
             <BroadcastPanel />
+            <OficiosPanel />
           </div>
         )}
 
