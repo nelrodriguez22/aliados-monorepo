@@ -8,6 +8,11 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 ---
 
 ## ⏭️ Próxima sesión (pendiente)
+- [ ] **Ofertas "dormidas" no tienen costo en el score (2026-06-26).** Cuando una oferta llega al proveedor y la deja sin aceptar ni rechazar:
+  - **Comportamiento actual:** el `TrabajoEscalationScheduler` corre cada 60s. Tras `trabajo_oferta_timeout1_min` (prod 30 min) re-ofrece al **siguiente mejor disponible** (excluye al que durmió), `reintentos=1`, avisa al cliente "seguimos buscando". Tras `trabajo_oferta_timeout2_min` (prod +15 min) **cancela** el trabajo. → **un solo re-ofrecimiento** antes de cancelar (aunque haya #3, #4 disponibles); el cliente puede esperar ~45 min.
+  - **Hallazgo:** dormir **o rechazar** una oferta **no afecta el score** del proveedor. Los 3 factores se calculan sobre `t.proveedor` (asignado, solo se setea al **aceptar**, `TrabajoService:564`) o sobre `propuesto_at`. Una oferta ignorada/rechazada deja el trabajo `PENDIENTE` sin `proveedor` y sin `propuesto_at` → **invisible** al scoring (`rechazarTrabajo:156` pone `proveedorNotificadoId=null` sin tocar `t.proveedor`).
+  - **Implicancia:** la "tasa de aceptación" (`countPropuestasEnviadasByProveedorId`/`...Aceptadas`) **no** mide "ofertas aceptadas/recibidas" sino, de los trabajos **que tomó**, cuántos completó vs canceló. Incentivo perverso: ignorar ofertas no convenientes y agarrar solo las jugosas no baja el score.
+  - **Opciones a decidir:** (a) penalizar la no-respuesta con una "tasa de respuesta a ofertas" real (registrar ofertas vencidas por proveedor); (b) más reintentos antes de cancelar (escalar al #3, #4…); (c) acortar timeout1 (30 min es mucho); (d) dejarlo así para el volumen pre-launch.
 - [x] **Login con botón de Google — RESUELTO (2026-06-20).** Tenía **3 capas** que se fueron destapando una por una:
   1. **CSP `frame-src`**: no permitía el iframe de Firebase Auth → agregado `https://aliados-web-22.firebaseapp.com` + `https://apis.google.com` en `firebase.json` (ambas políticas).
   2. **Google Cloud Console (`redirect_uri_mismatch`)**: el cliente OAuth `578160153411-...` no tenía registrado el redirect URI `https://aliados-web-22.firebaseapp.com/__/auth/handler` ni los JavaScript origins (los 3 dominios + localhost). Se habían "perdido"; se re-registraron.

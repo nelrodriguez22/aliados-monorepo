@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib/apiClient';
 import toast from 'react-hot-toast';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
+import { Tooltip } from '@/shared/components/ui/Tooltip';
 import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
   FileText, Star, Loader2, Bug, ChevronDown, ExternalLink,
-  Wifi, AlertTriangle, TrendingUp, PowerOff, Truck,
+  Wifi, AlertTriangle, TrendingUp, PowerOff, Truck, Search,
 } from 'lucide-react';
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
@@ -16,12 +17,12 @@ import { OficiosPanel } from './OficiosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
 
 const STAT_CONFIG = [
-  { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
-  { key: 'proveedores', label: 'Proveedores',      icon: Wrench,       bg: tw.iconBg.green,  color: 'text-green-600 dark:text-green-400' },
-  { key: 'totales',     label: 'Trabajos totales', icon: FileText,     bg: tw.iconBg.slate,  color: tw.text.secondary },
-  { key: 'completados', label: 'Completados',      icon: CheckCircle,  bg: tw.iconBg.green,  color: 'text-green-600 dark:text-green-400' },
-  { key: 'enCurso',     label: 'En curso',         icon: Clock,        bg: tw.iconBg.amber,  color: 'text-amber-600 dark:text-amber-400' },
-  { key: 'cancelados',  label: 'Cancelados',       icon: XCircle,      bg: 'bg-red-50 dark:bg-red-900/15', color: 'text-red-500 dark:text-red-400' },
+  { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand',          tooltip: 'Total de clientes registrados en la plataforma' },
+  { key: 'proveedores', label: 'Proveedores',      icon: Wrench,       bg: tw.iconBg.green,  color: 'text-green-600 dark:text-green-400',            tooltip: 'Total de proveedores registrados. El detalle muestra cuántos están online y cuántos ocupados ahora' },
+  { key: 'totales',     label: 'Trabajos totales', icon: FileText,     bg: tw.iconBg.slate,  color: tw.text.secondary,                               tooltip: 'Suma histórica de todos los trabajos creados' },
+  { key: 'completados', label: 'Completados',      icon: CheckCircle,  bg: tw.iconBg.green,  color: 'text-green-600 dark:text-green-400',            tooltip: 'Trabajos que finalizaron con éxito' },
+  { key: 'enCurso',     label: 'En curso',         icon: Clock,        bg: tw.iconBg.amber,  color: 'text-amber-600 dark:text-amber-400',            tooltip: 'Trabajos activos ahora mismo. Incluye los que están en cola esperando ser asignados' },
+  { key: 'cancelados',  label: 'Cancelados',       icon: XCircle,      bg: 'bg-red-50 dark:bg-red-900/15', color: 'text-red-500 dark:text-red-400',  tooltip: 'Trabajos cancelados por el cliente o por el sistema' },
 ] as const;
 
 const CAT_STYLE: Record<string, { label: string; cls: string }> = {
@@ -131,6 +132,30 @@ function SectionCard({ title, icon: Icon, iconColor, badge, children }: {
 
 const apiFetch = (path: string) => apiClient.get(path);
 
+const PROV_PAGE_SIZE = 10;
+
+function getPageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+  if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, '...', current - 1, current, current + 1, '...', total];
+}
+
+const PaginationBtn = ({ onClick, disabled, label, active }: { onClick: () => void; disabled?: boolean; label: string; active?: boolean }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={`h-7 min-w-[1.75rem] rounded-md px-2 text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+      active
+        ? 'bg-brand-600 text-white dark:bg-dark-brand'
+        : 'text-slate-600 dark:text-dark-text-secondary hover:bg-slate-100 dark:hover:bg-dark-border/40'
+    }`}
+  >
+    {label}
+  </button>
+);
+
 const AliadosDashboard = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'stats' | 'config'>('stats');
@@ -169,6 +194,9 @@ const AliadosDashboard = () => {
     mutationFn: (id: number) => apiClient.patch(`/api/admin/providers/${id}/offline`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-providers-active'] }),
   });
+
+  const [provSearch, setProvSearch] = useState('');
+  const [provPage, setProvPage] = useState(1);
 
   const [bugFiltro, setBugFiltro] = useState<string>('TODOS');
   const updateBugEstado = useMutation({
@@ -217,6 +245,16 @@ const AliadosDashboard = () => {
   const trabajosVarados: any[] = alertasData?.trabajosVarados ?? [];
   const calificacionesRecientes: any[] = ratingsData?.recientes ?? [];
   const proveedoresBajos: any[] = ratingsData?.proveedoresBajaCalificacion ?? [];
+
+  // Filtro (sobre todos los activos) + paginado de a 10
+  const provQuery = provSearch.trim().toLowerCase();
+  const provFiltrados = provQuery
+    ? proveedoresActivos.filter((p: any) =>
+        `${p.nombre ?? ''} ${p.oficio ?? ''}`.toLowerCase().includes(provQuery))
+    : proveedoresActivos;
+  const provTotalPages = Math.max(1, Math.ceil(provFiltrados.length / PROV_PAGE_SIZE));
+  const provPageActual = Math.min(provPage, provTotalPages);
+  const provPagina = provFiltrados.slice((provPageActual - 1) * PROV_PAGE_SIZE, provPageActual * PROV_PAGE_SIZE);
 
   return (
     <div className={`${tw.pageBg} min-h-screen`}>
@@ -271,19 +309,21 @@ const AliadosDashboard = () => {
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 mb-6">
-          {STAT_CONFIG.map(({ key, label, icon: Icon, bg, color }) => {
+          {STAT_CONFIG.map(({ key, label, icon: Icon, bg, color, tooltip }) => {
             const { value, sub } = statValues[key];
             return (
-              <div key={key} className={`rounded-2xl border p-4 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
-                <div className="mb-3 flex items-center gap-2">
-                  <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg} ${color}`}>
-                    <Icon className="h-3.5 w-3.5" />
+              <Tooltip key={key} text={tooltip} position="bottom">
+                <div className={`w-full rounded-2xl border p-4 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border cursor-default`}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg} ${color}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <span className={`text-xs font-medium ${tw.text.muted}`}>{label}</span>
                   </div>
-                  <span className={`text-xs font-medium ${tw.text.muted}`}>{label}</span>
+                  <p className={`text-2xl font-bold ${tw.text.primary}`}>{value}</p>
+                  {sub && <p className={`mt-1 text-[10px] leading-relaxed ${tw.text.faint}`}>{sub}</p>}
                 </div>
-                <p className={`text-2xl font-bold ${tw.text.primary}`}>{value}</p>
-                {sub && <p className={`mt-1 text-[10px] leading-relaxed ${tw.text.faint}`}>{sub}</p>}
-              </div>
+              </Tooltip>
             );
           })}
         </div>
@@ -414,8 +454,28 @@ const AliadosDashboard = () => {
             ) : proveedoresActivos.length === 0 ? (
               <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin proveedores activos</p>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
-                {proveedoresActivos.map((p: any) => (
+              <>
+                {/* Buscador (filtra sobre todos los activos, no solo la página) */}
+                <div className="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-dark-border/50">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={provSearch}
+                      onChange={(e) => { setProvSearch(e.target.value); setProvPage(1); }}
+                      placeholder="Buscar por nombre u oficio…"
+                      className="w-full rounded-lg border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-bg pl-9 pr-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                    />
+                  </div>
+                </div>
+
+                {provFiltrados.length === 0 ? (
+                  <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>
+                    Sin resultados para «{provSearch.trim()}»
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 dark:divide-dark-border/50">
+                    {provPagina.map((p: any) => (
                   <div key={p.id} className="flex items-start gap-3 px-4 py-3">
                     <div className="relative shrink-0">
                       {p.fotoPerfil ? (
@@ -439,19 +499,39 @@ const AliadosDashboard = () => {
                       )}
                     </div>
                     {p.status === 'BUSY' && (
-                      <button
-                        type="button"
-                        disabled={forceOffline.isPending}
-                        onClick={() => forceOffline.mutate(p.id)}
-                        className="shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-dark-border px-2.5 py-1.5 text-xs text-slate-500 dark:text-dark-text-secondary hover:border-red-300 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <PowerOff size={11} />
-                        Offline
-                      </button>
+                      <Tooltip text="Forzar desconexión del proveedor. Usalo si el proveedor quedó colgado o su app crasheó y no puede ponerse offline solo." position="left">
+                        <button
+                          type="button"
+                          disabled={forceOffline.isPending}
+                          onClick={() => forceOffline.mutate(p.id)}
+                          className="shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-dark-border px-2.5 py-1.5 text-xs text-slate-500 dark:text-dark-text-secondary hover:border-red-300 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <PowerOff size={11} />
+                          Offline
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                )}
+
+                {provTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-slate-100 dark:border-dark-border/50">
+                    <PaginationBtn label="«" onClick={() => setProvPage(1)} disabled={provPageActual === 1} />
+                    <PaginationBtn label="‹" onClick={() => setProvPage(provPageActual - 1)} disabled={provPageActual === 1} />
+                    {getPageNumbers(provPageActual, provTotalPages).map((n, i) =>
+                      n === '...' ? (
+                        <span key={`gap-${i}`} className="px-1 text-xs text-slate-400">…</span>
+                      ) : (
+                        <PaginationBtn key={n} label={String(n)} active={n === provPageActual} onClick={() => setProvPage(n as number)} />
+                      )
+                    )}
+                    <PaginationBtn label="›" onClick={() => setProvPage(provPageActual + 1)} disabled={provPageActual === provTotalPages} />
+                    <PaginationBtn label="»" onClick={() => setProvPage(provTotalPages)} disabled={provPageActual === provTotalPages} />
+                  </div>
+                )}
+              </>
             )}
           </SectionCard>
         </div>
