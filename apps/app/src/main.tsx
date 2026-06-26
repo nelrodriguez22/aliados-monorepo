@@ -70,6 +70,7 @@ createRoot(document.getElementById('root')!, {
       <Toaster
         position="top-right"
         gutter={8}
+        containerStyle={{ top: 72 }}
         toastOptions={{
           duration: 3500,
           style: {
