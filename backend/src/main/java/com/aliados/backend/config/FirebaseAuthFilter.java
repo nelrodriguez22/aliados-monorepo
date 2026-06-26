@@ -26,6 +26,7 @@ import java.util.List;
 public class FirebaseAuthFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(FirebaseAuthFilter.class);
+    private static final String SUSPENDED = "__SUSPENDED__";
 
     private final UserRepository userRepository;
 
@@ -45,10 +46,11 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
         String cached = roleCache.getIfPresent(uid);
         if (cached != null) return cached;
 
-        // Solo cacheamos cuando el usuario existe. Si no existe (alta en curso),
-        // devolvemos ROLE_USER sin cachear para que el próximo request re-chequee.
         return userRepository.findByFirebaseUid(uid)
                 .map(u -> {
+                    if (Boolean.FALSE.equals(u.getActivo())) {
+                        return SUSPENDED; // no cachear → reactivación inmediata
+                    }
                     String authority = "ROLE_" + u.getRole().name();
                     roleCache.put(uid, authority);
                     return authority;
@@ -78,6 +80,11 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
             // El rol de seguridad se deriva del rol persistido en la base de datos,
             // no de lo que diga el cliente (cacheado por uid, ver resolveAuthority).
             String authority = resolveAuthority(uid);
+
+            if (SUSPENDED.equals(authority)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cuenta suspendida");
+                return;
+            }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(

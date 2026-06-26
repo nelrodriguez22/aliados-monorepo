@@ -13,5 +13,6 @@ public class BugReportResponseDTO {
     private String titulo;
     private String descripcion;
     private String url;
+    private String estado;
     private LocalDateTime createdAt;
 }

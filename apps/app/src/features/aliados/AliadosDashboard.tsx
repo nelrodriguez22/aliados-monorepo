@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/lib/apiClient';
+import toast from 'react-hot-toast';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { tw } from '@/shared/styles/design-system';
 import {
@@ -12,6 +13,7 @@ import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
 import { BroadcastPanel } from './BroadcastPanel';
 import { OficiosPanel } from './OficiosPanel';
+import { UsuariosPanel } from './UsuariosPanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand' },
@@ -29,6 +31,13 @@ const CAT_STYLE: Record<string, { label: string; cls: string }> = {
   OTRO:          { label: 'Otro',           cls: 'bg-slate-100 text-slate-600 dark:bg-dark-elevated dark:text-dark-text-secondary' },
 };
 
+const BUG_ESTADO_STYLE: Record<string, { label: string; cls: string }> = {
+  NUEVO:       { label: 'Nuevo',        cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
+  EN_PROGRESO: { label: 'En progreso',  cls: 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400' },
+  RESUELTO:    { label: 'Resuelto',     cls: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
+};
+const BUG_ESTADOS = ['NUEVO', 'EN_PROGRESO', 'RESUELTO'] as const;
+
 const MUDANZA_ESTADO_STYLE: Record<string, { label: string; cls: string }> = {
   PENDIENTE:          { label: 'Pendiente',          cls: 'text-amber-600 dark:text-amber-400' },
   RESERVADO:          { label: 'Reservado',           cls: 'text-brand-600 dark:text-dark-brand' },
@@ -41,7 +50,7 @@ const MUDANZA_ESTADO_STYLE: Record<string, { label: string; cls: string }> = {
   CANCELADO:          { label: 'Cancelado',           cls: 'text-red-500 dark:text-red-400' },
 };
 
-function BugRow({ report }: { report: any }) {
+function BugRow({ report, onEstadoChange }: { report: any; onEstadoChange: (id: number, estado: string) => void }) {
   const [open, setOpen] = useState(false);
   const cat = CAT_STYLE[report.categoria] ?? CAT_STYLE.OTRO;
   const fecha = new Date(report.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -58,6 +67,17 @@ function BugRow({ report }: { report: any }) {
           <p className={`text-sm font-medium truncate ${tw.text.primary}`}>{report.titulo}</p>
           <p className={`text-xs mt-0.5 ${tw.text.muted}`}>{report.usuarioNombre} · {fecha}</p>
         </div>
+        <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${(BUG_ESTADO_STYLE[report.estado] ?? BUG_ESTADO_STYLE.NUEVO).cls}`}>
+          {(BUG_ESTADO_STYLE[report.estado] ?? BUG_ESTADO_STYLE.NUEVO).label}
+        </span>
+        <select
+          value={report.estado ?? 'NUEVO'}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => { e.stopPropagation(); onEstadoChange(report.id, e.target.value); }}
+          className="mt-0.5 shrink-0 rounded border border-slate-300 bg-white px-1 py-0.5 text-xs dark:border-dark-border dark:bg-dark-bg dark:text-slate-200"
+        >
+          {BUG_ESTADOS.map((s) => <option key={s} value={s}>{BUG_ESTADO_STYLE[s].label}</option>)}
+        </select>
         <ChevronDown size={15} className={`mt-0.5 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -148,6 +168,14 @@ const AliadosDashboard = () => {
   const forceOffline = useMutation({
     mutationFn: (id: number) => apiClient.patch(`/api/admin/providers/${id}/offline`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-providers-active'] }),
+  });
+
+  const [bugFiltro, setBugFiltro] = useState<string>('TODOS');
+  const updateBugEstado = useMutation({
+    mutationFn: ({ id, estado }: { id: number; estado: string }) =>
+      apiClient.patch(`/api/admin/bug-reports/${id}`, { estado }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-bug-reports'] }),
+    onError: () => toast.error('No se pudo actualizar el estado'),
   });
 
   if (statsError) {
@@ -494,7 +522,25 @@ const AliadosDashboard = () => {
             <p className={`px-6 py-8 text-center text-sm ${tw.text.muted}`}>Sin reportes</p>
           ) : (
             <div>
-              {bugReports.map((r: any) => <BugRow key={r.id} report={r} />)}
+              {/* Filtro por estado */}
+              <div className="flex flex-wrap gap-2 px-4 pt-3">
+                {(['TODOS', ...BUG_ESTADOS] as string[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setBugFiltro(f)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      bugFiltro === f ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-dark-bg dark:text-slate-300'
+                    }`}
+                  >
+                    {f === 'TODOS' ? 'Todos' : BUG_ESTADO_STYLE[f].label}
+                  </button>
+                ))}
+              </div>
+              {bugReports
+                .filter((r: any) => bugFiltro === 'TODOS' || (r.estado ?? 'NUEVO') === bugFiltro)
+                .map((r: any) => (
+                  <BugRow key={r.id} report={r} onEstadoChange={(id, estado) => updateBugEstado.mutate({ id, estado })} />
+                ))}
             </div>
           )}
         </SectionCard>
@@ -508,6 +554,7 @@ const AliadosDashboard = () => {
             <MaintenancePanel />
             <BroadcastPanel />
             <OficiosPanel />
+            <UsuariosPanel />
           </div>
         )}
 

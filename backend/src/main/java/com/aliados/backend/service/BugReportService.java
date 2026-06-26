@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +55,14 @@ public class BugReportService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public BugReportResponseDTO actualizarEstado(Long id, com.aliados.backend.entity.BugEstado estado) {
+        com.aliados.backend.entity.BugReport bug = bugReportRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Bug report no encontrado: " + id));
+        bug.setEstado(estado);
+        return mapToDTO(bugReportRepository.save(bug));
+    }
+
     private BugReportResponseDTO mapToDTO(BugReport r) {
         BugReportResponseDTO dto = new BugReportResponseDTO();
         dto.setId(r.getId());
@@ -63,6 +72,7 @@ public class BugReportService {
         dto.setTitulo(r.getTitulo());
         dto.setDescripcion(r.getDescripcion());
         dto.setUrl(r.getUrl());
+        dto.setEstado(r.getEstado() != null ? r.getEstado().name() : com.aliados.backend.entity.BugEstado.NUEVO.name());
         dto.setCreatedAt(r.getCreatedAt());
         return dto;
     }

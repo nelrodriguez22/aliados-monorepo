@@ -49,4 +49,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     void clearFcmToken(@Param("id") Long id);
 
     List<User> findByRoleInAndActivoTrue(Collection<UserRole> roles);
+
+    @Query("SELECT u FROM User u WHERE " +
+           "(:q IS NULL OR LOWER(u.nombre) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           " OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "AND (:role IS NULL OR u.role = :role) " +
+           "AND u.role <> com.aliados.backend.entity.UserRole.ADMIN " +
+           "ORDER BY u.createdAt DESC")
+    java.util.List<com.aliados.backend.entity.User> searchUsuarios(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("role") com.aliados.backend.entity.UserRole role);
 }

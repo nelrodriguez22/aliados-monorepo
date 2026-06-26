@@ -32,6 +32,10 @@ public class BugReport {
     @Column(length = 500)
     private String url;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BugEstado estado = BugEstado.NUEVO;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
