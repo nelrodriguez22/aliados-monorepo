@@ -22,10 +22,10 @@ export function ClientProposal() {
 
   const aceptarMutation = useMutation({
     mutationFn: () => apiClient.patch(`/api/trabajos/${jobId}/aceptar-propuesta`),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Propuesta aceptada. El profesional está en camino.');
-      navigate(ROUTES.CLIENT.TRACKING(data.id));
+      navigate(ROUTES.CLIENT.TRACKING(jobId));
     },
     onError: (error: Error) => toast.error(error.message),
   });

@@ -139,6 +139,11 @@ export const useWebSocket = () => {
 
       case 'PROPUESTA_ACEPTADA':
         toast.success('✅ ' + mensaje, { duration: 5000 });
+        // El backend pasó el proveedor a BUSY. Refrescamos el perfil para que el
+        // store actualice user.status → isBusy, que habilita la query 'trabajo-activo'
+        // (enabled: isBusy). Sin esto, invalidar 'trabajo-activo' es no-op porque RQ
+        // no refetchea una query deshabilitada hasta recargar la página.
+        queryClient.invalidateQueries({ queryKey: ['auth-profile'] });
         queryClient.invalidateQueries({ queryKey: ['trabajos-pendientes'] });
         queryClient.invalidateQueries({ queryKey: ['trabajo-activo'] });
         queryClient.invalidateQueries({ queryKey: ['trabajos-en-cola'] });
