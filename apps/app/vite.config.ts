@@ -12,7 +12,7 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       manifest: {
         name: "Aliados",
         short_name: "Aliados",
@@ -43,7 +43,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-        skipWaiting: true,
+        // skipWaiting OFF a propósito: con registerType 'prompt' el SW nuevo espera
+        // a que el usuario confirme "Recargar" (updateServiceWorker(true)) en vez de
+        // activarse y recargar a ciegas a mitad de sesión.
         clientsClaim: true,
         navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/__\//],
         runtimeCaching: [
@@ -54,6 +56,10 @@ export default defineConfig({
             options: {
               cacheName: "api-cache",
               networkTimeoutSeconds: 5,
+              // Caché de respaldo SOLO para red lenta/offline: acotada y de vida corta,
+              // para no servir estado de tiempo real desactualizado ni crecer sin tope.
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

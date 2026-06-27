@@ -4,6 +4,7 @@ import { Footer } from "@/features/components/Footer";
 import { FloatingActions } from "@/shared/components/FloatingActions";
 import { InstallBanner } from "@/shared/components/InstallBanner";
 import { MaintenanceBanner } from "@/shared/components/MaintenanceBanner";
+import { PWAUpdateBanner } from "@/shared/components/PWAUpdateBanner";
 
 export function MainLayout() {
   return (
@@ -11,6 +12,7 @@ export function MainLayout() {
       <Header />
       <main className="flex-1 flex flex-col">
         <MaintenanceBanner />
+        <PWAUpdateBanner />
         <Outlet />
       </main>
       <Footer />
