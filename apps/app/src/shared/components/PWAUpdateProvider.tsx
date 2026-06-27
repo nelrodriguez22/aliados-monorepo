@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 // Cada cuánto una pestaña ya abierta re-chequea si hay un deploy nuevo.
-const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 interface PWAUpdateContextValue {
   /** true cuando hay un SW nuevo en espera → se muestra el banner "Recargar". */
@@ -21,8 +21,8 @@ const PWAUpdateContext = createContext<PWAUpdateContextValue>({
  * Registra el SW (registerType: 'prompt') una sola vez y expone el estado de
  * actualización. El aviso visual lo pinta <PWAUpdateBanner/> dentro del layout
  * (mismo lugar que el banner de mantenimiento). Además chequea updates al volver
- * el foco y cada 30 min, para que las pestañas abiertas mucho tiempo detecten
- * deploys sin depender de una recarga completa.
+ * el foco (visibilitychange + window.focus) y cada 5 min, para que las pestañas
+ * abiertas mucho tiempo detecten deploys sin depender de una recarga completa.
  */
 export function PWAUpdateProvider({ children }: { children: ReactNode }) {
   const {
@@ -36,6 +36,7 @@ export function PWAUpdateProvider({ children }: { children: ReactNode }) {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
       });
+      window.addEventListener('focus', check);
     },
   });
 
