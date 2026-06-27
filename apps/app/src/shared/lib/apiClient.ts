@@ -14,6 +14,10 @@ class ApiError extends Error {
 const RETRY_STATUSES = new Set([502, 503, 504]);
 const MAX_RETRIES = 2;
 const RETRY_BACKOFF_MS = [300, 800];
+// Corta requests colgadas: sin esto, en red lenta/caída la UI queda cargando
+// indefinidamente. 15s es holgado para llamadas JSON; al vencer aborta y (en GET)
+// reintenta, o lanza un error claro.
+const REQUEST_TIMEOUT_MS = 15000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const isIdempotent = (method?: string) =>
@@ -40,18 +44,26 @@ async function request<T = any>(
   const method = (options.method || 'GET').toString();
   let attempt = 0;
 
-  // Reintenta solo GET (idempotente) ante 5xx transitorio o error de red.
+  // Reintenta solo GET (idempotente) ante 5xx transitorio o error de red/timeout.
   while (true) {
     let response: Response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+      response = await fetch(`${API_URL}${endpoint}`, { ...options, headers, signal: controller.signal });
     } catch (err) {
       if (isIdempotent(method) && attempt < MAX_RETRIES) {
         await sleep(RETRY_BACKOFF_MS[attempt]);
         attempt++;
         continue;
       }
+      // Timeout (abort): mensaje claro en vez del DOMException críptico.
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new ApiError('La conexión está lenta. Reintentá en un momento.', 0);
+      }
       throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (
