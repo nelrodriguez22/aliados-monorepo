@@ -22,7 +22,13 @@ export function ClientProposal() {
 
   const aceptarMutation = useMutation({
     mutationFn: () => apiClient.patch(`/api/trabajos/${jobId}/aceptar-propuesta`),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Sembramos el detalle del trabajo (key compartida ['trabajo', id]) con la
+      // respuesta —ya en EN_CURSO/EN_COLA— para que JobTracking NO lea el cache
+      // stale en 'PROPUESTO' y rebote de vuelta a /propuesta (su useEffect redirige
+      // a PROPOSAL si estado === 'PROPUESTO'). Sin esto, aceptar mostraba el cartel
+      // "Esta propuesta ya no está disponible".
+      queryClient.setQueryData(['trabajo', jobId], data);
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Propuesta aceptada. El profesional está en camino.');
       navigate(ROUTES.CLIENT.TRACKING(jobId));
