@@ -13,6 +13,7 @@ import { apiClient } from "@/shared/lib/apiClient";
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import {
   Bell, MapPin, Clock, CheckCircle,
@@ -149,7 +150,7 @@ export function ProviderDashboard() {
     refetchInterval: false,
   });
 
-  const { data: trabajosPendientes = [], isLoading: loadingPendientes } = useQuery({
+  const { data: trabajosPendientes = [], isLoading: loadingPendientes, isError: pendientesError, refetch: refetchPendientes } = useQuery({
     queryKey: ['trabajos-pendientes'],
     queryFn: () => apiClient.get('/api/trabajos/pendientes'),
     enabled: isOnline || isBusy,
@@ -165,6 +166,8 @@ export function ProviderDashboard() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: loadingCompletados,
+    isError: completadosError,
+    refetch: refetchCompletados,
   } = useInfiniteQuery({
     queryKey: ['trabajos-completados'],
     queryFn: ({ pageParam }) => apiClient.get(`/api/trabajos/completados?page=${pageParam}&size=10`),
@@ -335,6 +338,8 @@ export function ProviderDashboard() {
               ) : (isOnline || isBusy) ? (
                 loadingPendientes ? (
                   <div className="space-y-2 min-[375px]:space-y-3"><SkeletonCard /><SkeletonCard /></div>
+                ) : pendientesError ? (
+                  <ErrorState compact message="No pudimos cargar los trabajos disponibles." onRetry={() => refetchPendientes()} />
                 ) : trabajosPendientes.length > 0 ? (
                   <div className="space-y-2 min-[375px]:space-y-3">
                     {trabajosPendientes.map((trabajo: any) => (
@@ -559,6 +564,8 @@ export function ProviderDashboard() {
 
               {loadingCompletados ? (
                 <div className="space-y-2 min-[375px]:space-y-3"><SkeletonCard /><SkeletonCard /></div>
+              ) : completadosError ? (
+                <ErrorState compact message="No pudimos cargar tu historial." onRetry={() => refetchCompletados()} />
               ) : trabajosCompletados.length === 0 ? (
                 <EmptyState
                   icon={ClipboardList}

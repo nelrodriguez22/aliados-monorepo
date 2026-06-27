@@ -11,6 +11,7 @@ import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-r
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
+import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { useOficios } from "@/shared/hooks/useOficios";
 import { OnboardingTour } from "@/shared/components/OnboardingTour";
@@ -149,7 +150,7 @@ export function ClientDashboard() {
     { id: 'mudanza', nombre: 'Mudanzas' },
   ];
 
-  const { data: todosTrabajos = [], isLoading: loadingTrabajos } = useQuery({
+  const { data: todosTrabajos = [], isLoading: loadingTrabajos, isError: trabajosError, refetch: refetchTrabajos } = useQuery({
     queryKey: ['trabajos-cliente'],
     queryFn: () => apiClient.get('/api/trabajos/cliente'),
     staleTime: 30000,
@@ -180,6 +181,8 @@ export function ClientDashboard() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: loadingHistorial,
+    isError: historialError,
+    refetch: refetchHistorial,
   } = useInfiniteQuery({
     queryKey: ['trabajos-historial'],
     queryFn: ({ pageParam }) => apiClient.get(`/api/trabajos/cliente/historial?page=${pageParam}&size=10`),
@@ -380,7 +383,9 @@ export function ClientDashboard() {
                 Trabajos activos
               </h2>
 
-              {trabajosActivos.length > 0 ? (
+              {trabajosError ? (
+                <Card><ErrorState compact message="No pudimos cargar tus trabajos activos." onRetry={() => refetchTrabajos()} /></Card>
+              ) : trabajosActivos.length > 0 ? (
                 <div className="space-y-2 min-[375px]:space-y-3">
                   {trabajosActivos.map((trabajo: any) => {
                     const estadoBadge = getEstadoBadge(trabajo.estado);
@@ -495,6 +500,8 @@ export function ClientDashboard() {
 
               {loadingHistorial ? (
                 <SkeletonHistorial />
+              ) : historialError ? (
+                <Card><ErrorState compact message="No pudimos cargar tu historial." onRetry={() => refetchHistorial()} /></Card>
               ) : trabajosCompletados.length > 0 ? (
                 <div className="space-y-2 min-[375px]:space-y-3">
                   {trabajosCompletados.map((trabajo: any) => (
