@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
@@ -7,7 +8,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
-import { Clock, DollarSign, MapPin, Briefcase, Star, Loader2, Info } from "lucide-react";
+import { Clock, DollarSign, MapPin, Briefcase, Star, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function ClientProposal() {
@@ -31,7 +32,9 @@ export function ClientProposal() {
       queryClient.setQueryData(['trabajo', jobId], data);
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       toast.success('Propuesta aceptada. El profesional está en camino.');
-      navigate(ROUTES.CLIENT.TRACKING(jobId));
+      // replace: saca la propuesta consumida del historial → apretar "atrás" desde
+      // el seguimiento no vuelve a esta página.
+      navigate(ROUTES.CLIENT.TRACKING(jobId), { replace: true });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -45,6 +48,21 @@ export function ClientProposal() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  // Si el trabajo ya no está en PROPUESTO (tras aceptar y apretar "atrás", una
+  // notificación vieja o un link directo), redirigimos al lugar correcto en vez de
+  // mostrar un cartel muerto — mismo criterio que JobTracking.
+  useEffect(() => {
+    if (!trabajo || trabajo.estado === 'PROPUESTO') return;
+    if (trabajo.estado === 'COMPLETADO') {
+      navigate(ROUTES.CLIENT.COMPLETED(trabajo.id), { replace: true });
+    } else if (trabajo.estado === 'CANCELADO') {
+      navigate(ROUTES.CLIENT.DASHBOARD, { replace: true });
+    } else {
+      // EN_CURSO / EN_COLA / PENDIENTE → seguimiento
+      navigate(ROUTES.CLIENT.TRACKING(trabajo.id), { replace: true });
+    }
+  }, [trabajo?.estado]);
 
   const formatTiempo = (minutos: number) => {
     if (minutos < 60) return `${minutos} min`;
@@ -65,32 +83,12 @@ export function ClientProposal() {
     return <div className={tw.container}><p className={`text-center ${tw.text.secondary}`}>Trabajo no encontrado</p></div>;
   }
 
-  // Estado inválido
+  // Estado ya no PROPUESTO: el useEffect de arriba redirige al lugar correcto;
+  // mientras tanto mostramos un loader (sin cartel muerto).
   if (trabajo.estado !== 'PROPUESTO') {
     return (
-      <div className={tw.pageBg}>
-        <div className={tw.container}>
-          <div className="mx-auto max-w-sm">
-            <Card>
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
-                  <Info className={`h-5 w-5 ${tw.text.faint}`} />
-                </div>
-                <div>
-                  <h3 className={`text-sm font-semibold ${tw.text.primary}`}>
-                    Esta propuesta ya no está disponible
-                  </h3>
-                  <p className={`text-xs mt-0.5 ${tw.text.secondary}`}>
-                    El estado del trabajo cambió
-                  </p>
-                </div>
-                <Button onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>
-                  Volver al Dashboard
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>
+      <div className={`flex h-64 items-center justify-center ${tw.pageBg}`}>
+        <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
       </div>
     );
   }
