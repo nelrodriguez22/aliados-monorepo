@@ -1,6 +1,7 @@
 package com.aliados.backend.service;
 
 import com.aliados.backend.dto.CrearTrabajoDTO;
+import com.aliados.backend.dto.OficioResponseDTO;
 import com.aliados.backend.dto.PagedTrabajosResponse;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.entity.*;
@@ -355,7 +356,7 @@ public class TrabajoService {
         // unproxy: aunque se inicialice, el proxy LAZY sigue siendo una subclase
         // ByteBuddy que Jackson no puede serializar. unproxy devuelve la entidad
         // Oficio real (o null). Null-safe.
-        dto.setOficio((Oficio) Hibernate.unproxy(trabajo.getOficio()));
+        dto.setOficio(OficioResponseDTO.from((Oficio) Hibernate.unproxy(trabajo.getOficio())));
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
         dto.setDireccion(trabajo.getDireccion());
@@ -492,7 +493,7 @@ public class TrabajoService {
         // unproxy: aunque se inicialice, el proxy LAZY sigue siendo una subclase
         // ByteBuddy que Jackson no puede serializar. unproxy devuelve la entidad
         // Oficio real (o null). Null-safe.
-        dto.setOficio((Oficio) Hibernate.unproxy(trabajo.getOficio()));
+        dto.setOficio(OficioResponseDTO.from((Oficio) Hibernate.unproxy(trabajo.getOficio())));
         dto.setEstado(trabajo.getEstado());
         dto.setDescripcion(trabajo.getDescripcion());
         dto.setDireccion(trabajo.getDireccion());

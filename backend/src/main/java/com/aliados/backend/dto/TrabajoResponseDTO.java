@@ -1,6 +1,5 @@
 package com.aliados.backend.dto;
 
-import com.aliados.backend.entity.Oficio;
 import com.aliados.backend.entity.TrabajoEstado;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -13,7 +12,7 @@ public class TrabajoResponseDTO {
     private String clienteNombre;
     private Long proveedorId;
     private String proveedorNombre;
-    private Oficio oficio;
+    private OficioResponseDTO oficio;
     private TrabajoEstado estado;
     private String descripcion;
     private String direccion;

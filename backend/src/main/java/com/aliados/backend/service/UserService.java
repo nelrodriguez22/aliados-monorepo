@@ -1,5 +1,6 @@
 package com.aliados.backend.service;
 
+import com.aliados.backend.dto.OficioResponseDTO;
 import com.aliados.backend.dto.RegisterDTO;
 import com.aliados.backend.dto.UserResponseDTO;
 import com.aliados.backend.dto.UserStatusDTO;
@@ -262,21 +263,18 @@ public class UserService {
     private UserResponseDTO mapToDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());
-        dto.setFirebaseUid(user.getFirebaseUid());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
         dto.setNombre(user.getNombre());
         dto.setTelefono(user.getTelefono());
         dto.setFotoPerfil(user.getFotoPerfil());
         dto.setActivo(user.getActivo());
-        dto.setStatus(user.getStatus());          // NUEVO
-        dto.setLastSeenAt(user.getLastSeenAt());  // NUEVO
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
+        dto.setStatus(user.getStatus());
+        dto.setLastSeenAt(user.getLastSeenAt());
         dto.setLocalidad(user.getLocalidad());
-        // unproxy: devuelve la entidad Oficio real (no el proxy ByteBuddy que Jackson
-        // no puede serializar). Null-safe (clientes no tienen oficio).
-        dto.setOficio((Oficio) Hibernate.unproxy(user.getOficio()));
+        // Vista liviana: solo id/nombre/icono (sin flags internos del Oficio).
+        // unproxy null-safe: clientes no tienen oficio.
+        dto.setOficio(OficioResponseDTO.from((Oficio) Hibernate.unproxy(user.getOficio())));
         if (user.getRole() == UserRole.PROVIDER) {
             // #8: denormalizado en `users` (se mantiene al crear calificación) → sin queries.
             dto.setPromedioCalificacion(user.getPromedioCalificacion() != null ? user.getPromedioCalificacion() : 0.0);
