@@ -10,6 +10,7 @@ import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { useEffect } from "react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
+import toast from "react-hot-toast";
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
@@ -113,7 +114,7 @@ function TrabajoCard({
 
 export function ProviderDashboard() {
   const navigate = useNavigate();
-  const { user } = useStore();
+  const { user, updateUserStatus } = useStore();
   const { isSupported, permission, requestPermission } = usePushNotifications();
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
@@ -223,6 +224,23 @@ export function ProviderDashboard() {
     if (isBusy && !trabajoActivo && !loadingActivo)
       queryClient.invalidateQueries({ queryKey: ['trabajo-activo'] });
   }, [isBusy, trabajoActivo, loadingActivo, queryClient]);
+
+  // Auto-online al entrar (una vez por sesión de pestaña): el proveedor que abre la
+  // app normalmente quiere estar disponible. El flag evita re-activarlo en cada
+  // navegación, así respeta un OFFLINE manual posterior. No toca BUSY.
+  useEffect(() => {
+    if (sessionStorage.getItem('auto-online-hecho')) return;
+    if (user?.status !== 'OFFLINE') return;
+    sessionStorage.setItem('auto-online-hecho', '1');
+    apiClient.patch('/api/users/me/status', { status: 'ONLINE' })
+      .then(() => {
+        updateUserStatus('ONLINE');
+        queryClient.invalidateQueries({ queryKey: ['trabajos-pendientes'] });
+        toast.success('Estás en línea');
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const statusDot = {
     ONLINE:  'bg-green-500',

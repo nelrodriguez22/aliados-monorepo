@@ -42,6 +42,7 @@ export const useStore = create<Store>()(
       logout: () => {
         set({ user: null, isAuthenticated: false });
         localStorage.removeItem('aliados-storage');
+        sessionStorage.removeItem('auto-online-hecho');
         clearSentryUser();
         // Borra cualquier cache de API por-usuario al cerrar sesión, para que el
         // próximo usuario en el mismo dispositivo no pueda ver datos del anterior.
