@@ -47,22 +47,12 @@ export default defineConfig({
         // a que el usuario confirme "Recargar" (updateServiceWorker(true)) en vez de
         // activarse y recargar a ciegas a mitad de sesión.
         clientsClaim: true,
+        // /api NO se cachea (network-only): las respuestas son autenticadas y
+        // por-usuario, y el Cache Storage es por-origen (no por-usuario) → cachearlas
+        // podía filtrar datos del usuario A al B en el mismo dispositivo. Para una app
+        // de tiempo real el fallback offline de API aporta poco y arriesga estado viejo.
+        // El app-shell (HTML/JS/CSS/img) sí se precachea → la app abre offline.
         navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/__\//],
-        runtimeCaching: [
-          {
-            urlPattern:
-              /^https:\/\/api\.aliados-app\.convivirtech\.com\.ar\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 5,
-              // Caché de respaldo SOLO para red lenta/offline: acotada y de vida corta,
-              // para no servir estado de tiempo real desactualizado ni crecer sin tope.
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
     }),
     // Sube los source maps a Sentry (stack traces legibles). Solo se activa cuando

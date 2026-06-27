@@ -13,6 +13,13 @@ import { PWAUpdateProvider } from './shared/components/PWAUpdateProvider'
 // Google Analytics — carga gtag.js (no-op fuera de producción).
 initGtag()
 
+// Purga el cache legacy de API: versiones previas cacheaban /api en el SW (Cache
+// Storage es por-origen) → riesgo de fuga de datos entre usuarios en el mismo
+// dispositivo. Ya no se cachea /api; borramos lo que haya quedado de versiones previas.
+if ('caches' in window) {
+  caches.delete('api-cache').catch(() => {})
+}
+
 // En producción silenciamos toda salida de consola: cubre los console.* de dependencias
 // (Firebase/SockJS) y las referencias tipo `.catch(console.error)` que el minifier no puede
 // eliminar. El build (Oxc dropConsole) ya quita la mayoría; esto garantiza cero salida.
