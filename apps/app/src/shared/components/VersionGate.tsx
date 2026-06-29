@@ -1,26 +1,8 @@
 import { type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMinAppVersion } from "@/shared/lib/remoteConfig";
+import { hardReload } from "@/shared/lib/hardReload";
 import icono from "@/assets/icono.png";
-
-// Limpia SW + cachés y recarga: garantiza bajar el bundle nuevo (si no, el SW
-// serviría el viejo cacheado y el forzado entraría en loop).
-async function hardReload() {
-  try {
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    }
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-    }
-  } catch {
-    // best-effort
-  } finally {
-    location.reload();
-  }
-}
 
 /**
  * Version-gate (Capa 3): si la versión que corre el cliente (__APP_VERSION__) es

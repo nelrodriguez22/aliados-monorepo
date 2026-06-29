@@ -1,6 +1,7 @@
 /// <reference types="vite-plugin-pwa/react" />
 import { createContext, useContext, type ReactNode } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { hardReload } from '@/shared/lib/hardReload';
 
 // Cada cuánto una pestaña ya abierta re-chequea si hay un deploy nuevo.
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -27,7 +28,6 @@ const PWAUpdateContext = createContext<PWAUpdateContextValue>({
 export function PWAUpdateProvider({ children }: { children: ReactNode }) {
   const {
     needRefresh: [needRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
@@ -41,7 +41,7 @@ export function PWAUpdateProvider({ children }: { children: ReactNode }) {
   });
 
   return (
-    <PWAUpdateContext.Provider value={{ needRefresh, reload: () => updateServiceWorker(true) }}>
+    <PWAUpdateContext.Provider value={{ needRefresh, reload: hardReload }}>
       {children}
     </PWAUpdateContext.Provider>
   );
