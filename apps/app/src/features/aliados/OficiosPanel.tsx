@@ -15,6 +15,7 @@ export function OficiosPanel() {
   const { data: oficios = [], isLoading } = useQuery<OficioAdmin[]>({
     queryKey: ['admin-oficios'],
     queryFn: () => apiClient.get('/api/admin/oficios'),
+    staleTime: 1000 * 60 * 10, // 10 min: lista chica que cambia muy rara vez → evita refetch en cada apertura del tab.
   });
 
   const toggle = useMutation({

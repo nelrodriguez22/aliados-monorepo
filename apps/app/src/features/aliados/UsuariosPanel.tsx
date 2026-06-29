@@ -27,11 +27,14 @@ export function UsuariosPanel() {
   const [q, setQ] = useState('');
   const [role, setRole] = useState<RoleFiltro>('');
   const [applied, setApplied] = useState<{ q: string; role: RoleFiltro }>({ q: '', role: '' });
+  // On-demand: no traemos usuarios al montar (no escala con la base). Solo tras buscar.
+  const [searched, setSearched] = useState(false);
 
   const { data: usuarios = [], isFetching } = useQuery<UsuarioAdmin[]>({
     queryKey: ['admin-usuarios', applied.q, applied.role],
     queryFn: () =>
       apiClient.get(`/api/admin/usuarios?q=${encodeURIComponent(applied.q)}&role=${applied.role}`),
+    enabled: searched,
   });
 
   const toggle = useMutation({
@@ -57,6 +60,7 @@ export function UsuariosPanel() {
         onSubmit={(e) => {
           e.preventDefault();
           setApplied({ q, role });
+          setSearched(true);
         }}
       >
         <input
@@ -71,7 +75,9 @@ export function UsuariosPanel() {
           Buscar
         </button>
       </form>
-      {isFetching ? (
+      {!searched ? (
+        <p className="text-sm text-slate-500">Buscá por nombre, email o rol (dejá vacío y "Buscar" para ver todos).</p>
+      ) : isFetching ? (
         <p className="text-sm text-slate-500">Buscando…</p>
       ) : usuarios.length === 0 ? (
         <p className="text-sm text-slate-500">Sin resultados</p>
