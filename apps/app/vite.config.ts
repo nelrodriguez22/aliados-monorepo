@@ -6,11 +6,35 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 
+// Versión del build para el version-gate (Capa 3 del SW). En CI = run_number de
+// GitHub Actions (monotónico, comparable con <); en build local = 0 (no se deploya).
+// Se inyecta en el bundle (__APP_VERSION__) y se emite en /version.json para que el
+// admin lea la versión que está sirviendo el deploy en vivo.
+const APP_VERSION = Number(process.env.GITHUB_RUN_NUMBER) || 0;
+const APP_SHA = (process.env.GITHUB_SHA || "local").slice(0, 7);
+
 export default defineConfig({
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
+    // Emite /version.json con la versión del deploy (la lee el admin panel para
+    // setear min_app_version sin adivinar si el deploy está online).
+    {
+      name: "emit-version-json",
+      apply: "build",
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify({
+            version: APP_VERSION,
+            sha: APP_SHA,
+            builtAt: new Date().toISOString(),
+          }),
+        });
+      },
+    },
     VitePWA({
       registerType: "prompt",
       manifest: {
@@ -130,5 +154,6 @@ export default defineConfig({
   },
   define: {
     global: "globalThis",
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
 });

@@ -13,6 +13,8 @@ const DEFAULTS = {
   // Banner de aviso previo (warning)
   maintenance_schedule: "",
   maintenance_duration: "",
+  // Version-gate (Capa 3): versión mínima requerida. "0" = sin forzado.
+  min_app_version: "0",
 };
 
 let rc: ReturnType<typeof getRemoteConfig> | null = null;
@@ -46,5 +48,16 @@ export async function fetchMaintenance(): Promise<MaintenanceState> {
       schedule: "",
       duration: "",
     };
+  }
+}
+
+// Versión mínima requerida (version-gate). Fail-open: ante error → 0 (sin forzado).
+export async function fetchMinAppVersion(): Promise<number> {
+  try {
+    const instance = getRc();
+    await fetchAndActivate(instance);
+    return Number(getValue(instance, "min_app_version").asString()) || 0;
+  } catch {
+    return 0;
   }
 }

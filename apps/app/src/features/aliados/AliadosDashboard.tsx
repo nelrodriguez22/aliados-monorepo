@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
+import { VersionGatePanel } from './VersionGatePanel';
 import { BroadcastPanel } from './BroadcastPanel';
 import { OficiosPanel } from './OficiosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
@@ -632,6 +633,7 @@ const AliadosDashboard = () => {
           <div className="flex flex-col gap-4">
             <FeatureFlagsPanel />
             <MaintenancePanel />
+            <VersionGatePanel />
             <BroadcastPanel />
             <OficiosPanel />
             <UsuariosPanel />
