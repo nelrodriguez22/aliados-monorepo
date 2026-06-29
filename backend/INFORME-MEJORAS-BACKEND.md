@@ -1,9 +1,34 @@
 # Informe de mejoras — Backend Aliados
 
 > Documento vivo para retomar entre sesiones. Marcá los TODOs a medida que se resuelven.
-> Última actualización: 2026-06-18
+> Última actualización: 2026-06-29
 
 Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket STOMP · SendGrid · FCM.
+
+---
+
+## 🗓️ Resumen sesión 2026-06-26 → 29
+
+**Qué se hizo (todo commiteado y pusheado a `main`):**
+
+1. **Dashboard admin — proveedores en tiempo real:** paginado de a 10 (`« ‹ N › »`) + filtro de búsqueda sobre todos los activos. (`02d5da0`)
+2. **Sistema de ponderación (scoring) — testeado y validado en prod:** 8 tests en `ProviderScoreServiceTest` (orden por calificación, proveedor nuevo neutral, cruces multifactor 1★-rápido vs 5★-lento, ambos 5★). Prueba E2E real con cuentas: confirmado que excelente (5★, score 70) le gana al medio (3★, 50). (`02d5da0`)
+3. **Bugs reales cazados y arreglados (validados en prod):**
+   - **Trabajo activo del proveedor** no aparecía tras aceptar: la query `['trabajo-activo']` tiene `enabled: isBusy` y `isBusy` no se actualizaba en vivo → se invalida `auth-profile` en `PROPUESTA_ACEPTADA`. (`99389ff`)
+   - **Aceptar propuesta** no iba al seguimiento (mostraba "no disponible"): rebote por cache `['trabajo', id]` stale → `setQueryData` con la respuesta. (`6f3217b`) + **back-button**: la propuesta consumida ahora redirige por estado en vez de cartel muerto + `replace:true`. (`a6c4182`)
+   - **`/api/admin/usuarios` 400** con `q` vacío (`lower(bytea)`): el `q` null reventaba en `LOWER(:q)` → viaja como `""`. (`00ae97b`)
+4. **Hallazgo de seguridad (review de commit) — fuga de datos entre usuarios:** el `api-cache` del SW (por-origen) cacheaba respuestas autenticadas → `/api` pasó a **network-only** + purga del cache legacy en arranque/logout. (`96a7ff7`)
+5. **Hardening del Service Worker (3 capas):** (1) api-cache → network-only; (2) `autoUpdate → prompt` con banner "Nueva versión disponible" + chequeo de updates 5min + `window.focus`; (3) **version-gate forzado** vía Remote Config + panel admin (`__APP_VERSION__`, `/version.json`, `VersionGate`, `AppVersionGateService`, `VersionGatePanel`). (`d8e0d85`, `ebecaf0`, `1fe782d`)
+6. **Payloads / redes lentas:** compresión gzip en el backend; slim de DTOs (`OficioResponseDTO` reemplaza la entidad embebida, `UserResponseDTO` sin `firebaseUid/createdAt/updatedAt`); **timeout de 15s en `apiClient`**; estados de **error con reintento** en `ClientDashboard`/`ProviderDashboard`; usuarios admin **on-demand**; `staleTime` en oficios admin. (`fe06bc2`, `e6407a8`, `fe043e5`, `f338c0a`)
+7. **UX admin:** tooltips de ayuda detallados en feature flags (por flag) y en cada sección del tab Estadísticas; variante `multiline` del `Tooltip`. (`2055148`)
+8. **Otros:** posición del toast; auto-online del proveedor al entrar al dashboard (interino hasta la feature de horario). (`eff4869`, `d2c5700`)
+
+**⚠️ Deploys pendientes para que tome efecto todo:**
+- **Backend (Railway):** compresión gzip, DTOs slim, endpoint `/api/admin/version-gate`, fix `lower(bytea)`. Hasta redeployar, esos cambios no están vivos.
+- **Remote Config:** el param `min_app_version` se crea con el primer PUT desde el `VersionGatePanel` (o a mano en la consola de Firebase).
+- FE se viene desplegando solo con cada push (Firebase Hosting via CI).
+
+**Qué resta** → ver "⏭️ Próxima sesión (pendiente)" abajo (features grandes: multi-oficio hasta 3, horario de trabajo; hallazgos de producto: validación de matrícula, ofertas dormidas sin costo en el score).
 
 ---
 
