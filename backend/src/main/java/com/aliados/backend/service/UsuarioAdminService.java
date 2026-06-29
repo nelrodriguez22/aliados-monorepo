@@ -20,7 +20,10 @@ public class UsuarioAdminService {
 
     @Transactional(readOnly = true)
     public List<User> buscar(String q, UserRole role) {
-        String query = (q == null || q.isBlank()) ? null : q.trim();
+        // "" (no null) cuando está vacío: un :q null en LOWER(CONCAT(...)) hace que
+        // Postgres infiera bytea ("function lower(bytea) does not exist"). Con "" el
+        // parámetro se tipa como texto y el branch `:q = ''` matchea todo.
+        String query = (q == null) ? "" : q.trim();
         return userRepository.searchUsuarios(query, role);
     }
 

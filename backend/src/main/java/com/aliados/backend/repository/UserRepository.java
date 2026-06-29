@@ -51,7 +51,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByRoleInAndActivoTrue(Collection<UserRole> roles);
 
     @Query("SELECT u FROM User u WHERE " +
-           "(:q IS NULL OR LOWER(u.nombre) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "(:q = '' OR LOWER(u.nombre) LIKE LOWER(CONCAT('%', :q, '%')) " +
            " OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))) " +
            "AND (:role IS NULL OR u.role = :role) " +
            "AND u.role <> com.aliados.backend.entity.UserRole.ADMIN " +
