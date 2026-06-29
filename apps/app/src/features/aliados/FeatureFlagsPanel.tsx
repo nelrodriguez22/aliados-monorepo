@@ -3,6 +3,33 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { apiClient } from '@/shared/lib/apiClient';
 import { type FeatureFlag, validateFlagValue } from './featureFlags';
+import { Tooltip } from '@/shared/components/ui/Tooltip';
+import { Info } from 'lucide-react';
+
+// Descripción detallada por flag (la `description` del backend es muy corta).
+// Se muestra en un tooltip al pasar el mouse por el ícono ℹ️ del renglón.
+const FLAG_DETAILS: Record<string, string> = {
+  limite_trabajos_default:
+    'Máximo de trabajos simultáneos (en curso + en cola) que puede tener un proveedor. Al llegar al tope deja de recibir nuevas ofertas hasta que libere uno.',
+  limite_trabajos_flete:
+    'Igual que el límite default pero para proveedores de fletes/mudanzas, que manejan otra cantidad de trabajos a la vez.',
+  mudanza_comision_porcentaje:
+    'Porcentaje que la plataforma cobra de comisión sobre el precio de una mudanza (ej. 10 = 10%).',
+  mudanza_ratio_tiempo:
+    'Acelerador de tiempos de mudanza para testing: comprime los tiempos reales por este factor. ⚠️ Debe estar en 1 (o desactivado) en producción real.',
+  score_peso_calificacion:
+    'Peso de la calificación (estrellas) en el score del proveedor, de 0 a 1. Junto con aceptación y velocidad suma ~1. Default 0.40. Subilo para que la calidad pese más al asignar trabajos.',
+  score_peso_aceptacion:
+    'Peso de la tasa de aceptación (de los trabajos que tomó, cuántos no canceló) en el score, de 0 a 1. Default 0.35.',
+  score_peso_velocidad:
+    'Peso de la velocidad de respuesta (qué tan rápido responde las ofertas) en el score, de 0 a 1. Default 0.25.',
+  score_tiempo_max_respuesta_min:
+    'Minutos de referencia para normalizar la velocidad: responder en 0 min = 100 puntos; tardar este valor o más = 0. Default 30.',
+  trabajo_oferta_timeout1_min:
+    'Minutos que el sistema espera la respuesta del proveedor antes de re-ofrecer el trabajo al siguiente mejor disponible. Default 30 (prod).',
+  trabajo_oferta_timeout2_min:
+    'Minutos que espera al 2º proveedor antes de cancelar el trabajo si nadie lo toma. Default 15 (prod).',
+};
 
 export function FeatureFlagsPanel() {
   const queryClient = useQueryClient();
@@ -59,7 +86,14 @@ function FlagRow({ flag, onSave }: { flag: FeatureFlag; onSave: (enabled: boolea
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0 dark:border-dark-border">
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-slate-800 dark:text-slate-100">{flag.key}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-medium text-slate-800 dark:text-slate-100">{flag.key}</p>
+          {FLAG_DETAILS[flag.key] && (
+            <Tooltip text={FLAG_DETAILS[flag.key]} position="top" multiline>
+              <Info className="h-3.5 w-3.5 shrink-0 cursor-help text-slate-400" />
+            </Tooltip>
+          )}
+        </div>
         {flag.description && <p className="text-xs text-slate-500">{flag.description}</p>}
       </div>
       <label className="flex items-center gap-2 text-sm">

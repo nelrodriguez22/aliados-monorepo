@@ -8,7 +8,7 @@ import { tw } from '@/shared/styles/design-system';
 import {
   Users, Wrench, Clock, CheckCircle, XCircle,
   FileText, Star, Loader2, Bug, ChevronDown, ExternalLink,
-  Wifi, AlertTriangle, TrendingUp, PowerOff, Truck, Search,
+  Wifi, AlertTriangle, TrendingUp, PowerOff, Truck, Search, Info,
 } from 'lucide-react';
 import { FeatureFlagsPanel } from './FeatureFlagsPanel';
 import { MaintenancePanel } from './MaintenancePanel';
@@ -110,8 +110,17 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function SectionCard({ title, icon: Icon, iconColor, badge, children }: {
-  title: string; icon: React.ElementType; iconColor: string; badge?: number; children: React.ReactNode;
+// Ícono de ayuda con tooltip detallado, para los títulos de sección del dashboard.
+function HelpIcon({ text }: { text: string }) {
+  return (
+    <Tooltip text={text} position="top" multiline>
+      <Info className="h-3.5 w-3.5 shrink-0 cursor-help text-slate-300 dark:text-slate-500" />
+    </Tooltip>
+  );
+}
+
+function SectionCard({ title, icon: Icon, iconColor, badge, help, children }: {
+  title: string; icon: React.ElementType; iconColor: string; badge?: number; help?: string; children: React.ReactNode;
 }) {
   return (
     <div className={`rounded-2xl border bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
@@ -119,6 +128,7 @@ function SectionCard({ title, icon: Icon, iconColor, badge, children }: {
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 ${iconColor}`} />
           <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>{title}</h2>
+          {help && <HelpIcon text={help} />}
         </div>
         {badge !== undefined && badge > 0 && (
           <span className="rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
@@ -333,9 +343,12 @@ const AliadosDashboard = () => {
 
           {/* Trabajos por oficio */}
           <div className={`rounded-2xl border p-6 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
-            <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-              Trabajos por oficio
-            </h2>
+            <div className="mb-4 flex items-center gap-1.5">
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                Trabajos por oficio
+              </h2>
+              <HelpIcon text="Cantidad de trabajos solicitados agrupados por tipo de oficio (electricista, plomero, etc.). Muestra qué servicios tienen más demanda; la barra y el % son sobre el total de trabajos." />
+            </div>
             <div className="space-y-3">
               {stats.trabajosPorOficio?.length > 0 ? (
                 stats.trabajosPorOficio.map((item: any) => {
@@ -362,9 +375,12 @@ const AliadosDashboard = () => {
 
           {/* Estado actual */}
           <div className={`rounded-2xl border p-6 bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border`}>
-            <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-              Estado actual
-            </h2>
+            <div className="mb-4 flex items-center gap-1.5">
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                Estado actual
+              </h2>
+              <HelpIcon text="Cuántos trabajos hay ahora mismo en cada estado: pendientes (esperando proveedor), propuestos (esperando respuesta del cliente) y en curso. Incluye la calificación promedio global de la plataforma." />
+            </div>
             <div className="space-y-2">
               {estadoRows.map(({ label, sub, value, bg, text }) => (
                 <div key={label} className={`flex items-center justify-between rounded-xl p-4 ${bg}`}>
@@ -402,6 +418,7 @@ const AliadosDashboard = () => {
             <div className="flex items-center gap-2 mb-4">
               <Truck className="h-4 w-4 text-sky-500" />
               <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Mudanzas</h2>
+              <HelpIcon text="Cantidad de mudanzas en cada estado de su flujo (pendiente, reservado, contrapropuesto, aceptado, en curso, finalizado, etc.)." />
             </div>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(mudanzas).map(([estado, count]) => {
@@ -422,6 +439,7 @@ const AliadosDashboard = () => {
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-4 w-4 text-green-500" />
               <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>Funnel de conversión</h2>
+              <HelpIcon text="Embudo de los trabajos: de las solicitudes recibidas, cuántas llegaron a propuesta y cuántas se completaron. La tasa de éxito compara completados vs (completados + cancelados)." />
             </div>
             <div className="space-y-3">
               {[
@@ -449,7 +467,8 @@ const AliadosDashboard = () => {
 
         {/* Proveedores en tiempo real */}
         <div className="mb-4">
-          <SectionCard title="Proveedores en tiempo real" icon={Wifi} iconColor="text-green-500">
+          <SectionCard title="Proveedores en tiempo real" icon={Wifi} iconColor="text-green-500" help="Proveedores conectados ahora mismo (online u ocupados), con su oficio y el trabajo actual si están trabajando. Podés forzar su desconexión si quedaron colgados. Se filtra y pagina de a 10.">
+
             {provError ? (
               <ErrorState compact message="No se pudo cargar la lista de proveedores." onRetry={() => refetchProv()} />
             ) : proveedoresActivos.length === 0 ? (
@@ -540,7 +559,8 @@ const AliadosDashboard = () => {
         {/* Calificaciones recientes + proveedores bajos */}
         <div className="grid gap-4 lg:grid-cols-2 mb-4">
 
-          <SectionCard title="Calificaciones recientes" icon={Star} iconColor="text-amber-400">
+          <SectionCard title="Calificaciones recientes" icon={Star} iconColor="text-amber-400" help="Últimas calificaciones que dejaron los clientes a los proveedores, con las estrellas y el comentario.">
+
             {ratingsError ? (
               <ErrorState compact message="No se pudieron cargar las calificaciones." onRetry={() => refetchRatings()} />
             ) : calificacionesRecientes.length === 0 ? (
@@ -563,7 +583,8 @@ const AliadosDashboard = () => {
             )}
           </SectionCard>
 
-          <SectionCard title="Proveedores con baja calificación" icon={AlertTriangle} iconColor="text-red-500" badge={proveedoresBajos.length}>
+          <SectionCard title="Proveedores con baja calificación" icon={AlertTriangle} iconColor="text-red-500" badge={proveedoresBajos.length} help="Proveedores con promedio de estrellas por debajo del umbral. Sirve para detectar a quiénes revisar o dar de baja. El número en rojo es la cantidad.">
+
             {ratingsError ? (
               <ErrorState compact message="No se pudieron cargar los datos." onRetry={() => refetchRatings()} />
             ) : proveedoresBajos.length === 0 ? (
@@ -596,7 +617,8 @@ const AliadosDashboard = () => {
         </div>
 
         {/* Bug reports */}
-        <SectionCard title="Bug reports" icon={Bug} iconColor="text-red-500" badge={bugReports.length}>
+        <SectionCard title="Bug reports" icon={Bug} iconColor="text-red-500" badge={bugReports.length} help="Reportes de errores que enviaron los usuarios desde la app. Podés filtrarlos por estado y cambiarles el estado (nuevo, en revisión, resuelto, etc.).">
+
           {bugError ? (
             <ErrorState compact message="No se pudieron cargar los reportes." onRetry={() => refetchBugs()} />
           ) : bugReports.length === 0 ? (
