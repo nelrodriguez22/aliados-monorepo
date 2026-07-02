@@ -58,10 +58,33 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Testcontainers: DB Postgres efímera para tests de integración (@ServiceConnection).
+	// Versiones gestionadas por el BOM de Spring Boot.
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:postgresql'
 }
 
+// Suite unitaria por defecto: NO corre los tests @Tag("integration") (que requieren Docker),
+// así queda verde en cualquier máquina/CI sin Docker.
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+}
+
+// Tests de integración (Testcontainers → requieren Docker corriendo). Correr con:
+//   ./gradlew integrationTest
+tasks.register('integrationTest', Test) {
+	description = 'Corre los tests @Tag("integration") (requieren Docker).'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	shouldRunAfter tasks.named('test')
 }
 
 tasks.named('bootJar') {
