@@ -26,10 +26,14 @@ export async function fetchProfile(
     });
 
     if (res.status === 401 || res.status === 403) throw new ProfileError('unauthorized');
+    // 404 defensivo/legacy: el backend ahora responde 200 { registered:false } para
+    // usuarios autenticados aún no registrados (evita el 404 en la consola del navegador).
     if (res.status === 404) throw new ProfileError('not-registered');
     if (!res.ok) throw new ProfileError('server', `Server error: ${res.status}`);
 
-    return await res.json();
+    const data = await res.json();
+    if (data && data.registered === false) throw new ProfileError('not-registered');
+    return data;
   } catch (err) {
     if (err instanceof ProfileError) throw err;
     if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') {

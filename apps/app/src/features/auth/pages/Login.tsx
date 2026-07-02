@@ -89,18 +89,21 @@ export function Login() {
         return;
       }
 
-      // ¿Existe en el backend? 404 → usuario nuevo → onboarding.
+      // ¿Existe en el backend? El backend responde 200 { registered:false } para
+      // el usuario nuevo (sin registrar) → onboarding.
       const token = await cred.user.getIdToken();
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.status === 404) {
-        navigate(ROUTES.ONBOARDING);
-        return;
-      }
       if (!res.ok) {
         toast.error('No se pudo iniciar sesión. Intentá de nuevo.');
+        return;
+      }
+
+      const perfil = await res.json();
+      if (perfil?.registered === false) {
+        navigate(ROUTES.ONBOARDING);
         return;
       }
 

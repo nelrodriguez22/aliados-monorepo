@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -132,6 +133,15 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         return mapToDTO(user);
+    }
+
+    /**
+     * Variante no-lanzante de {@link #getUserByFirebaseUid}: devuelve Optional vacío
+     * cuando el usuario no existe en la DB (autenticado en Firebase, aún sin registrar).
+     * La usa GET /me para responder 200 { registered:false } en vez de 404.
+     */
+    public Optional<UserResponseDTO> findUserByFirebaseUid(String firebaseUid) {
+        return userRepository.findByFirebaseUid(firebaseUid).map(this::mapToDTO);
     }
 
     /**

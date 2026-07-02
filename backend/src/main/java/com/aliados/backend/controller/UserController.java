@@ -73,8 +73,15 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser(Authentication authentication) {
         String uid = authentication.getName();
-        UserResponseDTO user = userService.getUserByFirebaseUid(uid);
-        return ResponseEntity.ok(user);
+        // 200 siempre para autenticados: si aún no existe en la DB (pre-onboarding),
+        // devolvemos { registered:false } en vez de 404 (evita el 404 en la consola).
+        UserResponseDTO body = userService.findUserByFirebaseUid(uid)
+                .orElseGet(() -> {
+                    UserResponseDTO nuevo = new UserResponseDTO();
+                    nuevo.setRegistered(false);
+                    return nuevo;
+                });
+        return ResponseEntity.ok(body);
     }
 
     @PatchMapping("/me/status")

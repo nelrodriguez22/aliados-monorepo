@@ -32,7 +32,22 @@ describe('fetchProfile', () => {
     });
   });
 
-  it('404 → ProfileError kind=not-registered', async () => {
+  it('200 con { registered: false } → ProfileError kind=not-registered', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { registered: false }));
+    await expect(fetchProfile(API, 'tok', 5000, fetchMock as any)).rejects.toMatchObject({
+      kind: 'not-registered',
+    });
+  });
+
+  it('200 con { registered: true, ... } → devuelve el body', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(200, { registered: true, nombre: 'Ana', role: 'CLIENT' }),
+    );
+    const data = await fetchProfile(API, 'tok', 5000, fetchMock as any);
+    expect(data).toMatchObject({ nombre: 'Ana', role: 'CLIENT' });
+  });
+
+  it('404 → ProfileError kind=not-registered (defensivo/legacy)', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(404, {}));
     await expect(fetchProfile(API, 'tok', 5000, fetchMock as any)).rejects.toMatchObject({
       kind: 'not-registered',
