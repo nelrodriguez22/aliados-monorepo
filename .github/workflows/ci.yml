@@ -54,7 +54,7 @@ jobs:
         run: pnpm --filter aliados-app test
 
   backend:
-    name: Backend (compile)
+    name: Backend (test)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -67,11 +67,15 @@ jobs:
           java-version: 21
           cache: gradle
 
-      # Compila main + test sources (caza errores de compilación y wiring).
-      # NO corre `./gradlew test` todavía: el único test es @SpringBootTest, que
-      # levanta el contexto completo y necesita Postgres + Firebase. Para correrlo
-      # de verdad hace falta Testcontainers (o un perfil de test con DB efímera) —
-      # pendiente como tarea aparte.
-      - name: Compile (main + tests)
+      # Suite unitaria (compila main + test y corre los tests sin @Tag("integration")).
+      # No necesita DB ni secrets: son tests de servicio con Mockito.
+      - name: Unit tests
         working-directory: backend
-        run: ./gradlew compileJava compileTestJava --no-daemon
+        run: ./gradlew test --no-daemon
+
+      # Tests de integración con Testcontainers (Postgres real efímero): verifican que
+      # las migraciones Flyway apliquen y que las entidades JPA validen contra el esquema.
+      # Los runners ubuntu-latest de GitHub traen Docker, así que Testcontainers corre solo.
+      - name: Integration tests (Testcontainers)
+        working-directory: backend
+        run: ./gradlew integrationTest --no-daemon
