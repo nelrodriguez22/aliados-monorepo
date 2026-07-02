@@ -60,8 +60,10 @@ class UsuarioAdminServiceTest {
     }
 
     @Test
-    void buscar_normalizaQEnBlancoANull() {
+    void buscar_normalizaQEnBlancoAStringVacio() {
+        // Blanco → "" (no null): un :q null en LOWER(CONCAT(...)) hace que Postgres
+        // infiera bytea ("function lower(bytea) does not exist"). Ver UsuarioAdminService#buscar.
         service.buscar("  ", UserRole.CLIENT);
-        verify(userRepository).searchUsuarios(null, UserRole.CLIENT);
+        verify(userRepository).searchUsuarios("", UserRole.CLIENT);
     }
 }
