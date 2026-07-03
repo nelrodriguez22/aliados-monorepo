@@ -6,9 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -94,4 +96,12 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
 
     @Query("SELECT t.oficio.nombre, t.oficio.icono, COUNT(t) FROM Trabajo t GROUP BY t.oficio.nombre, t.oficio.icono ORDER BY COUNT(t) DESC")
     List<Object[]> countTrabajosGroupByOficio();
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query("""
+        UPDATE Trabajo t SET t.estado = com.aliados.backend.entity.TrabajoEstado.PROPUESTO
+        WHERE t.id = :id AND t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+        """)
+    int tomarTrabajoSiPendiente(@Param("id") Long id);
 }

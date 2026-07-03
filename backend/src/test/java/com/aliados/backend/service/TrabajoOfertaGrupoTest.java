@@ -23,7 +23,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.aliados.backend.entity.ResultadoOferta;
+import com.aliados.backend.exception.ForbiddenException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -102,5 +106,50 @@ class TrabajoOfertaGrupoTest {
         // top 2 → 2 ofertas guardadas + 2 push
         verify(trabajoOfertaRepository, times(2)).save(any(TrabajoOferta.class));
         verify(notificacionService, times(2)).enviarNotificacion(anyString(), any(), anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
+    void proponer_ganaLaCarrera_marcaPropusoYNotificaCliente() {
+        User prov = proveedor(10L);
+        when(userRepository.findByFirebaseUid("uid-10")).thenReturn(Optional.of(prov));
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta oferta = new TrabajoOferta();
+        oferta.setProveedor(prov); oferta.setTrabajo(t); oferta.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 10L)).thenReturn(Optional.of(oferta));
+        when(trabajoRepository.tomarTrabajoSiPendiente(t.getId())).thenReturn(1);
+
+        trabajoService.proponerTrabajo(t.getId(), "uid-10", 20, -32.9, -60.6, new java.math.BigDecimal("15000"));
+
+        assertThat(oferta.getResultado()).isEqualTo(ResultadoOferta.PROPUSO);
+        assertThat(oferta.getRespondioAt()).isNotNull();
+        verify(notificacionService).enviarNotificacion(eq(t.getCliente().getFirebaseUid()), any(), anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
+    void proponer_pierdeLaCarrera_lanza409() {
+        User prov = proveedor(11L);
+        when(userRepository.findByFirebaseUid("uid-11")).thenReturn(Optional.of(prov));
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta oferta = new TrabajoOferta();
+        oferta.setProveedor(prov); oferta.setTrabajo(t); oferta.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 11L)).thenReturn(Optional.of(oferta));
+        when(trabajoRepository.tomarTrabajoSiPendiente(t.getId())).thenReturn(0);
+
+        assertThatThrownBy(() -> trabajoService.proponerTrabajo(t.getId(), "uid-11", 20, null, null, null))
+                .hasMessageContaining("ya no está disponible");
+    }
+
+    @Test
+    void proponer_sinOferta_lanzaForbidden() {
+        User prov = proveedor(12L);
+        when(userRepository.findByFirebaseUid("uid-12")).thenReturn(Optional.of(prov));
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 12L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> trabajoService.proponerTrabajo(t.getId(), "uid-12", 20, null, null, null))
+                .isInstanceOf(ForbiddenException.class);
     }
 }

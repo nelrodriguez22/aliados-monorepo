@@ -596,19 +596,19 @@ public class TrabajoService {
                                               Integer tiempoEstimadoMinutos, Double latitud, Double longitud, BigDecimal tarifaVisita) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
-
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
                 .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
-        if (!trabajo.getEstado().equals(TrabajoEstado.PENDIENTE)) {
+        TrabajoOferta oferta = trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajoId, proveedor.getId())
+                .filter(o -> o.getResultado() == ResultadoOferta.OFRECIDA)
+                .orElseThrow(() -> new ForbiddenException("No estás asignado a este trabajo"));
+
+        // Lock atómico: solo uno de los N ofertados flipea PENDIENTE→PROPUESTO.
+        if (trabajoRepository.tomarTrabajoSiPendiente(trabajoId) == 0) {
             throw new RuntimeException("El trabajo ya no está disponible");
         }
+        trabajo = trabajoRepository.findById(trabajoId).orElseThrow();
 
-        if (trabajo.getProveedorNotificadoId() == null || !trabajo.getProveedorNotificadoId().equals(proveedor.getId())) {
-            throw new ForbiddenException("No estás asignado a este trabajo");
-        }
-
-        trabajo.setEstado(TrabajoEstado.PROPUESTO);
         trabajo.setProveedor(proveedor);
         trabajo.setTiempoEstimadoMinutos(tiempoEstimadoMinutos);
         BigDecimal tarifaEfectiva = tarifaVisita != null ? tarifaVisita : new BigDecimal("15000");
@@ -618,10 +618,12 @@ public class TrabajoService {
             trabajo.setLatitudProveedor(latitud);
             trabajo.setLongitudProveedor(longitud);
         }
+        trabajoRepository.save(trabajo);
 
-        trabajo = trabajoRepository.save(trabajo);
+        oferta.setResultado(ResultadoOferta.PROPUSO);
+        oferta.setRespondioAt(LocalDateTime.now());
+        trabajoOfertaRepository.save(oferta);
 
-        // Formato AR: 15000 → "15.000". Usa la tarifa real, no un texto fijo.
         String tarifaFmt = NumberFormat.getIntegerInstance(Locale.of("es", "AR")).format(tarifaEfectiva);
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
@@ -629,8 +631,7 @@ public class TrabajoService {
                 "Propuesta de Profesional",
                 proveedor.getNombre() + " puede llegar en " + tiempoEstimadoMinutos + " minutos. Tarifa de visita: $" + tarifaFmt,
                 trabajo.getId(),
-                "/cliente/propuesta/" + trabajo.getId()
-        );
+                "/cliente/propuesta/" + trabajo.getId());
 
         return mapToDTO(trabajo);
     }
