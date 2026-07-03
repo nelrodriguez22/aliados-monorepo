@@ -203,5 +203,43 @@ class TrabajoOfertaGrupoTest {
         assertThat(ofertaRechazado.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
         // re-notifica al restante del grupo (no baja de grupo)
         verify(notificacionService).enviarNotificacion(eq(proveedor(11L).getFirebaseUid()), any(), anyString(), anyString(), anyLong(), anyString());
+        // el proveedor rechazado NO recibe re-notificación de NUEVO_TRABAJO
+        verify(notificacionService, never()).enviarNotificacion(
+                eq(rechazado.getFirebaseUid()), eq(TipoNotificacion.NUEVO_TRABAJO),
+                anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
+    void rechazar_sinRestoDelGrupo_ofreceGrupoSiguiente() {
+        Trabajo t = pendiente(0, null);
+        t.setEstado(TrabajoEstado.PROPUESTO);
+        User rechazado = proveedor(10L); t.setProveedor(rechazado);
+        when(userRepository.findByFirebaseUid("uid-cli")).thenReturn(Optional.of(t.getCliente()));
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta ofertaRechazado = ofrecida(t, rechazado);
+        ofertaRechazado.setGrupo(1); // necesario para que ofrecerSiguienteGrupo pueda calcular grupo+1
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 10L))
+                .thenReturn(Optional.of(ofertaRechazado));
+        // No quedan OFRECIDA → rama ofrecerSiguienteGrupo
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(t.getId(), ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of());
+        // mocks para ofrecerSiguienteGrupo
+        when(featureFlagService.getNumber(eq("trabajo_oferta_grupo_tamano"), anyDouble())).thenReturn(10.0);
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(10.0);
+        User nuevo = proveedor(12L);
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>(List.of(nuevo)));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(trabajoOfertaRepository.findByTrabajoId(t.getId())).thenReturn(List.of(ofertaRechazado));
+
+        trabajoService.rechazarPropuesta(t.getId(), "uid-cli");
+
+        assertThat(t.getEstado()).isEqualTo(TrabajoEstado.PENDIENTE);
+        // se guardó una nueva oferta OFRECIDA para el proveedor 12L
+        verify(trabajoOfertaRepository).save(argThat(o ->
+                o.getProveedor().getId().equals(12L) && o.getResultado() == ResultadoOferta.OFRECIDA));
+        // se notificó al nuevo proveedor 12L
+        verify(notificacionService).enviarNotificacion(eq("uid-12"), eq(TipoNotificacion.NUEVO_TRABAJO),
+                anyString(), anyString(), anyLong(), anyString());
     }
 }
