@@ -748,22 +748,24 @@ public class TrabajoService {
         if (ChronoUnit.MINUTES.between(ref, LocalDateTime.now()) < intervaloMin) {
             return; // la ventana del grupo actual sigue abierta
         }
-        // El grupo durmió: finalizar sus ofertas y avanzar.
-        for (TrabajoOferta o : grupoActual) {
-            o.setResultado(ResultadoOferta.DURMIO);
-            trabajoOfertaRepository.save(o);
+        // El grupo durmió: UPDATE atómico condicional — nunca pisa un PROPUSO.
+        // clearAutomatically=true deja la entidad t detached; re-leer estado fresco.
+        trabajoOfertaRepository.marcarGrupoDurmioSiPendiente(trabajoId);
+        Trabajo fresco = trabajoRepository.findById(trabajoId).orElse(null);
+        if (fresco == null || fresco.getEstado() != TrabajoEstado.PENDIENTE) {
+            return; // un propose ganó la carrera; ese flujo ya gestiona las ofertas
         }
-        boolean ofrecio = ofrecerSiguienteGrupo(t);
+        boolean ofrecio = ofrecerSiguienteGrupo(fresco);
         if (ofrecio) {
-            notificarCliente(t, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
+            notificarCliente(fresco, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
                     "Seguimos buscando",
-                    "Seguimos buscando un profesional para tu pedido de " + t.getOficio().getNombre() + ".");
+                    "Seguimos buscando un profesional para tu pedido de " + fresco.getOficio().getNombre() + ".");
         } else {
-            aplicarCancelacion(t, "No encontramos un profesional disponible");
-            notificarCliente(t, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
+            aplicarCancelacion(fresco, "No encontramos un profesional disponible");
+            notificarCliente(fresco, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
                     "Pedido cancelado",
                     "No encontramos un profesional disponible. Cancelamos tu pedido de "
-                            + t.getOficio().getNombre() + "; podés volver a intentarlo.");
+                            + fresco.getOficio().getNombre() + "; podés volver a intentarlo.");
         }
     }
 

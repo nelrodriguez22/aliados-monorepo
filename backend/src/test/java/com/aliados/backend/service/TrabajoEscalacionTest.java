@@ -94,10 +94,8 @@ class TrabajoEscalacionTest {
 
         trabajoService.escalarUnTrabajo(t.getId(), 5);
 
-        assertThat(o1.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
-        assertThat(o2.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
-        // Persiste el marcado DURMIO de las 2 ofertas del grupo que durmió.
-        verify(trabajoOfertaRepository, times(2)).save(argThat(o -> o.getResultado() == ResultadoOferta.DURMIO));
+        // El UPDATE atómico condicional se emitió (sustituye el loop).
+        verify(trabajoOfertaRepository).marcarGrupoDurmioSiPendiente(t.getId());
         // Avanzó de grupo → avisa al cliente que seguimos buscando (efecto del path if(ofrecio)).
         verify(notificacionService).enviarNotificacion(eq(t.getCliente().getFirebaseUid()),
                 eq(TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR), anyString(), anyString(), any(), any());
@@ -237,6 +235,35 @@ class TrabajoEscalacionTest {
 
         verifyNoInteractions(notificacionService);
         verify(trabajoRepository, never()).save(any());
+    }
+
+    // ── Test de carrera scheduler-vs-propose ────────────────────────────────
+
+    @Test
+    void escalar_perdioLaCarreraContraPropose_noAvanza() {
+        // Arrange: primer findById → PENDIENTE; re-lectura → ya PROPUESTO
+        Trabajo pendienteT = pendiente(0, LocalDateTime.now().minusMinutes(6));
+        Trabajo propuestoT = pendiente(0, LocalDateTime.now().minusMinutes(6));
+        propuestoT.setEstado(TrabajoEstado.PROPUESTO);
+
+        when(trabajoRepository.findById(100L))
+                .thenReturn(Optional.of(pendienteT), Optional.of(propuestoT));
+
+        // La oferta OFRECIDA tiene ofrecidoAt de hace 6 min → ventana (intervalo=5) vencida
+        TrabajoOferta o = ofrecida(pendienteT, proveedor(10L));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(o));
+
+        trabajoService.escalarUnTrabajo(100L, 5);
+
+        // El UPDATE condicional se llamó (el DB decidirá si afecta filas)
+        verify(trabajoOfertaRepository).marcarGrupoDurmioSiPendiente(100L);
+        // Pero el flujo NO avanzó: ni busca proveedores ni notifica al cliente
+        verify(userRepository, never()).findProveedoresDisponibles(any(), any(), anyInt());
+        verify(notificacionService, never()).enviarNotificacion(
+                any(), eq(TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR), any(), any(), any(), any());
+        verify(notificacionService, never()).enviarNotificacion(
+                any(), eq(TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR), any(), any(), any(), any());
     }
 
     @Test
