@@ -1,6 +1,8 @@
 package com.aliados.backend.service;
 
+import com.aliados.backend.entity.ResultadoOferta;
 import com.aliados.backend.entity.User;
+import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import static org.mockito.Mockito.when;
 class ProviderScoreServiceTest {
 
     @Mock TrabajoRepository trabajoRepository;
+    @Mock TrabajoOfertaRepository trabajoOfertaRepository;
     @Mock FeatureFlagService featureFlagService;
     @InjectMocks ProviderScoreService service;
 
@@ -31,31 +34,31 @@ class ProviderScoreServiceTest {
 
     @Test
     void combinarScore_pesosPorDefecto() {
-        // 80*0.40 + 60*0.35 + 40*0.25 = 32 + 21 + 10 = 63
-        assertThat(service.combinarScore(80, 60, 40, 0.40, 0.35, 0.25)).isCloseTo(63.0, within(1e-9));
+        // 80*0.40 + 60*0.35 + 40*0.25 + 0*0 = 32 + 21 + 10 + 0 = 63 (w4=0 no aporta)
+        assertThat(service.combinarScore(80, 60, 40, 0, 0.40, 0.35, 0.25, 0)).isCloseTo(63.0, within(1e-9));
     }
 
     @Test
     void combinarScore_pesosQueNoSuman1_seNormalizan() {
-        // 1/1/1 → cada uno cuenta 1/3 → (80 + 60 + 40) / 3 = 60
-        assertThat(service.combinarScore(80, 60, 40, 1, 1, 1)).isCloseTo(60.0, within(1e-9));
+        // 1/1/1/0 → (80 + 60 + 40 + 0) / 3 = 60
+        assertThat(service.combinarScore(80, 60, 40, 0, 1, 1, 1, 0)).isCloseTo(60.0, within(1e-9));
     }
 
     @Test
     void combinarScore_pesosEnCero_usaDefaults() {
-        // suma <= 0 → guard usa 0.40/0.35/0.25 → 63
-        assertThat(service.combinarScore(80, 60, 40, 0, 0, 0)).isCloseTo(63.0, within(1e-9));
+        // suma <= 0 → guard usa 0.40/0.35/0.25/0.20, suma=1.20
+        // 80*(0.40/1.20) + 60*(0.35/1.20) + 40*(0.25/1.20) + 0*(0.20/1.20) = 52.5
+        assertThat(service.combinarScore(80, 60, 40, 0, 0, 0, 0, 0)).isCloseTo(52.5, within(1e-9));
     }
 
     // ---------------------------------------------------------------------
     // Escenario de ponderación: 3 proveedores que SOLO difieren en calificación.
     //
-    // Sin historial de propuestas/respuestas, aceptación y velocidad quedan en
-    // 50 neutral (stubeamos 0 propuestas y null en tiempos de respuesta), así
-    // que el orden lo decide la calificación:
-    //   5★ → cal 100 → 100*0.4 + 50*0.35 + 50*0.25 = 70
-    //   3★ → cal  50 →  50*0.4 + 50*0.35 + 50*0.25 = 50
-    //   1★ → cal   0 →   0*0.4 + 50*0.35 + 50*0.25 = 30
+    // Sin historial, aceptación, velocidad y respuestaOfertas quedan en 50 neutral.
+    // Pesos por defecto: 0.40/0.35/0.25/0.20, suma=1.20.
+    //   5★ → cal 100 → (100*0.40 + 50*0.35 + 50*0.25 + 50*0.20) / 1.20 = 80/1.20 = 66.67
+    //   3★ → cal  50 →  50 * 1.20 / 1.20 = 50
+    //   1★ → cal   0 → (0 + 17.5 + 12.5 + 10) / 1.20 = 40/1.20 = 33.33
     // ---------------------------------------------------------------------
 
     /**
@@ -82,9 +85,9 @@ class ProviderScoreServiceTest {
     @Test
     void calcularScore_segunCalificacion_excelenteMedioMalo() {
         usarPesosPorDefectoSinHistorial();
-        assertThat(service.calcularScore(proveedor(1, "Excelente", 5.0, 10))).isCloseTo(70.0, within(1e-9));
+        assertThat(service.calcularScore(proveedor(1, "Excelente", 5.0, 10))).isCloseTo(66.67, within(0.01));
         assertThat(service.calcularScore(proveedor(2, "Medio", 3.0, 10))).isCloseTo(50.0, within(1e-9));
-        assertThat(service.calcularScore(proveedor(3, "Malo", 1.0, 10))).isCloseTo(30.0, within(1e-9));
+        assertThat(service.calcularScore(proveedor(3, "Malo", 1.0, 10))).isCloseTo(33.33, within(0.01));
     }
 
     @Test
@@ -120,21 +123,22 @@ class ProviderScoreServiceTest {
                 .thenAnswer(inv -> (double) inv.getArgument(1));
 
         // Malo (1★) pero acepta 10/10 (aceptación 100) y responde en 3 min (velocidad 90).
+        // respuestaOfertas = 50 (neutral, sin datos). Pesos 0.40/0.35/0.25/0.20, suma=1.20.
         User maloRapido = proveedor(1, "Malo rápido", 1.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(1L)).thenReturn(3.0);
-        // 0*0.4 + 100*0.35 + 90*0.25 = 0 + 35 + 22.5 = 57.5
+        // (0*0.40 + 100*0.35 + 90*0.25 + 50*0.20) / 1.20 = 67.5/1.20 = 56.25
 
         // Excelente (5★) pero acepta 1/10 (aceptación 10) y responde en 27 min (velocidad 10).
         User excelenteLento = proveedor(2, "Excelente lento", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(2L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(2L)).thenReturn(1L);
         when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(2L)).thenReturn(27.0);
-        // 100*0.4 + 10*0.35 + 10*0.25 = 40 + 3.5 + 2.5 = 46
+        // (100*0.40 + 10*0.35 + 10*0.25 + 50*0.20) / 1.20 = 56/1.20 = 46.67
 
-        assertThat(service.calcularScore(maloRapido)).isCloseTo(57.5, within(1e-9));
-        assertThat(service.calcularScore(excelenteLento)).isCloseTo(46.0, within(1e-9));
+        assertThat(service.calcularScore(maloRapido)).isCloseTo(56.25, within(1e-9));
+        assertThat(service.calcularScore(excelenteLento)).isCloseTo(46.67, within(0.01));
 
         // Pese a la peor calificación, el malo rápido queda primero.
         List<User> ordenados = service.ordenarPorScore(new ArrayList<>(List.of(excelenteLento, maloRapido)));
@@ -147,24 +151,57 @@ class ProviderScoreServiceTest {
                 .thenAnswer(inv -> (double) inv.getArgument(1));
 
         // 5★ que acepta 10/10 (aceptación 100) y responde en 3 min (velocidad 90).
+        // respuestaOfertas = 50 (neutral). Pesos 0.40/0.35/0.25/0.20, suma=1.20.
         User rapido = proveedor(1, "5★ rápido", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(1L)).thenReturn(3.0);
-        // 100*0.4 + 100*0.35 + 90*0.25 = 40 + 35 + 22.5 = 97.5
+        // (100*0.40 + 100*0.35 + 90*0.25 + 50*0.20) / 1.20 = 107.5/1.20 = 89.58
 
         // 5★ que acepta 1/10 (aceptación 10) y responde en 27 min (velocidad 10).
         User lento = proveedor(2, "5★ lento", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(2L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(2L)).thenReturn(1L);
         when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(2L)).thenReturn(27.0);
-        // 100*0.4 + 10*0.35 + 10*0.25 = 40 + 3.5 + 2.5 = 46
+        // (100*0.40 + 10*0.35 + 10*0.25 + 50*0.20) / 1.20 = 56/1.20 = 46.67
 
         // A igual calificación (5★), la calificación empata y desempatan aceptación + velocidad.
-        assertThat(service.calcularScore(rapido)).isCloseTo(97.5, within(1e-9));
-        assertThat(service.calcularScore(lento)).isCloseTo(46.0, within(1e-9));
+        assertThat(service.calcularScore(rapido)).isCloseTo(89.58, within(0.01));
+        assertThat(service.calcularScore(lento)).isCloseTo(46.67, within(0.01));
 
         List<User> ordenados = service.ordenarPorScore(new ArrayList<>(List.of(lento, rapido)));
         assertThat(ordenados).containsExactly(rapido, lento);
+    }
+
+    // ---------------------------------------------------------------------
+    // 4º factor: tasa de respuesta a ofertas
+    // ---------------------------------------------------------------------
+
+    @Test
+    void combinarScore_conCuatroPesos_normaliza() {
+        // 4 factores en 100, pesos iguales → 100
+        double s = service.combinarScore(100, 100, 100, 100, 0.25, 0.25, 0.25, 0.25);
+        assertThat(s).isEqualTo(100.0);
+    }
+
+    @Test
+    void combinarScore_sumaPesosCero_usaDefaults() {
+        double s = service.combinarScore(100, 0, 0, 0, 0, 0, 0, 0);
+        // defaults 0.40/0.35/0.25/0.20 → 100*0.40/1.20 = 33.33
+        assertThat(s).isCloseTo(33.33, within(0.1));
+    }
+
+    @Test
+    void tasaRespuestaOfertas_sinDatos_neutral50() {
+        when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.PROPUSO)).thenReturn(0L);
+        when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.DURMIO)).thenReturn(0L);
+        assertThat(service.calcularTasaRespuestaOfertas(7L)).isEqualTo(50.0);
+    }
+
+    @Test
+    void tasaRespuestaOfertas_calcula() {
+        when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.PROPUSO)).thenReturn(3L);
+        when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.DURMIO)).thenReturn(1L);
+        assertThat(service.calcularTasaRespuestaOfertas(7L)).isEqualTo(75.0); // 3/(3+1)
     }
 }
