@@ -6,9 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -36,10 +38,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     List<Trabajo> findByEstadoAndOficioId(TrabajoEstado estado, Long oficioId);
 
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
-    List<Trabajo> findByEstadoAndOficioIdAndProveedorNotificadoId(
-            TrabajoEstado estado, Long oficioId, Long proveedorNotificadoId);
-
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, TrabajoEstado estado);
 
     // Historial del proveedor paginado (#20-B). El orden lo define el Pageable (completedAt DESC).
@@ -49,9 +47,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")
     Trabajo findTrabajoEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
-
-    @Query("SELECT t FROM Trabajo t WHERE t.estado = 'PENDIENTE' AND t.proveedorNotificadoId IS NULL AND t.oficio.id = :oficioId")
-    List<Trabajo> findTrabajosPendientesSinAsignar(@Param("oficioId") Long oficioId);
 
     Long countByProveedorIdAndEstado(Long proveedorId, TrabajoEstado estado);
 
@@ -70,10 +65,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'EN_COLA', 'COMPLETADO')")
     long countPropuestasAceptadasByProveedorId(@Param("proveedorId") Long proveedorId);
 
-    // Scoring: tiempo promedio de respuesta en minutos (entre notificadoAt y propuestoAt)
-    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (propuesto_at - notificado_at)) / 60) FROM trabajos WHERE proveedor_id = :proveedorId AND propuesto_at IS NOT NULL AND notificado_at IS NOT NULL", nativeQuery = true)
-    Double getPromedioTiempoRespuestaMinutosByProveedorId(@Param("proveedorId") Long proveedorId);
-
     long countByEstado(TrabajoEstado estado);
 
     List<Trabajo> findByEstado(TrabajoEstado estado);
@@ -81,6 +72,33 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @Query("SELECT t FROM Trabajo t WHERE t.estado = 'PENDIENTE' AND t.createdAt < :umbral ORDER BY t.createdAt ASC")
     List<Trabajo> findTrabajosVarados(@Param("umbral") java.time.LocalDateTime umbral);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
+    @Query("""
+        SELECT t FROM Trabajo t
+        JOIN TrabajoOferta o ON o.trabajo = t
+        WHERE t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+          AND t.oficio.id = :oficioId
+          AND o.proveedor.id = :proveedorId
+          AND o.resultado = com.aliados.backend.entity.ResultadoOferta.OFRECIDA
+        """)
+    List<Trabajo> findPendientesOfrecidosA(@Param("proveedorId") Long proveedorId, @Param("oficioId") Long oficioId);
+
     @Query("SELECT t.oficio.nombre, t.oficio.icono, COUNT(t) FROM Trabajo t GROUP BY t.oficio.nombre, t.oficio.icono ORDER BY COUNT(t) DESC")
     List<Object[]> countTrabajosGroupByOficio();
+
+    @Query("""
+        SELECT t FROM Trabajo t
+        WHERE t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+          AND t.oficio.id = :oficioId
+          AND NOT EXISTS (SELECT 1 FROM TrabajoOferta o WHERE o.trabajo = t AND o.proveedor.id = :proveedorId)
+        """)
+    List<Trabajo> findPendientesSinOfertaPara(@Param("oficioId") Long oficioId, @Param("proveedorId") Long proveedorId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query("""
+        UPDATE Trabajo t SET t.estado = com.aliados.backend.entity.TrabajoEstado.PROPUESTO
+        WHERE t.id = :id AND t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+        """)
+    int tomarTrabajoSiPendiente(@Param("id") Long id);
 }

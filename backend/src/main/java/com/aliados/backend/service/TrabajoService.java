@@ -8,6 +8,7 @@ import com.aliados.backend.entity.*;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.aliados.backend.repository.OficioRepository;
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -63,6 +65,9 @@ public class TrabajoService {
 
     @Autowired
     private FeatureFlagService featureFlagService;
+
+    @Autowired
+    private TrabajoOfertaRepository trabajoOfertaRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
@@ -106,7 +111,7 @@ public class TrabajoService {
 
         trabajo = trabajoRepository.save(trabajo);
 
-        notificarProveedorDisponible(trabajo);
+        ofrecerSiguienteGrupo(trabajo);
 
         return mapToDTO(trabajo);
     }
@@ -119,13 +124,9 @@ public class TrabajoService {
             throw new RuntimeException("El proveedor no tiene un oficio asignado");
         }
 
-        // Filtra en SQL por (estado, oficio, proveedor notificado) en vez de traer
-        // todos los PENDIENTE del oficio y descartar en memoria.
-        List<Trabajo> trabajos = trabajoRepository.findByEstadoAndOficioIdAndProveedorNotificadoId(
-                TrabajoEstado.PENDIENTE,
-                proveedor.getOficio().getId(),
-                proveedor.getId()
-        );
+        // Filtra por trabajos donde el proveedor tiene una oferta OFRECIDA (nuevo modelo de grupos).
+        List<Trabajo> trabajos = trabajoRepository.findPendientesOfrecidosA(
+                proveedor.getId(), proveedor.getOficio().getId());
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
@@ -153,12 +154,9 @@ public class TrabajoService {
             throw new RuntimeException("El trabajo ya no está disponible");
         }
 
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
-        trabajoRepository.save(trabajo);
-
-        // Excluir a quien rechaza para no re-ofrecérselo de inmediato (loop con un solo proveedor).
-        notificarProveedorDisponible(trabajo, proveedor.getId());
+        trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajoId, proveedor.getId())
+                .ifPresent(o -> { o.setResultado(ResultadoOferta.DURMIO); trabajoOfertaRepository.save(o); });
+        // El trabajo sigue PENDIENTE con el resto del grupo; el scheduler avanza si nadie responde.
     }
 
     @Transactional
@@ -273,52 +271,50 @@ public class TrabajoService {
         return new PagedTrabajosResponse(content, page.hasNext(), page.getTotalElements(), sinCalificar);
     }
 
-    private void notificarProveedorDisponible(Trabajo trabajo) {
-        notificarProveedorDisponible(trabajo, null);
-    }
-
     /**
-     * Re-ofrece el trabajo al mejor proveedor disponible.
-     * @param excluirProveedorId si no es null, ese proveedor queda fuera del re-ofrecimiento
-     *        (ej. el que acaba de rechazar). Si tras excluirlo no queda nadie, el trabajo
-     *        queda PENDIENTE sin notificar (no reaparece en el dashboard de quien rechazó).
+     * Ofrece el trabajo al siguiente grupo de proveedores por score, excluyendo a los ya
+     * ofertados. Inserta una fila OFRECIDA por proveedor y notifica. Si no queda nadie nuevo,
+     * no hace nada (el caller decide cancelar).
+     * @implNote Package-private: hace N writes sin @Transactional propio. Debe invocarse
+     *           siempre desde un contexto @Transactional write (crearTrabajo, escalarUnTrabajo,
+     *           rechazarPropuesta ya lo garantizan).
+     * @return true si ofreció a alguien; false si ya no hay proveedores nuevos.
      */
-    private void notificarProveedorDisponible(Trabajo trabajo, Long excluirProveedorId) {
+    boolean ofrecerSiguienteGrupo(Trabajo trabajo) {
         String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
         int limite = getLimiteTrabajos(trabajo.getOficio());
-        List<User> proveedores = new ArrayList<>(
+        int tamano = (int) featureFlagService.getNumber("trabajo_oferta_grupo_tamano", 10);
+
+        List<TrabajoOferta> previas = trabajoOfertaRepository.findByTrabajoId(trabajo.getId());
+        Set<Long> yaOfertados = previas.stream().map(o -> o.getProveedor().getId()).collect(Collectors.toSet());
+        int grupo = previas.stream().map(TrabajoOferta::getGrupo).max(Integer::compareTo).orElse(0) + 1;
+
+        List<User> candidatos = new ArrayList<>(
                 userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite));
-
-        if (excluirProveedorId != null) {
-            proveedores.removeIf(p -> p.getId().equals(excluirProveedorId));
+        candidatos.removeIf(p -> yaOfertados.contains(p.getId()));
+        if (candidatos.isEmpty()) {
+            return false;
         }
+        providerScoreService.ordenarPorScore(candidatos);
+        List<User> grupoProveedores = candidatos.stream().limit(tamano).toList();
 
-        if (proveedores.isEmpty()) {
-            logger.info("No hay (otro) proveedor disponible para el oficio {}; el trabajo {} queda sin asignar",
-                    trabajo.getOficio().getNombre(), trabajo.getId());
-            return;
+        for (User p : grupoProveedores) {
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo);
+            of.setProveedor(p);
+            of.setGrupo(grupo);
+            of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
+
+            notificacionService.enviarNotificacion(
+                    p.getFirebaseUid(),
+                    TipoNotificacion.NUEVO_TRABAJO,
+                    "Nueva Solicitud de Trabajo",
+                    "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                    trabajo.getId(),
+                    "/proveedor/trabajo/" + trabajo.getId());
         }
-
-        // Ordenar por score descendente
-        providerScoreService.ordenarPorScore(proveedores);
-
-        User mejorProveedor = proveedores.get(0);
-        trabajo.setProveedorNotificadoId(mejorProveedor.getId());
-        trabajo.setNotificadoAt(LocalDateTime.now());
-        trabajoRepository.save(trabajo);
-
-        logger.info("Trabajo {} asignado a proveedor {} (score: {})",
-                trabajo.getId(), mejorProveedor.getNombre(),
-                String.format("%.1f", providerScoreService.calcularScore(mejorProveedor)));
-
-        notificacionService.enviarNotificacion(
-                mejorProveedor.getFirebaseUid(),
-                TipoNotificacion.NUEVO_TRABAJO,
-                "Nueva Solicitud de Trabajo",
-                "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
-                trabajo.getId(),
-                "/proveedor/trabajo/" + trabajo.getId()
-        );
+        return true;
     }
 
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
@@ -397,24 +393,23 @@ public class TrabajoService {
             return;
         }
 
-        List<Trabajo> trabajosSinAsignar = trabajoRepository.findTrabajosPendientesSinAsignar(proveedor.getOficio().getId());
+        List<Trabajo> candidatos = trabajoRepository.findPendientesSinOfertaPara(proveedor.getOficio().getId(), proveedor.getId());
 
-        for (Trabajo trabajo : trabajosSinAsignar) {
+        for (Trabajo trabajo : candidatos) {
             if (trabajoRepository.countTrabajosActivosYCola(proveedor.getId()) >= limiteProveedor) {
                 break;
             }
-
-            trabajo.setProveedorNotificadoId(proveedor.getId());
-            trabajo.setNotificadoAt(LocalDateTime.now());
-            trabajoRepository.save(trabajo);
+            int grupo = trabajoOfertaRepository.findByTrabajoId(trabajo.getId()).stream()
+                    .map(TrabajoOferta::getGrupo).max(Integer::compareTo).orElse(0);
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo); of.setProveedor(proveedor);
+            of.setGrupo(grupo == 0 ? 1 : grupo); of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
             notificacionService.enviarNotificacion(
-                    proveedor.getFirebaseUid(),
-                    TipoNotificacion.NUEVO_TRABAJO,
+                    proveedor.getFirebaseUid(), TipoNotificacion.NUEVO_TRABAJO,
                     "Nueva Solicitud de Trabajo",
                     "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
-                    trabajo.getId(),
-                    "/proveedor/trabajo/" + trabajo.getId()
-            );
+                    trabajo.getId(), "/proveedor/trabajo/" + trabajo.getId());
         }
     }
 
@@ -537,8 +532,6 @@ public class TrabajoService {
     // Core de cancelación reusable (cliente y escalado automático).
     private void aplicarCancelacion(Trabajo trabajo, String motivo) {
         trabajo.setEstado(TrabajoEstado.CANCELADO);
-        trabajo.setProveedorNotificadoId(null);
-        trabajo.setNotificadoAt(null);
         trabajo.setMotivoCancelacion(motivo);
         trabajoRepository.save(trabajo);
         cloudinaryService.borrarFotos(trabajo.getFotos());
@@ -549,19 +542,19 @@ public class TrabajoService {
                                               Integer tiempoEstimadoMinutos, Double latitud, Double longitud, BigDecimal tarifaVisita) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
-
         Trabajo trabajo = trabajoRepository.findById(trabajoId)
                 .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
 
-        if (!trabajo.getEstado().equals(TrabajoEstado.PENDIENTE)) {
+        TrabajoOferta oferta = trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajoId, proveedor.getId())
+                .filter(o -> o.getResultado() == ResultadoOferta.OFRECIDA)
+                .orElseThrow(() -> new ForbiddenException("No estás asignado a este trabajo"));
+
+        // Lock atómico: solo uno de los N ofertados flipea PENDIENTE→PROPUESTO.
+        if (trabajoRepository.tomarTrabajoSiPendiente(trabajoId) == 0) {
             throw new RuntimeException("El trabajo ya no está disponible");
         }
+        trabajo = trabajoRepository.findById(trabajoId).orElseThrow();
 
-        if (trabajo.getProveedorNotificadoId() == null || !trabajo.getProveedorNotificadoId().equals(proveedor.getId())) {
-            throw new ForbiddenException("No estás asignado a este trabajo");
-        }
-
-        trabajo.setEstado(TrabajoEstado.PROPUESTO);
         trabajo.setProveedor(proveedor);
         trabajo.setTiempoEstimadoMinutos(tiempoEstimadoMinutos);
         BigDecimal tarifaEfectiva = tarifaVisita != null ? tarifaVisita : new BigDecimal("15000");
@@ -571,10 +564,12 @@ public class TrabajoService {
             trabajo.setLatitudProveedor(latitud);
             trabajo.setLongitudProveedor(longitud);
         }
+        trabajoRepository.save(trabajo);
 
-        trabajo = trabajoRepository.save(trabajo);
+        oferta.setResultado(ResultadoOferta.PROPUSO);
+        oferta.setRespondioAt(LocalDateTime.now());
+        trabajoOfertaRepository.save(oferta);
 
-        // Formato AR: 15000 → "15.000". Usa la tarifa real, no un texto fijo.
         String tarifaFmt = NumberFormat.getIntegerInstance(Locale.of("es", "AR")).format(tarifaEfectiva);
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
@@ -582,8 +577,7 @@ public class TrabajoService {
                 "Propuesta de Profesional",
                 proveedor.getNombre() + " puede llegar en " + tiempoEstimadoMinutos + " minutos. Tarifa de visita: $" + tarifaFmt,
                 trabajo.getId(),
-                "/cliente/propuesta/" + trabajo.getId()
-        );
+                "/cliente/propuesta/" + trabajo.getId());
 
         return mapToDTO(trabajo);
     }
@@ -622,9 +616,13 @@ public class TrabajoService {
         }
 
         trabajo.setAcceptedAt(LocalDateTime.now());
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
         trabajo = trabajoRepository.save(trabajo);
+
+        // El trabajo se tomó: las ofertas OFRECIDA restantes cuentan DURMIO (estricto).
+        for (TrabajoOferta o : trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA)) {
+            o.setResultado(ResultadoOferta.DURMIO);
+            trabajoOfertaRepository.save(o);
+        }
 
         if (proveedor.getStatus() != UserStatus.BUSY) {
             userService.updateUserStatus(proveedor.getFirebaseUid(), UserStatus.BUSY);
@@ -676,17 +674,33 @@ public class TrabajoService {
                 "/proveedor/dashboard"
         );
 
+        // La oferta del rechazado cuenta DURMIO y queda fuera de este trabajo.
+        trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajo.getId(), proveedorRechazado.getId())
+                .ifPresent(o -> { o.setResultado(ResultadoOferta.DURMIO); trabajoOfertaRepository.save(o); });
+
         trabajo.setEstado(TrabajoEstado.PENDIENTE);
         trabajo.setProveedor(null);
         trabajo.setTiempoEstimadoMinutos(null);
         trabajo.setTarifaVisita(null);
         trabajo.setLatitudProveedor(null);
         trabajo.setLongitudProveedor(null);
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
         trabajoRepository.save(trabajo);
 
-        notificarProveedorDisponible(trabajo);
+        // Reabrir al resto del grupo actual (OFRECIDA); si no queda nadie, avanzar de grupo.
+        List<TrabajoOferta> resto = trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA);
+        if (resto.isEmpty()) {
+            ofrecerSiguienteGrupo(trabajo);
+        } else {
+            for (TrabajoOferta o : resto) {
+                notificacionService.enviarNotificacion(
+                        o.getProveedor().getFirebaseUid(),
+                        TipoNotificacion.NUEVO_TRABAJO,
+                        "Trabajo disponible de nuevo",
+                        "Volvió a estar disponible un trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                        trabajo.getId(),
+                        "/proveedor/trabajo/" + trabajo.getId());
+            }
+        }
     }
 
     public List<TrabajoResponseDTO> getTrabajosEnCola(String proveedorFirebaseUid) {
@@ -712,36 +726,46 @@ public class TrabajoService {
     }
 
     /**
-     * Escala UN trabajo PENDIENTE sin respuesta del proveedor, en su propia transacción
-     * (REQUIRES_NEW): si algo falla, rollbackea solo este trabajo y el scheduler sigue con
-     * el resto. timeout1Min: minutos para re-ofrecer al siguiente (1 reintento).
-     * timeout2Min: minutos del reintento antes de cancelar.
+     * Escala UN trabajo PENDIENTE cuyo grupo activo (ofertas OFRECIDA) no respondió en el
+     * intervalo configurado. Marca el grupo como DURMIO y avanza al siguiente via
+     * {@link #ofrecerSiguienteGrupo}. Si no quedan proveedores, cancela el trabajo y avisa
+     * al cliente. Opera en su propia transacción (REQUIRES_NEW): si algo falla, rollbackea
+     * solo este trabajo y el scheduler sigue con el resto.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void escalarUnTrabajo(Long trabajoId, int timeout1Min, int timeout2Min) {
+    public void escalarUnTrabajo(Long trabajoId, int intervaloMin) {
         Trabajo t = trabajoRepository.findById(trabajoId).orElse(null);
         if (t == null || t.getEstado() != TrabajoEstado.PENDIENTE) {
-            return; // ya no aplica (tomado/cancelado entre la query y el procesamiento)
+            return;
         }
-        LocalDateTime ref = t.getNotificadoAt() != null ? t.getNotificadoAt() : t.getCreatedAt();
-        long mins = ChronoUnit.MINUTES.between(ref, LocalDateTime.now());
-        int reintentos = t.getReintentos() != null ? t.getReintentos() : 0;
-
-        if (reintentos == 0 && mins >= timeout1Min) {
-            Long excluir = t.getProveedorNotificadoId();
-            t.setReintentos(1);
-            trabajoRepository.save(t); // persiste el contador aunque no haya proveedor
-            notificarProveedorDisponible(t, excluir);
-            notificarCliente(t, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
+        List<TrabajoOferta> grupoActual = trabajoOfertaRepository
+                .findByTrabajoIdAndResultado(trabajoId, ResultadoOferta.OFRECIDA);
+        // ofrecidoAt del grupo vivo (todas comparten ventana; tomamos la más reciente)
+        LocalDateTime ref = grupoActual.stream()
+                .map(TrabajoOferta::getOfrecidoAt)
+                .max(LocalDateTime::compareTo)
+                .orElse(t.getCreatedAt());
+        if (ChronoUnit.MINUTES.between(ref, LocalDateTime.now()) < intervaloMin) {
+            return; // la ventana del grupo actual sigue abierta
+        }
+        // El grupo durmió: UPDATE atómico condicional — nunca pisa un PROPUSO.
+        // clearAutomatically=true deja la entidad t detached; re-leer estado fresco.
+        trabajoOfertaRepository.marcarGrupoDurmioSiPendiente(trabajoId);
+        Trabajo fresco = trabajoRepository.findById(trabajoId).orElse(null);
+        if (fresco == null || fresco.getEstado() != TrabajoEstado.PENDIENTE) {
+            return; // un propose ganó la carrera; ese flujo ya gestiona las ofertas
+        }
+        boolean ofrecio = ofrecerSiguienteGrupo(fresco);
+        if (ofrecio) {
+            notificarCliente(fresco, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
                     "Seguimos buscando",
-                    "Seguimos buscando un profesional para tu pedido de "
-                            + t.getOficio().getNombre() + ".");
-        } else if (reintentos >= 1 && mins >= timeout2Min) {
-            aplicarCancelacion(t, "No encontramos un profesional disponible");
-            notificarCliente(t, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
+                    "Seguimos buscando un profesional para tu pedido de " + fresco.getOficio().getNombre() + ".");
+        } else {
+            aplicarCancelacion(fresco, "No encontramos un profesional disponible");
+            notificarCliente(fresco, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
                     "Pedido cancelado",
                     "No encontramos un profesional disponible. Cancelamos tu pedido de "
-                            + t.getOficio().getNombre() + "; podés volver a intentarlo.");
+                            + fresco.getOficio().getNombre() + "; podés volver a intentarlo.");
         }
     }
 

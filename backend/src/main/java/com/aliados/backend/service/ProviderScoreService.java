@@ -1,6 +1,8 @@
 package com.aliados.backend.service;
 
+import com.aliados.backend.entity.ResultadoOferta;
 import com.aliados.backend.entity.User;
+import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,49 +25,66 @@ public class ProviderScoreService {
     private TrabajoRepository trabajoRepository;
 
     @Autowired
+    private TrabajoOfertaRepository trabajoOfertaRepository;
+
+    @Autowired
     private FeatureFlagService featureFlagService;
 
     /**
      * Calcula el score de un proveedor (0-100).
      *
-     * score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, w1, w2, w3)
-     * donde w1/w2/w3 provienen de feature flags con fallback 0.40/0.35/0.25.
+     * score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, respuestaOfertas, w1, w2, w3, w4)
+     * donde w1/w2/w3/w4 provienen de feature flags con fallback 0.40/0.35/0.25/0.20.
      *
      * - calificacionNorm: promedio de estrellas (1-5) normalizado a 0-100
      * - tasaAceptacion: propuestas aceptadas / propuestas enviadas (0-100)
      * - velocidadRespuesta: inversamente proporcional al tiempo promedio de respuesta (0-100)
+     * - respuestaOfertas: PROPUSO / (PROPUSO + DURMIO) * 100, neutral 50 sin datos
      */
     public double calcularScore(User proveedor) {
-        double calificacionNorm = calcularCalificacionNormalizada(proveedor);
-        double tasaAceptacion = calcularTasaAceptacion(proveedor.getId());
+        double calificacionNorm   = calcularCalificacionNormalizada(proveedor);
+        double tasaAceptacion     = calcularTasaAceptacion(proveedor.getId());
         double velocidadRespuesta = calcularVelocidadRespuesta(proveedor.getId());
+        double respuestaOfertas   = calcularTasaRespuestaOfertas(proveedor.getId());
 
         double w1 = featureFlagService.getNumber("score_peso_calificacion", 0.40);
         double w2 = featureFlagService.getNumber("score_peso_aceptacion", 0.35);
         double w3 = featureFlagService.getNumber("score_peso_velocidad", 0.25);
-        double score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, w1, w2, w3);
+        double w4 = featureFlagService.getNumber("score_peso_respuesta_ofertas", 0.20);
+        double score = combinarScore(calificacionNorm, tasaAceptacion, velocidadRespuesta, respuestaOfertas, w1, w2, w3, w4);
 
-        logger.debug("Score proveedor {} ({}): cal={} tasa={} vel={} → total={}",
+        logger.debug("Score proveedor {} ({}): cal={} tasa={} vel={} resp={} → total={}",
                 proveedor.getId(), proveedor.getNombre(),
                 String.format("%.1f", calificacionNorm),
                 String.format("%.1f", tasaAceptacion),
                 String.format("%.1f", velocidadRespuesta),
+                String.format("%.1f", respuestaOfertas),
                 String.format("%.1f", score));
 
         return score;
     }
 
     /**
-     * Combina los 3 componentes con sus pesos, normalizando para que sumen 1.0.
+     * Combina los 4 componentes con sus pesos, normalizando para que sumen 1.0.
      * Si la suma de pesos es <= 0, usa los pesos por defecto (guard).
      */
-    double combinarScore(double calif, double aceptacion, double velocidad,
-                         double w1, double w2, double w3) {
-        double suma = w1 + w2 + w3;
+    double combinarScore(double calif, double aceptacion, double velocidad, double respuestaOfertas,
+                         double w1, double w2, double w3, double w4) {
+        double suma = w1 + w2 + w3 + w4;
         if (suma <= 0) {
-            w1 = 0.40; w2 = 0.35; w3 = 0.25; suma = 1.0;
+            w1 = 0.40; w2 = 0.35; w3 = 0.25; w4 = 0.20; suma = 1.20;
         }
-        return (calif * (w1 / suma)) + (aceptacion * (w2 / suma)) + (velocidad * (w3 / suma));
+        return (calif * (w1 / suma)) + (aceptacion * (w2 / suma))
+             + (velocidad * (w3 / suma)) + (respuestaOfertas * (w4 / suma));
+    }
+
+    /** Tasa de respuesta a ofertas: PROPUSO / (PROPUSO + DURMIO) * 100. Sin datos → 50 (neutral). */
+    double calcularTasaRespuestaOfertas(Long proveedorId) {
+        long propuso = trabajoOfertaRepository.countByProveedorIdAndResultado(proveedorId, ResultadoOferta.PROPUSO);
+        long durmio  = trabajoOfertaRepository.countByProveedorIdAndResultado(proveedorId, ResultadoOferta.DURMIO);
+        long total = propuso + durmio;
+        if (total == 0) return 50.0;
+        return ((double) propuso / total) * 100.0;
     }
 
     /**
@@ -119,8 +138,8 @@ public class ProviderScoreService {
      * 0 min → 100, tiempoMax+ min → 0.
      * Sin datos → 50 (neutral).
      */
-    private double calcularVelocidadRespuesta(Long proveedorId) {
-        Double promedioMinutos = trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(proveedorId);
+    double calcularVelocidadRespuesta(Long proveedorId) {
+        Double promedioMinutos = trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(proveedorId);
         if (promedioMinutos == null) {
             return 50.0;
         }
