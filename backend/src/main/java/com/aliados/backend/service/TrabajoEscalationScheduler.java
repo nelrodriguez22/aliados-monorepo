@@ -24,11 +24,10 @@ public class TrabajoEscalationScheduler {
 
     @Scheduled(fixedDelay = 60_000)
     public void escalar() {
-        int timeout1 = (int) featureFlagService.getNumber("trabajo_oferta_timeout1_min", 30);
-        int timeout2 = (int) featureFlagService.getNumber("trabajo_oferta_timeout2_min", 15);
+        int intervalo = (int) featureFlagService.getNumber("trabajo_oferta_grupo_intervalo_min", 5);
         for (Long id : trabajoService.idsTrabajosPendientes()) {
             try {
-                trabajoService.escalarUnTrabajo(id, timeout1, timeout2);
+                trabajoService.escalarUnTrabajo(id, intervalo);
             } catch (Exception e) {
                 logger.error("Error escalando trabajo {}: {}", id, e.getMessage(), e);
             }

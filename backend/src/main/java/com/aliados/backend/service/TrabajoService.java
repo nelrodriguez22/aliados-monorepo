@@ -760,31 +760,39 @@ public class TrabajoService {
     }
 
     /**
-     * Escala UN trabajo PENDIENTE sin respuesta del proveedor, en su propia transacción
-     * (REQUIRES_NEW): si algo falla, rollbackea solo este trabajo y el scheduler sigue con
-     * el resto. timeout1Min: minutos para re-ofrecer al siguiente (1 reintento).
-     * timeout2Min: minutos del reintento antes de cancelar.
+     * Escala UN trabajo PENDIENTE cuyo grupo activo (ofertas OFRECIDA) no respondió en el
+     * intervalo configurado. Marca el grupo como DURMIO y avanza al siguiente via
+     * {@link #ofrecerSiguienteGrupo}. Si no quedan proveedores, cancela el trabajo y avisa
+     * al cliente. Opera en su propia transacción (REQUIRES_NEW): si algo falla, rollbackea
+     * solo este trabajo y el scheduler sigue con el resto.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void escalarUnTrabajo(Long trabajoId, int timeout1Min, int timeout2Min) {
+    public void escalarUnTrabajo(Long trabajoId, int intervaloMin) {
         Trabajo t = trabajoRepository.findById(trabajoId).orElse(null);
         if (t == null || t.getEstado() != TrabajoEstado.PENDIENTE) {
-            return; // ya no aplica (tomado/cancelado entre la query y el procesamiento)
+            return;
         }
-        LocalDateTime ref = t.getNotificadoAt() != null ? t.getNotificadoAt() : t.getCreatedAt();
-        long mins = ChronoUnit.MINUTES.between(ref, LocalDateTime.now());
-        int reintentos = t.getReintentos() != null ? t.getReintentos() : 0;
-
-        if (reintentos == 0 && mins >= timeout1Min) {
-            Long excluir = t.getProveedorNotificadoId();
-            t.setReintentos(1);
-            trabajoRepository.save(t); // persiste el contador aunque no haya proveedor
-            notificarProveedorDisponible(t, excluir);
+        List<TrabajoOferta> grupoActual = trabajoOfertaRepository
+                .findByTrabajoIdAndResultado(trabajoId, ResultadoOferta.OFRECIDA);
+        // ofrecidoAt del grupo vivo (todas comparten ventana; tomamos la más reciente)
+        LocalDateTime ref = grupoActual.stream()
+                .map(TrabajoOferta::getOfrecidoAt)
+                .max(LocalDateTime::compareTo)
+                .orElse(t.getCreatedAt());
+        if (ChronoUnit.MINUTES.between(ref, LocalDateTime.now()) < intervaloMin) {
+            return; // la ventana del grupo actual sigue abierta
+        }
+        // El grupo durmió: finalizar sus ofertas y avanzar.
+        for (TrabajoOferta o : grupoActual) {
+            o.setResultado(ResultadoOferta.DURMIO);
+            trabajoOfertaRepository.save(o);
+        }
+        boolean ofrecio = ofrecerSiguienteGrupo(t);
+        if (ofrecio) {
             notificarCliente(t, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
                     "Seguimos buscando",
-                    "Seguimos buscando un profesional para tu pedido de "
-                            + t.getOficio().getNombre() + ".");
-        } else if (reintentos >= 1 && mins >= timeout2Min) {
+                    "Seguimos buscando un profesional para tu pedido de " + t.getOficio().getNombre() + ".");
+        } else {
             aplicarCancelacion(t, "No encontramos un profesional disponible");
             notificarCliente(t, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
                     "Pedido cancelado",

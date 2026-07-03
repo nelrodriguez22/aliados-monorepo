@@ -1,12 +1,15 @@
 package com.aliados.backend.service;
 
 import com.aliados.backend.entity.Oficio;
+import com.aliados.backend.entity.ResultadoOferta;
 import com.aliados.backend.entity.TipoNotificacion;
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
+import com.aliados.backend.entity.TrabajoOferta;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.repository.CalificacionRepository;
 import com.aliados.backend.repository.OficioRepository;
+import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,7 @@ class TrabajoEscalacionTest {
     @Mock ProviderScoreService providerScoreService;
     @Mock CloudinaryService cloudinaryService;
     @Mock com.aliados.backend.service.FeatureFlagService featureFlagService;
+    @Mock TrabajoOfertaRepository trabajoOfertaRepository;
 
     @InjectMocks TrabajoService trabajoService;
 
@@ -57,28 +61,97 @@ class TrabajoEscalacionTest {
         return t;
     }
 
+    private User proveedor(Long id) {
+        User u = new User();
+        u.setId(id);
+        u.setFirebaseUid("prov-" + id);
+        return u;
+    }
+
+    private TrabajoOferta ofrecida(Trabajo t, User p) {
+        TrabajoOferta o = new TrabajoOferta();
+        o.setTrabajo(t);
+        o.setProveedor(p);
+        o.setGrupo(1);
+        o.setResultado(ResultadoOferta.OFRECIDA);
+        o.setOfrecidoAt(LocalDateTime.now().minusMinutes(6));
+        return o;
+    }
+
+    // ── Tests nuevos (Task 6) ────────────────────────────────────────────────
+
     @Test
-    void ventana1_vencida_reofrece_incrementa_y_notifica_cliente() {
+    void escalar_grupoDurmio_marcaDurmioYAvanza() {
+        Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(6));
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta o1 = ofrecida(t, proveedor(10L)), o2 = ofrecida(t, proveedor(11L));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(t.getId(), ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(o1, o2));
+        // hay grupo siguiente
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>(List.of(proveedor(12L))));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(trabajoOfertaRepository.findByTrabajoId(t.getId())).thenReturn(List.of(o1, o2));
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
+
+        trabajoService.escalarUnTrabajo(t.getId(), 5);
+
+        assertThat(o1.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        assertThat(o2.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        verify(trabajoOfertaRepository, atLeastOnce()).save(argThat(o -> o.getResultado() == ResultadoOferta.OFRECIDA));
+    }
+
+    @Test
+    void escalar_sinMasProveedores_cancela() {
+        Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(6));
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(t.getId(), ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(ofrecida(t, proveedor(10L))));
+        when(trabajoOfertaRepository.findByTrabajoId(t.getId())).thenReturn(List.of(ofrecida(t, proveedor(10L))));
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>()); // nadie nuevo
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
+
+        trabajoService.escalarUnTrabajo(t.getId(), 5);
+
+        assertThat(t.getEstado()).isEqualTo(TrabajoEstado.CANCELADO);
+        verify(notificacionService).enviarNotificacion(eq(t.getCliente().getFirebaseUid()), eq(TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR), anyString(), anyString(), anyLong(), any());
+    }
+
+    // ── Tests adaptados al nuevo modelo (firma (id, intervalo)) ─────────────
+
+    @Test
+    void ventana_vencida_sin_grupo_activo_avanza_y_notifica_cliente() {
         Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(10));
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
-        // Sin proveedor disponible: la re-oferta corre pero no asigna (camino simple).
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of()); // sin grupo activo → ref = createdAt (10 min ago)
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of());
         when(userRepository.findProveedoresDisponibles(eq("Rosario"), eq(1L), anyInt()))
-                .thenReturn(List.of());
+                .thenReturn(new java.util.ArrayList<>(List.of(proveedor(12L))));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
-        assertThat(t.getReintentos()).isEqualTo(1);
         verify(userRepository).findProveedoresDisponibles(eq("Rosario"), eq(1L), anyInt());
         verify(notificacionService).enviarNotificacion(eq("cliente-uid"),
                 eq(TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR), anyString(), anyString(), eq(100L), isNull());
     }
 
     @Test
-    void ventana2_vencida_cancela_y_notifica_cliente() {
-        Trabajo t = pendiente(1, LocalDateTime.now().minusMinutes(10));
+    void ventana_vencida_sin_mas_proveedores_cancela_y_notifica_cliente() {
+        Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(10));
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        TrabajoOferta o = ofrecida(t, proveedor(10L));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(o));
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of(o));
+        when(userRepository.findProveedoresDisponibles(eq("Rosario"), eq(1L), anyInt()))
+                .thenReturn(new java.util.ArrayList<>());
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
         assertThat(t.getEstado()).isEqualTo(TrabajoEstado.CANCELADO);
         assertThat(t.getMotivoCancelacion()).isEqualTo("No encontramos un profesional disponible");
@@ -92,9 +165,17 @@ class TrabajoEscalacionTest {
     @Test
     void dentro_de_la_ventana_no_hace_nada() {
         Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(1));
+        TrabajoOferta o = new TrabajoOferta();
+        o.setTrabajo(t);
+        o.setProveedor(proveedor(10L));
+        o.setGrupo(1);
+        o.setResultado(ResultadoOferta.OFRECIDA);
+        o.setOfrecidoAt(LocalDateTime.now().minusMinutes(1)); // 1 min ago, ventana abierta con intervalo=3
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(o));
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
         assertThat(t.getReintentos()).isEqualTo(0);
         assertThat(t.getEstado()).isEqualTo(TrabajoEstado.PENDIENTE);
@@ -103,33 +184,43 @@ class TrabajoEscalacionTest {
     }
 
     @Test
-    void notificadoAt_null_usa_createdAt_como_referencia() {
+    void ref_grupo_vacio_usa_createdAt_como_referencia() {
         Trabajo t = pendiente(0, null); // notificadoAt null → ref = createdAt (now-1h, viejo)
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of()); // sin grupo activo → ref = createdAt (1h ago)
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of());
         when(userRepository.findProveedoresDisponibles(eq("Rosario"), eq(1L), anyInt()))
-                .thenReturn(List.of());
+                .thenReturn(new java.util.ArrayList<>(List.of(proveedor(12L))));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
-        assertThat(t.getReintentos()).isEqualTo(1); // createdAt viejo → ventana 1 vence
+        // createdAt viejo → ventana vence → avanza al siguiente grupo
         verify(notificacionService).enviarNotificacion(eq("cliente-uid"),
                 eq(TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR), anyString(), anyString(), eq(100L), isNull());
     }
 
     @Test
-    void ventana1_excluye_al_proveedor_actual() {
-        Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(10)); // proveedorNotificadoId=5
+    void proveedores_ya_ofertados_son_excluidos_del_grupo_siguiente() {
+        Trabajo t = pendiente(0, LocalDateTime.now().minusMinutes(10));
         User actual = new User();
         actual.setId(5L);
         actual.setFirebaseUid("prov-5");
+        User siguiente = proveedor(12L);
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
-        // Único "disponible" es el proveedor actual → debe quedar excluido (lista vacía tras removeIf).
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of()); // sin grupo activo → ref = createdAt (10 min ago)
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of(ofrecida(t, actual)));
         when(userRepository.findProveedoresDisponibles(eq("Rosario"), eq(1L), anyInt()))
-                .thenReturn(List.of(actual));
+                .thenReturn(new java.util.ArrayList<>(List.of(actual, siguiente)));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(featureFlagService.getNumber(anyString(), anyDouble())).thenReturn(10.0);
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
-        // El proveedor actual (5) fue excluido → NO recibe oferta:
+        // El proveedor(5) ya fue ofertado → NO recibe nueva oferta:
         verify(notificacionService, never()).enviarNotificacion(eq("prov-5"), any(), any(), any(), any(), any());
         // El cliente sí es notificado:
         verify(notificacionService).enviarNotificacion(eq("cliente-uid"),
@@ -142,7 +233,7 @@ class TrabajoEscalacionTest {
         t.setEstado(TrabajoEstado.CANCELADO); // tomado/cancelado entre la query y el procesamiento
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
 
-        trabajoService.escalarUnTrabajo(100L, 3, 3);
+        trabajoService.escalarUnTrabajo(100L, 3);
 
         verifyNoInteractions(notificacionService);
         verify(trabajoRepository, never()).save(any());
@@ -164,4 +255,3 @@ class TrabajoEscalacionTest {
         assertThat(trabajoService.getLimiteTrabajos(plomeria)).isEqualTo(3);
     }
 }
-

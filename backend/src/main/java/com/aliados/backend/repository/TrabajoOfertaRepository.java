@@ -13,4 +13,6 @@ public interface TrabajoOfertaRepository extends JpaRepository<TrabajoOferta, Lo
     List<TrabajoOferta> findByTrabajoId(Long trabajoId);
 
     Optional<TrabajoOferta> findByTrabajoIdAndProveedorId(Long trabajoId, Long proveedorId);
+
+    List<TrabajoOferta> findByTrabajoIdAndResultado(Long trabajoId, ResultadoOferta resultado);
 }
