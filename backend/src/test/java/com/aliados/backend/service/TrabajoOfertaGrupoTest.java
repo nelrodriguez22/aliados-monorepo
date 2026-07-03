@@ -17,9 +17,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.aliados.backend.dto.TrabajoResponseDTO;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -67,6 +71,18 @@ class TrabajoOfertaGrupoTest {
         p.setOficio(oficio);
         p.setFirebaseUid("uid-" + id);
         return p;
+    }
+
+    @Test
+    void getTrabajosPendientes_devuelveLosOfrecidosAlProveedor() {
+        User prov = proveedor(10L);
+        when(userRepository.findByFirebaseUid("uid-10")).thenReturn(Optional.of(prov));
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findPendientesOfrecidosA(10L, prov.getOficio().getId())).thenReturn(List.of(t));
+
+        List<TrabajoResponseDTO> res = trabajoService.getTrabajosPendientes("uid-10");
+
+        assertThat(res).hasSize(1);
     }
 
     @Test

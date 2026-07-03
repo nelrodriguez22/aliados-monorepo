@@ -81,6 +81,17 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @Query("SELECT t FROM Trabajo t WHERE t.estado = 'PENDIENTE' AND t.createdAt < :umbral ORDER BY t.createdAt ASC")
     List<Trabajo> findTrabajosVarados(@Param("umbral") java.time.LocalDateTime umbral);
 
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
+    @Query("""
+        SELECT t FROM Trabajo t
+        JOIN TrabajoOferta o ON o.trabajo = t
+        WHERE t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+          AND t.oficio.id = :oficioId
+          AND o.proveedor.id = :proveedorId
+          AND o.resultado = com.aliados.backend.entity.ResultadoOferta.OFRECIDA
+        """)
+    List<Trabajo> findPendientesOfrecidosA(@Param("proveedorId") Long proveedorId, @Param("oficioId") Long oficioId);
+
     @Query("SELECT t.oficio.nombre, t.oficio.icono, COUNT(t) FROM Trabajo t GROUP BY t.oficio.nombre, t.oficio.icono ORDER BY COUNT(t) DESC")
     List<Object[]> countTrabajosGroupByOficio();
 }

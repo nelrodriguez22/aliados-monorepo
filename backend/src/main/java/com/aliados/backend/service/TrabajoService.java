@@ -124,13 +124,9 @@ public class TrabajoService {
             throw new RuntimeException("El proveedor no tiene un oficio asignado");
         }
 
-        // Filtra en SQL por (estado, oficio, proveedor notificado) en vez de traer
-        // todos los PENDIENTE del oficio y descartar en memoria.
-        List<Trabajo> trabajos = trabajoRepository.findByEstadoAndOficioIdAndProveedorNotificadoId(
-                TrabajoEstado.PENDIENTE,
-                proveedor.getOficio().getId(),
-                proveedor.getId()
-        );
+        // Filtra por trabajos donde el proveedor tiene una oferta OFRECIDA (nuevo modelo de grupos).
+        List<Trabajo> trabajos = trabajoRepository.findPendientesOfrecidosA(
+                proveedor.getId(), proveedor.getOficio().getId());
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
