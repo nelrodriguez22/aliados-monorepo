@@ -282,6 +282,9 @@ public class TrabajoService {
      * Ofrece el trabajo al siguiente grupo de proveedores por score, excluyendo a los ya
      * ofertados. Inserta una fila OFRECIDA por proveedor y notifica. Si no queda nadie nuevo,
      * no hace nada (el caller decide cancelar).
+     * @implNote Package-private: hace N writes sin @Transactional propio. Debe invocarse
+     *           siempre desde un contexto @Transactional write (crearTrabajo, escalarUnTrabajo,
+     *           rechazarPropuesta ya lo garantizan).
      * @return true si ofreció a alguien; false si ya no hay proveedores nuevos.
      */
     boolean ofrecerSiguienteGrupo(Trabajo trabajo) {
