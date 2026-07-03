@@ -222,6 +222,8 @@ class TrabajoOfertaGrupoTest {
         trabajoService.rechazarTrabajo(t.getId(), "uid-10");
 
         assertThat(oferta.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        verify(trabajoOfertaRepository).save(oferta);            // persiste el DURMIO
+        verify(trabajoRepository, never()).save(any());          // no modifica el trabajo
     }
 
     @Test
@@ -237,7 +239,8 @@ class TrabajoOfertaGrupoTest {
         trabajoService.asignarTrabajosAProveedorQueSeConecta(prov);
 
         verify(trabajoOfertaRepository).save(argThat(o -> o.getProveedor().getId().equals(10L)
-                && o.getResultado() == ResultadoOferta.OFRECIDA));
+                && o.getResultado() == ResultadoOferta.OFRECIDA
+                && o.getGrupo() != null && o.getGrupo() >= 1));   // grupo NOT NULL, ≥ 1
         verify(notificacionService).enviarNotificacion(eq(prov.getFirebaseUid()), any(), anyString(), anyString(), anyLong(), anyString());
     }
 
