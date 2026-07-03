@@ -210,6 +210,38 @@ class TrabajoOfertaGrupoTest {
     }
 
     @Test
+    void rechazarTrabajo_marcaOfertaDurmio() {
+        User prov = proveedor(10L);
+        when(userRepository.findByFirebaseUid("uid-10")).thenReturn(Optional.of(prov));
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta oferta = new TrabajoOferta();
+        oferta.setProveedor(prov); oferta.setTrabajo(t); oferta.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 10L)).thenReturn(Optional.of(oferta));
+
+        trabajoService.rechazarTrabajo(t.getId(), "uid-10");
+
+        assertThat(oferta.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+    }
+
+    @Test
+    void proveedorSeConecta_seSumaAlGrupoDeTrabajosSinOfertarle() {
+        User prov = proveedor(10L);
+        prov.setLocalidad("Rosario");
+        when(userRepository.findById(10L)).thenReturn(Optional.of(prov));
+        when(trabajoRepository.countTrabajosActivosYCola(10L)).thenReturn(0);
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        Trabajo t = pendiente(0, null);
+        when(trabajoRepository.findPendientesSinOfertaPara(t.getOficio().getId(), 10L)).thenReturn(List.of(t));
+
+        trabajoService.asignarTrabajosAProveedorQueSeConecta(prov);
+
+        verify(trabajoOfertaRepository).save(argThat(o -> o.getProveedor().getId().equals(10L)
+                && o.getResultado() == ResultadoOferta.OFRECIDA));
+        verify(notificacionService).enviarNotificacion(eq(prov.getFirebaseUid()), any(), anyString(), anyString(), anyLong(), anyString());
+    }
+
+    @Test
     void rechazar_sinRestoDelGrupo_ofreceGrupoSiguiente() {
         Trabajo t = pendiente(0, null);
         t.setEstado(TrabajoEstado.PROPUESTO);

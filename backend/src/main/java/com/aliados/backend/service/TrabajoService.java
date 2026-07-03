@@ -154,12 +154,9 @@ public class TrabajoService {
             throw new RuntimeException("El trabajo ya no está disponible");
         }
 
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
-        trabajoRepository.save(trabajo);
-
-        // Excluir a quien rechaza para no re-ofrecérselo de inmediato (loop con un solo proveedor).
-        notificarProveedorDisponible(trabajo, proveedor.getId());
+        trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajoId, proveedor.getId())
+                .ifPresent(o -> { o.setResultado(ResultadoOferta.DURMIO); trabajoOfertaRepository.save(o); });
+        // El trabajo sigue PENDIENTE con el resto del grupo; el scheduler avanza si nadie responde.
     }
 
     @Transactional
@@ -320,54 +317,6 @@ public class TrabajoService {
         return true;
     }
 
-    private void notificarProveedorDisponible(Trabajo trabajo) {
-        notificarProveedorDisponible(trabajo, null);
-    }
-
-    /**
-     * Re-ofrece el trabajo al mejor proveedor disponible.
-     * @param excluirProveedorId si no es null, ese proveedor queda fuera del re-ofrecimiento
-     *        (ej. el que acaba de rechazar). Si tras excluirlo no queda nadie, el trabajo
-     *        queda PENDIENTE sin notificar (no reaparece en el dashboard de quien rechazó).
-     */
-    private void notificarProveedorDisponible(Trabajo trabajo, Long excluirProveedorId) {
-        String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
-        int limite = getLimiteTrabajos(trabajo.getOficio());
-        List<User> proveedores = new ArrayList<>(
-                userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite));
-
-        if (excluirProveedorId != null) {
-            proveedores.removeIf(p -> p.getId().equals(excluirProveedorId));
-        }
-
-        if (proveedores.isEmpty()) {
-            logger.info("No hay (otro) proveedor disponible para el oficio {}; el trabajo {} queda sin asignar",
-                    trabajo.getOficio().getNombre(), trabajo.getId());
-            return;
-        }
-
-        // Ordenar por score descendente
-        providerScoreService.ordenarPorScore(proveedores);
-
-        User mejorProveedor = proveedores.get(0);
-        trabajo.setProveedorNotificadoId(mejorProveedor.getId());
-        trabajo.setNotificadoAt(LocalDateTime.now());
-        trabajoRepository.save(trabajo);
-
-        logger.info("Trabajo {} asignado a proveedor {} (score: {})",
-                trabajo.getId(), mejorProveedor.getNombre(),
-                String.format("%.1f", providerScoreService.calcularScore(mejorProveedor)));
-
-        notificacionService.enviarNotificacion(
-                mejorProveedor.getFirebaseUid(),
-                TipoNotificacion.NUEVO_TRABAJO,
-                "Nueva Solicitud de Trabajo",
-                "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
-                trabajo.getId(),
-                "/proveedor/trabajo/" + trabajo.getId()
-        );
-    }
-
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
         double R = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
@@ -444,24 +393,23 @@ public class TrabajoService {
             return;
         }
 
-        List<Trabajo> trabajosSinAsignar = trabajoRepository.findTrabajosPendientesSinAsignar(proveedor.getOficio().getId());
+        List<Trabajo> candidatos = trabajoRepository.findPendientesSinOfertaPara(proveedor.getOficio().getId(), proveedor.getId());
 
-        for (Trabajo trabajo : trabajosSinAsignar) {
+        for (Trabajo trabajo : candidatos) {
             if (trabajoRepository.countTrabajosActivosYCola(proveedor.getId()) >= limiteProveedor) {
                 break;
             }
-
-            trabajo.setProveedorNotificadoId(proveedor.getId());
-            trabajo.setNotificadoAt(LocalDateTime.now());
-            trabajoRepository.save(trabajo);
+            int grupo = trabajoOfertaRepository.findByTrabajoId(trabajo.getId()).stream()
+                    .map(TrabajoOferta::getGrupo).max(Integer::compareTo).orElse(0);
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo); of.setProveedor(proveedor);
+            of.setGrupo(grupo == 0 ? 1 : grupo); of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
             notificacionService.enviarNotificacion(
-                    proveedor.getFirebaseUid(),
-                    TipoNotificacion.NUEVO_TRABAJO,
+                    proveedor.getFirebaseUid(), TipoNotificacion.NUEVO_TRABAJO,
                     "Nueva Solicitud de Trabajo",
                     "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
-                    trabajo.getId(),
-                    "/proveedor/trabajo/" + trabajo.getId()
-            );
+                    trabajo.getId(), "/proveedor/trabajo/" + trabajo.getId());
         }
     }
 

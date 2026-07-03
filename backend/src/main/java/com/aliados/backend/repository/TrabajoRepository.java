@@ -97,6 +97,14 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @Query("SELECT t.oficio.nombre, t.oficio.icono, COUNT(t) FROM Trabajo t GROUP BY t.oficio.nombre, t.oficio.icono ORDER BY COUNT(t) DESC")
     List<Object[]> countTrabajosGroupByOficio();
 
+    @Query("""
+        SELECT t FROM Trabajo t
+        WHERE t.estado = com.aliados.backend.entity.TrabajoEstado.PENDIENTE
+          AND t.oficio.id = :oficioId
+          AND NOT EXISTS (SELECT 1 FROM TrabajoOferta o WHERE o.trabajo = t AND o.proveedor.id = :proveedorId)
+        """)
+    List<Trabajo> findPendientesSinOfertaPara(@Param("oficioId") Long oficioId, @Param("proveedorId") Long proveedorId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("""
