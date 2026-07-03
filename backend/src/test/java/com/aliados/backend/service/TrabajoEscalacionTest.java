@@ -98,7 +98,11 @@ class TrabajoEscalacionTest {
 
         assertThat(o1.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
         assertThat(o2.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
-        verify(trabajoOfertaRepository, atLeastOnce()).save(argThat(o -> o.getResultado() == ResultadoOferta.OFRECIDA));
+        // Persiste el marcado DURMIO de las 2 ofertas del grupo que durmió.
+        verify(trabajoOfertaRepository, times(2)).save(argThat(o -> o.getResultado() == ResultadoOferta.DURMIO));
+        // Avanzó de grupo → avisa al cliente que seguimos buscando (efecto del path if(ofrecio)).
+        verify(notificacionService).enviarNotificacion(eq(t.getCliente().getFirebaseUid()),
+                eq(TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR), anyString(), anyString(), any(), any());
     }
 
     @Test
