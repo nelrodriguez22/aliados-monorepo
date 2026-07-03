@@ -70,7 +70,7 @@ class ProviderScoreServiceTest {
         when(featureFlagService.getNumber(anyString(), anyDouble()))
                 .thenAnswer(inv -> (double) inv.getArgument(1));
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(anyLong())).thenReturn(0L);
-        when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(anyLong())).thenReturn(null);
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(anyLong())).thenReturn(null);
     }
 
     private User proveedor(long id, String nombre, double promedio, long cantidad) {
@@ -127,14 +127,14 @@ class ProviderScoreServiceTest {
         User maloRapido = proveedor(1, "Malo rápido", 1.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(1L)).thenReturn(10L);
-        when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(1L)).thenReturn(3.0);
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(1L)).thenReturn(3.0);
         // (0*0.40 + 100*0.35 + 90*0.25 + 50*0.20) / 1.20 = 67.5/1.20 = 56.25
 
         // Excelente (5★) pero acepta 1/10 (aceptación 10) y responde en 27 min (velocidad 10).
         User excelenteLento = proveedor(2, "Excelente lento", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(2L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(2L)).thenReturn(1L);
-        when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(2L)).thenReturn(27.0);
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(2L)).thenReturn(27.0);
         // (100*0.40 + 10*0.35 + 10*0.25 + 50*0.20) / 1.20 = 56/1.20 = 46.67
 
         assertThat(service.calcularScore(maloRapido)).isCloseTo(56.25, within(1e-9));
@@ -155,14 +155,14 @@ class ProviderScoreServiceTest {
         User rapido = proveedor(1, "5★ rápido", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(1L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(1L)).thenReturn(10L);
-        when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(1L)).thenReturn(3.0);
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(1L)).thenReturn(3.0);
         // (100*0.40 + 100*0.35 + 90*0.25 + 50*0.20) / 1.20 = 107.5/1.20 = 89.58
 
         // 5★ que acepta 1/10 (aceptación 10) y responde en 27 min (velocidad 10).
         User lento = proveedor(2, "5★ lento", 5.0, 10);
         when(trabajoRepository.countPropuestasEnviadasByProveedorId(2L)).thenReturn(10L);
         when(trabajoRepository.countPropuestasAceptadasByProveedorId(2L)).thenReturn(1L);
-        when(trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(2L)).thenReturn(27.0);
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(2L)).thenReturn(27.0);
         // (100*0.40 + 10*0.35 + 10*0.25 + 50*0.20) / 1.20 = 56/1.20 = 46.67
 
         // A igual calificación (5★), la calificación empata y desempatan aceptación + velocidad.
@@ -203,5 +203,17 @@ class ProviderScoreServiceTest {
         when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.PROPUSO)).thenReturn(3L);
         when(trabajoOfertaRepository.countByProveedorIdAndResultado(7L, ResultadoOferta.DURMIO)).thenReturn(1L);
         assertThat(service.calcularTasaRespuestaOfertas(7L)).isEqualTo(75.0); // 3/(3+1)
+    }
+
+    // ---------------------------------------------------------------------
+    // Velocidad de respuesta: ahora sobre trabajo_oferta (ofrecidoAt→respondioAt)
+    // ---------------------------------------------------------------------
+
+    @Test
+    void velocidad_usaTrabajoOferta() {
+        when(trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(7L)).thenReturn(10.0);
+        when(featureFlagService.getNumber("score_tiempo_max_respuesta_min", 30.0)).thenReturn(30.0);
+        // 10 min sobre 30 → (1 - 10/30)*100 = 66.6
+        assertThat(service.calcularVelocidadRespuesta(7L)).isCloseTo(66.6, within(0.2));
     }
 }

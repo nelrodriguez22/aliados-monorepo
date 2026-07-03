@@ -138,8 +138,8 @@ public class ProviderScoreService {
      * 0 min → 100, tiempoMax+ min → 0.
      * Sin datos → 50 (neutral).
      */
-    private double calcularVelocidadRespuesta(Long proveedorId) {
-        Double promedioMinutos = trabajoRepository.getPromedioTiempoRespuestaMinutosByProveedorId(proveedorId);
+    double calcularVelocidadRespuesta(Long proveedorId) {
+        Double promedioMinutos = trabajoOfertaRepository.getPromedioMinutosRespuestaByProveedorId(proveedorId);
         if (promedioMinutos == null) {
             return 50.0;
         }

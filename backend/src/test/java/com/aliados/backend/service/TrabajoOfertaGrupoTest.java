@@ -59,9 +59,7 @@ class TrabajoOfertaGrupoTest {
         t.setId(100L);
         t.setEstado(TrabajoEstado.PENDIENTE);
         t.setReintentos(reintentos);
-        t.setNotificadoAt(notificadoAt);
         t.setCreatedAt(notificadoAt != null ? notificadoAt : LocalDateTime.now().minusHours(1));
-        t.setProveedorNotificadoId(5L);
         t.setCliente(cliente);
         t.setOficio(oficio);
         return t;

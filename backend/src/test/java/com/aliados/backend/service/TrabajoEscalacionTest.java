@@ -53,9 +53,7 @@ class TrabajoEscalacionTest {
         t.setId(100L);
         t.setEstado(TrabajoEstado.PENDIENTE);
         t.setReintentos(reintentos);
-        t.setNotificadoAt(notificadoAt);
         t.setCreatedAt(notificadoAt != null ? notificadoAt : LocalDateTime.now().minusHours(1));
-        t.setProveedorNotificadoId(5L);
         t.setCliente(cliente);
         t.setOficio(oficio);
         return t;
@@ -159,8 +157,6 @@ class TrabajoEscalacionTest {
 
         assertThat(t.getEstado()).isEqualTo(TrabajoEstado.CANCELADO);
         assertThat(t.getMotivoCancelacion()).isEqualTo("No encontramos un profesional disponible");
-        assertThat(t.getProveedorNotificadoId()).isNull();
-        assertThat(t.getNotificadoAt()).isNull();
         verify(cloudinaryService).borrarFotos(any());
         verify(notificacionService).enviarNotificacion(eq("cliente-uid"),
                 eq(TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR), anyString(), anyString(), eq(100L), isNull());

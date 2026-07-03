@@ -64,12 +64,6 @@ public class Trabajo {
     @Column(columnDefinition = "jsonb")
     private String fotos; // JSON array de URLs
 
-    @Column
-    private LocalDateTime notificadoAt;
-
-    @Column
-    private Long proveedorNotificadoId;
-
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

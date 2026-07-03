@@ -532,8 +532,6 @@ public class TrabajoService {
     // Core de cancelación reusable (cliente y escalado automático).
     private void aplicarCancelacion(Trabajo trabajo, String motivo) {
         trabajo.setEstado(TrabajoEstado.CANCELADO);
-        trabajo.setProveedorNotificadoId(null);
-        trabajo.setNotificadoAt(null);
         trabajo.setMotivoCancelacion(motivo);
         trabajoRepository.save(trabajo);
         cloudinaryService.borrarFotos(trabajo.getFotos());
@@ -618,8 +616,6 @@ public class TrabajoService {
         }
 
         trabajo.setAcceptedAt(LocalDateTime.now());
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
         trabajo = trabajoRepository.save(trabajo);
 
         // El trabajo se tomó: las ofertas OFRECIDA restantes cuentan DURMIO (estricto).

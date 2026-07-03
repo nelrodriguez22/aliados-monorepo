@@ -38,10 +38,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     List<Trabajo> findByEstadoAndOficioId(TrabajoEstado estado, Long oficioId);
 
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
-    List<Trabajo> findByEstadoAndOficioIdAndProveedorNotificadoId(
-            TrabajoEstado estado, Long oficioId, Long proveedorNotificadoId);
-
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     List<Trabajo> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, TrabajoEstado estado);
 
     // Historial del proveedor paginado (#20-B). El orden lo define el Pageable (completedAt DESC).
@@ -51,9 +47,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")
     Trabajo findTrabajoEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
-
-    @Query("SELECT t FROM Trabajo t WHERE t.estado = 'PENDIENTE' AND t.proveedorNotificadoId IS NULL AND t.oficio.id = :oficioId")
-    List<Trabajo> findTrabajosPendientesSinAsignar(@Param("oficioId") Long oficioId);
 
     Long countByProveedorIdAndEstado(Long proveedorId, TrabajoEstado estado);
 
@@ -71,10 +64,6 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     // Scoring: propuestas aceptadas por el cliente
     @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'EN_COLA', 'COMPLETADO')")
     long countPropuestasAceptadasByProveedorId(@Param("proveedorId") Long proveedorId);
-
-    // Scoring: tiempo promedio de respuesta en minutos (entre notificadoAt y propuestoAt)
-    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (propuesto_at - notificado_at)) / 60) FROM trabajos WHERE proveedor_id = :proveedorId AND propuesto_at IS NOT NULL AND notificado_at IS NOT NULL", nativeQuery = true)
-    Double getPromedioTiempoRespuestaMinutosByProveedorId(@Param("proveedorId") Long proveedorId);
 
     long countByEstado(TrabajoEstado estado);
 
