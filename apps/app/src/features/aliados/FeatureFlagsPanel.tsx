@@ -25,10 +25,12 @@ const FLAG_DETAILS: Record<string, string> = {
     'Peso de la velocidad de respuesta (qué tan rápido responde las ofertas) en el score, de 0 a 1. Default 0.25.',
   score_tiempo_max_respuesta_min:
     'Minutos de referencia para normalizar la velocidad: responder en 0 min = 100 puntos; tardar este valor o más = 0. Default 30.',
-  trabajo_oferta_timeout1_min:
-    'Minutos que el sistema espera la respuesta del proveedor antes de re-ofrecer el trabajo al siguiente mejor disponible. Default 30 (prod).',
-  trabajo_oferta_timeout2_min:
-    'Minutos que espera al 2º proveedor antes de cancelar el trabajo si nadie lo toma. Default 15 (prod).',
+  score_peso_respuesta_ofertas:
+    'Peso de la tasa de respuesta a ofertas (de las ofertas que recibió, a cuántas respondió vs cuántas ignoró) en el score, de 0 a 1. Default 0.20. Subilo para penalizar más a los que dejan pasar ofertas.',
+  trabajo_oferta_grupo_tamano:
+    'A cuántos proveedores (los mejores por score) se le ofrece el trabajo a la vez. Default 10. Bajalo (ej. 1 o 2) para que el mejor rankeado reciba primero y los demás solo si no responde.',
+  trabajo_oferta_grupo_intervalo_min:
+    'Minutos que se espera la respuesta de un grupo antes de pasar al siguiente grupo de proveedores. Default 5. Si nadie responde y no quedan más proveedores, el trabajo se cancela.',
 };
 
 export function FeatureFlagsPanel() {
