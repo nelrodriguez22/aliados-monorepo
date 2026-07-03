@@ -52,6 +52,7 @@ class TrabajoOfertaGrupoTest {
         oficio.setId(1L);
         oficio.setNombre("Plomería");
         User cliente = new User();
+        cliente.setId(1L);
         cliente.setFirebaseUid("cliente-uid");
         cliente.setLocalidad("Rosario");
         Trabajo t = new Trabajo();
@@ -151,5 +152,56 @@ class TrabajoOfertaGrupoTest {
 
         assertThatThrownBy(() -> trabajoService.proponerTrabajo(t.getId(), "uid-12", 20, null, null, null))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    private TrabajoOferta ofrecida(Trabajo t, User p) {
+        TrabajoOferta o = new TrabajoOferta();
+        o.setTrabajo(t);
+        o.setProveedor(p);
+        o.setResultado(ResultadoOferta.OFRECIDA);
+        return o;
+    }
+
+    @Test
+    void aceptar_finalizaOfrecidasRestantesComoDurmio() {
+        // trabajo PROPUESTO con proveedor ganador + 1 oferta OFRECIDA restante
+        Trabajo t = pendiente(0, null);
+        t.setEstado(TrabajoEstado.PROPUESTO);
+        User ganador = proveedor(10L); t.setProveedor(ganador);
+        when(userRepository.findByFirebaseUid("uid-cli")).thenReturn(Optional.of(t.getCliente()));
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        when(trabajoRepository.countTrabajosActivosYCola(anyLong())).thenReturn(0);
+        when(trabajoRepository.findTrabajoEnCursoByProveedorId(10L)).thenReturn(null);
+        when(trabajoRepository.save(any(Trabajo.class))).thenAnswer(inv -> inv.getArgument(0));
+        TrabajoOferta restante = ofrecida(t, proveedor(11L));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(t.getId(), ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(restante));
+
+        trabajoService.aceptarPropuesta(t.getId(), "uid-cli");
+
+        assertThat(restante.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+    }
+
+    @Test
+    void rechazar_reabreAlRestoDelGrupo() {
+        Trabajo t = pendiente(0, null);
+        t.setEstado(TrabajoEstado.PROPUESTO);
+        User rechazado = proveedor(10L); t.setProveedor(rechazado);
+        when(userRepository.findByFirebaseUid("uid-cli")).thenReturn(Optional.of(t.getCliente()));
+        when(trabajoRepository.findById(t.getId())).thenReturn(Optional.of(t));
+        TrabajoOferta ofertaRechazado = new TrabajoOferta();
+        ofertaRechazado.setProveedor(rechazado); ofertaRechazado.setTrabajo(t); ofertaRechazado.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(t.getId(), 10L)).thenReturn(Optional.of(ofertaRechazado));
+        TrabajoOferta restante = ofrecida(t, proveedor(11L));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(t.getId(), ResultadoOferta.OFRECIDA))
+                .thenReturn(List.of(restante));
+
+        trabajoService.rechazarPropuesta(t.getId(), "uid-cli");
+
+        assertThat(t.getEstado()).isEqualTo(TrabajoEstado.PENDIENTE);
+        assertThat(ofertaRechazado.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        // re-notifica al restante del grupo (no baja de grupo)
+        verify(notificacionService).enviarNotificacion(eq(proveedor(11L).getFirebaseUid()), any(), anyString(), anyString(), anyLong(), anyString());
     }
 }

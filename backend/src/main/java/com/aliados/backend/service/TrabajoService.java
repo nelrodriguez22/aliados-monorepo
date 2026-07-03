@@ -674,6 +674,12 @@ public class TrabajoService {
         trabajo.setProveedorNotificadoId(null);
         trabajo = trabajoRepository.save(trabajo);
 
+        // El trabajo se tomó: las ofertas OFRECIDA restantes cuentan DURMIO (estricto).
+        for (TrabajoOferta o : trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA)) {
+            o.setResultado(ResultadoOferta.DURMIO);
+            trabajoOfertaRepository.save(o);
+        }
+
         if (proveedor.getStatus() != UserStatus.BUSY) {
             userService.updateUserStatus(proveedor.getFirebaseUid(), UserStatus.BUSY);
         }
@@ -724,17 +730,33 @@ public class TrabajoService {
                 "/proveedor/dashboard"
         );
 
+        // La oferta del rechazado cuenta DURMIO y queda fuera de este trabajo.
+        trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajo.getId(), proveedorRechazado.getId())
+                .ifPresent(o -> { o.setResultado(ResultadoOferta.DURMIO); trabajoOfertaRepository.save(o); });
+
         trabajo.setEstado(TrabajoEstado.PENDIENTE);
         trabajo.setProveedor(null);
         trabajo.setTiempoEstimadoMinutos(null);
         trabajo.setTarifaVisita(null);
         trabajo.setLatitudProveedor(null);
         trabajo.setLongitudProveedor(null);
-        trabajo.setNotificadoAt(null);
-        trabajo.setProveedorNotificadoId(null);
         trabajoRepository.save(trabajo);
 
-        notificarProveedorDisponible(trabajo);
+        // Reabrir al resto del grupo actual (OFRECIDA); si no queda nadie, avanzar de grupo.
+        List<TrabajoOferta> resto = trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA);
+        if (resto.isEmpty()) {
+            ofrecerSiguienteGrupo(trabajo);
+        } else {
+            for (TrabajoOferta o : resto) {
+                notificacionService.enviarNotificacion(
+                        o.getProveedor().getFirebaseUid(),
+                        TipoNotificacion.NUEVO_TRABAJO,
+                        "Trabajo disponible de nuevo",
+                        "Volvió a estar disponible un trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                        trabajo.getId(),
+                        "/proveedor/trabajo/" + trabajo.getId());
+            }
+        }
     }
 
     public List<TrabajoResponseDTO> getTrabajosEnCola(String proveedorFirebaseUid) {
