@@ -8,6 +8,7 @@ import com.aliados.backend.entity.*;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
 import com.aliados.backend.repository.OficioRepository;
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -63,6 +65,9 @@ public class TrabajoService {
 
     @Autowired
     private FeatureFlagService featureFlagService;
+
+    @Autowired
+    private TrabajoOfertaRepository trabajoOfertaRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
@@ -106,7 +111,7 @@ public class TrabajoService {
 
         trabajo = trabajoRepository.save(trabajo);
 
-        notificarProveedorDisponible(trabajo);
+        ofrecerSiguienteGrupo(trabajo);
 
         return mapToDTO(trabajo);
     }
@@ -271,6 +276,49 @@ public class TrabajoService {
 
         long sinCalificar = trabajoRepository.countSinCalificarByCliente(firebaseUid);
         return new PagedTrabajosResponse(content, page.hasNext(), page.getTotalElements(), sinCalificar);
+    }
+
+    /**
+     * Ofrece el trabajo al siguiente grupo de proveedores por score, excluyendo a los ya
+     * ofertados. Inserta una fila OFRECIDA por proveedor y notifica. Si no queda nadie nuevo,
+     * no hace nada (el caller decide cancelar).
+     * @return true si ofreció a alguien; false si ya no hay proveedores nuevos.
+     */
+    boolean ofrecerSiguienteGrupo(Trabajo trabajo) {
+        String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
+        int limite = getLimiteTrabajos(trabajo.getOficio());
+        int tamano = (int) featureFlagService.getNumber("trabajo_oferta_grupo_tamano", 10);
+
+        List<TrabajoOferta> previas = trabajoOfertaRepository.findByTrabajoId(trabajo.getId());
+        Set<Long> yaOfertados = previas.stream().map(o -> o.getProveedor().getId()).collect(Collectors.toSet());
+        int grupo = previas.stream().map(TrabajoOferta::getGrupo).max(Integer::compareTo).orElse(0) + 1;
+
+        List<User> candidatos = new ArrayList<>(
+                userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite));
+        candidatos.removeIf(p -> yaOfertados.contains(p.getId()));
+        if (candidatos.isEmpty()) {
+            return false;
+        }
+        providerScoreService.ordenarPorScore(candidatos);
+        List<User> grupoProveedores = candidatos.stream().limit(tamano).toList();
+
+        for (User p : grupoProveedores) {
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo);
+            of.setProveedor(p);
+            of.setGrupo(grupo);
+            of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
+
+            notificacionService.enviarNotificacion(
+                    p.getFirebaseUid(),
+                    TipoNotificacion.NUEVO_TRABAJO,
+                    "Nueva Solicitud de Trabajo",
+                    "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                    trabajo.getId(),
+                    "/proveedor/trabajo/" + trabajo.getId());
+        }
+        return true;
     }
 
     private void notificarProveedorDisponible(Trabajo trabajo) {
