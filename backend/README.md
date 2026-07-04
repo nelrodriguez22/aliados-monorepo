@@ -65,4 +65,4 @@ src/main/resources/
 
 Railway, por push. Usa [`railway.json`](./railway.json) con healthcheck en `/api/health` + graceful shutdown (`server.shutdown=graceful`) para deploys sin downtime.
 
-> Auditoría de mejoras del backend: `backend/INFORME-MEJORAS-BACKEND.md`.
+> Auditoría de mejoras del backend: [`docs/backend/INFORME-MEJORAS-BACKEND.md`](../docs/backend/INFORME-MEJORAS-BACKEND.md).
