@@ -1,9 +1,32 @@
 # Informe de mejoras — Backend Aliados
 
 > Documento vivo para retomar entre sesiones. Marcá los TODOs a medida que se resuelven.
-> Última actualización: 2026-06-29
+> Última actualización: 2026-07-04
 
 Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket STOMP · SendGrid · FCM.
+
+---
+
+## 🗓️ Resumen sesión 2026-07-02 → 04
+
+**Qué se hizo:**
+
+1. **`/me` responde 200 en vez de 404 para usuario nuevo** (`fcd6e05`, en `main`): el chequeo de "¿existe en backend?" usaba el 404 de `GET /api/users/me` como señal → onboarding, y el navegador lo logueaba en consola aunque el código lo manejara. Ahora `/me` devuelve `200 { registered:false }`; `UserResponseDTO.registered` default `true` (retrocompatible). Front detecta el flag en `fetchProfile` y `Login`.
+2. **CI ahora corre los tests del backend** (`729a92b`, `45f3663`, `bd793dd`, en `main`): antes solo compilaba. Se arregló un test obsoleto (`UsuarioAdminServiceTest` afirmaba `null` en vez de `""` tras el fix `lower(bytea)`) y se reemplazó el `contextLoads` roto por `SchemaMigrationIT` (`@DataJpaTest` + **Testcontainers Postgres**, `@Tag("integration")`). El job `backend` del CI corre `./gradlew test` + `integrationTest` (los runners de GitHub traen Docker). ⚠️ Local no hay Docker → la validación real del esquema es en CI.
+3. **Feature: ofertas por grupos + penalización de no-respuesta** (PR **#2**, mergeado a `main` como `f7dde1b`). Reemplaza la asignación 1:1 por ofertas en grupos. Resuelve el hallazgo "ofertas dormidas" (ver abajo). Diseño y plan en `docs/superpowers/`. 14 commits, 68 tests, implementado tarea-por-tarea con review por-tarea + review final de rama.
+4. **Limpieza de flags admin** (PR **#3**, _abierto_): `V9` elimina los flags huérfanos `trabajo_oferta_timeout1_min`/`timeout2_min` (sin uso tras el modelo nuevo) y se agregan descripciones de los 3 flags nuevos en `FeatureFlagsPanel`.
+
+**Modelo nuevo de asignación (reemplaza `proveedorNotificadoId` 1:1):**
+- Nueva tabla `trabajo_oferta` (proveedor × trabajo: `grupo`, `ofrecidoAt`, `respondioAt`, `resultado` ∈ OFRECIDA/PROPUSO/DURMIO). Es a la vez estado vivo (grupo actual = filas OFRECIDA) e historial para el score.
+- El trabajo se ofrece al **top-N por score** (`trabajo_oferta_grupo_tamano`, default 10); si en **N min** (`trabajo_oferta_grupo_intervalo_min`, default 5) nadie propone, se marca DURMIO al grupo y se avanza al siguiente; se agota → cancela. Dentro del grupo es **carrera**: el 1º que propone gana (lock atómico `tomarTrabajoSiPendiente`).
+- **Score:** nuevo 4º factor `tasaRespuestaOfertas = PROPUSO/(PROPUSO+DURMIO)`, peso `score_peso_respuesta_ofertas` (default 0.20), configurable en admin. La velocidad se calcula sobre `trabajo_oferta`.
+- **Concurrencia:** el marcado DURMIO del scheduler es un UPDATE condicional (`marcarGrupoDurmioSiPendiente`) que no pisa un PROPUSO y solo actúa si el trabajo sigue PENDIENTE (cierra la carrera scheduler-vs-propose que detectó el review final).
+
+**⚠️ Deploys pendientes:**
+- **Mergear PR #3** (limpieza de flags).
+- **Deploy backend (Railway):** corre las migraciones V7/V8 (y V9 al mergear #3) y activa los flags nuevos. Verificar que el CI (`integrationTest`) quedó verde en `main` tras el merge de #2.
+
+**Follow-ups del review final** (documentados, no bloquean) → ver "⏭️ Próxima sesión (pendiente)".
 
 ---
 
@@ -28,7 +51,7 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - **Remote Config:** el param `min_app_version` se crea con el primer PUT desde el `VersionGatePanel` (o a mano en la consola de Firebase).
 - FE se viene desplegando solo con cada push (Firebase Hosting via CI).
 
-**Qué resta** → ver "⏭️ Próxima sesión (pendiente)" abajo (features grandes: multi-oficio hasta 3, horario de trabajo; hallazgos de producto: validación de matrícula, ofertas dormidas sin costo en el score).
+**Qué resta** → ver "⏭️ Próxima sesión (pendiente)" abajo (features grandes: multi-oficio hasta 3, horario de trabajo; hallazgo de producto: validación de matrícula). _Ofertas dormidas: RESUELTO (2026-07-02, ver abajo)._
 
 ---
 
@@ -51,11 +74,17 @@ Stack: Spring Boot 3.4.2 · Java 21 · PostgreSQL · Firebase Auth · WebSocket 
 - [x] **UX: pantalla de propuesta tras aceptar — RESUELTO de verdad (2026-06-26).** Al aceptar una propuesta, `ClientProposal.tsx` quedaba mostrando "Esta propuesta ya no está disponible" en vez de ir al seguimiento. **(Primer intento equivocado:** se creyó que `data.id` venía undefined y se cambió a `jobId` — pero `apiClient.patch` devuelve el body y el DTO trae `id`, así que era un no-op; commit `99389ff` no arregló nada.) **Causa real — carrera de caché:** `useTrabajo` comparte la key `['trabajo', id]`. Al aceptar, `onSuccess` invalidaba solo `['trabajos-cliente']`, NO esa key → al navegar a `/seguimiento/:id`, `JobTracking` (`:45-46`) leía el trabajo cacheado **todavía en `PROPUESTO`** y su `useEffect` **redirige a `/propuesta/:id` si estado === 'PROPUESTO'** → rebote → `/propuesta` re-fetchea (ya EN_CURSO/EN_COLA) → cartel "no disponible". **Fix:** en `onSuccess(data)` sembrar `queryClient.setQueryData(['trabajo', jobId], data)` con la respuesta (estado ya EN_CURSO/EN_COLA) antes de navegar, así `JobTracking` lee el estado fresco y no rebota. `tsc` OK. _Pendiente: redeploy FE._ _Lección: verificar la premisa antes de "arreglar" (el primer fix se basó en una suposición sin comprobar)._
 - [ ] **Nota de testing — denormalizados por SQL directo causan lecturas stale (2026-06-26).** Editar `users.promedio_calificacion`/`cantidad_calificaciones` con un `UPDATE` directo en la DB **no se refleja de inmediato** en el scoring: el backend puede tener la entidad `User` cacheada con el valor viejo hasta que el caché se refresca (~minutos). Vivido en la prueba de ponderación: el primer trabajo se asignó al "medio" porque el "excelente" se leyó con su calificación pre-`UPDATE` (empate en 50). **No es bug de prod** — el flujo real crea calificaciones vía `CalificacionService.crearCalificacion`, que recalcula y persiste el denormalizado por Hibernate (lecturas frescas). Solo aplica a ediciones manuales de testing: tras un `UPDATE` manual, esperar/refrescar antes de probar.
 - [ ] **Validación de la matrícula del proveedor (2026-06-26).** Hoy la `matrícula` se guarda en `User` (`RegisterDTO`/`UserService:93`) y se pide en el onboarding del proveedor (`OnboardingGoogle.tsx`), pero la **única validación es que no esté vacía** (`!matricula.trim()`) — no se valida formato ni que sea real/exista. Definir: ¿validación de formato?, ¿chequeo contra un registro/padrón oficial?, ¿revisión manual del admin antes de habilitar al proveedor? Hoy cualquiera se registra como proveedor con una matrícula inventada.
-- [ ] **Ofertas "dormidas" no tienen costo en el score (2026-06-26).** Cuando una oferta llega al proveedor y la deja sin aceptar ni rechazar:
+- [x] **Ofertas "dormidas" no tienen costo en el score — RESUELTO (2026-07-02, PR #2).** Cuando una oferta llega al proveedor y la deja sin aceptar ni rechazar:
   - **Comportamiento actual:** el `TrabajoEscalationScheduler` corre cada 60s. Tras `trabajo_oferta_timeout1_min` (prod 30 min) re-ofrece al **siguiente mejor disponible** (excluye al que durmió), `reintentos=1`, avisa al cliente "seguimos buscando". Tras `trabajo_oferta_timeout2_min` (prod +15 min) **cancela** el trabajo. → **un solo re-ofrecimiento** antes de cancelar (aunque haya #3, #4 disponibles); el cliente puede esperar ~45 min.
   - **Hallazgo:** dormir **o rechazar** una oferta **no afecta el score** del proveedor. Los 3 factores se calculan sobre `t.proveedor` (asignado, solo se setea al **aceptar**, `TrabajoService:564`) o sobre `propuesto_at`. Una oferta ignorada/rechazada deja el trabajo `PENDIENTE` sin `proveedor` y sin `propuesto_at` → **invisible** al scoring (`rechazarTrabajo:156` pone `proveedorNotificadoId=null` sin tocar `t.proveedor`).
   - **Implicancia:** la "tasa de aceptación" (`countPropuestasEnviadasByProveedorId`/`...Aceptadas`) **no** mide "ofertas aceptadas/recibidas" sino, de los trabajos **que tomó**, cuántos completó vs canceló. Incentivo perverso: ignorar ofertas no convenientes y agarrar solo las jugosas no baja el score.
   - **Opciones a decidir:** (a) penalizar la no-respuesta con una "tasa de respuesta a ofertas" real (registrar ofertas vencidas por proveedor); (b) más reintentos antes de cancelar (escalar al #3, #4…); (c) acortar timeout1 (30 min es mucho); (d) dejarlo así para el volumen pre-launch.
+  - **✅ RESUELTO (PR #2):** se hizo (a) + (b) juntas con un rediseño del modelo de asignación. Nueva tabla `trabajo_oferta` (registra cada oferta por proveedor con `resultado` PROPUSO/DURMIO). El trabajo se ofrece al **top-10 por score a la vez**; si nadie propone en 5 min, se marca DURMIO al grupo y se pasa al siguiente (hasta agotar → cancela) — ya no un solo re-ofrecimiento. Nuevo 4º factor de score `tasaRespuestaOfertas = PROPUSO/(PROPUSO+DURMIO)`, peso `score_peso_respuesta_ofertas` (0.20) configurable en admin → dormir/rechazar **sí** baja el ranking. Detalle en el resumen de sesión 2026-07-02 arriba y en `docs/superpowers/{specs,plans}/2026-07-02-ofertas-por-grupos*`.
+  - **Follow-ups del review final (pendientes, no bloquean):**
+    - [ ] **Timeout de aceptación del cliente.** El scheduler solo escala trabajos `PENDIENTE`. Si el cliente nunca resuelve una propuesta (`PROPUESTO`), las ofertas del resto del grupo quedan `OFRECIDA` colgadas sin cerrar. Falta un barrido de propuestas `PROPUESTO` estancadas (gap pre-existente: no hay timeout de aceptación del cliente).
+    - [ ] **`Trabajo.reintentos` vestigial** — ya no se lee/escribe en el modelo nuevo; drop de columna cuando convenga.
+    - [ ] **`RuntimeException` desnuda** para "el trabajo ya no está disponible" (perdedor de la carrera en `proponerTrabajo`) → excepción tipada 409 (`ConflictException`).
+    - [ ] **Pulidos de tests** menores (bordes de velocidad null→50/0→100 con la nueva fuente; `ArgumentCaptor` de identidad en vez de conteo; comentarios/nombres de test stale).
 - [x] **Login con botón de Google — RESUELTO (2026-06-20).** Tenía **3 capas** que se fueron destapando una por una:
   1. **CSP `frame-src`**: no permitía el iframe de Firebase Auth → agregado `https://aliados-web-22.firebaseapp.com` + `https://apis.google.com` en `firebase.json` (ambas políticas).
   2. **Google Cloud Console (`redirect_uri_mismatch`)**: el cliente OAuth `578160153411-...` no tenía registrado el redirect URI `https://aliados-web-22.firebaseapp.com/__/auth/handler` ni los JavaScript origins (los 3 dominios + localhost). Se habían "perdido"; se re-registraron.
