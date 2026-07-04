@@ -2,7 +2,7 @@
 
 Fecha: 2026-06-18
 Estado: Aprobado (sin commit, por regla de no tocar git sin permiso)
-Relacionado: `backend/INFORME-MEJORAS-BACKEND.md` #20 (fotos base64 → payload gigante).
+Relacionado: `docs/backend/INFORME-MEJORAS-BACKEND.md` #20 (fotos base64 → payload gigante).
 
 ## Problema
 

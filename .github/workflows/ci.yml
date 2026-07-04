@@ -6,8 +6,17 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # Cambios que son SOLO documentación no gatean lint/build/tests: no cambian
+    # el código ni el esquema, así que el CI no aporta nada. Si un commit toca
+    # docs + código, el CI igual corre (basta un path no-ignorado para dispararlo).
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
 
 # Cancela corridas viejas del mismo ref si se pushea de nuevo.
 concurrency:
