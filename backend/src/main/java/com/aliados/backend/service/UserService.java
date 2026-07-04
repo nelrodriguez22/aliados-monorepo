@@ -10,6 +10,7 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.entity.UserStatus;
 import com.aliados.backend.exception.ConflictException;
+import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.exception.UserNotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
@@ -73,6 +74,13 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO registerUser(RegisterDTO dto) {
+        // SEC-1: el rol ADMIN nunca se auto-asigna por el registro público. Solo se
+        // crea por un camino privilegiado (seed/migración). Rechazamos antes de tocar
+        // la BD para no dejar rastro de un intento de escalada.
+        if (dto.getRole() == UserRole.ADMIN) {
+            throw new ForbiddenException("Rol no permitido en el registro");
+        }
+
         // Verificar que no exista el usuario
         if (userRepository.existsByFirebaseUid(dto.getFirebaseUid())) {
             throw new ConflictException("Usuario ya registrado con este Firebase UID");

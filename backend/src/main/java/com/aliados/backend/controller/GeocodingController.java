@@ -1,6 +1,8 @@
 package com.aliados.backend.controller;
 
 import com.aliados.backend.config.RateLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,6 +19,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/geocoding")
 public class GeocodingController {
+
+    private static final Logger logger = LoggerFactory.getLogger(GeocodingController.class);
 
     private static final String GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
     private static final String AUTOCOMPLETE_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
@@ -54,7 +58,9 @@ public class GeocodingController {
             Map<String, Object> response = getMap(uri);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
+            logger.warn("Error en reverse geocode: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
 
@@ -75,7 +81,9 @@ public class GeocodingController {
             Map<String, Object> response = getMap(uri);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
+            logger.warn("Error en forward geocode: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
 
@@ -111,7 +119,9 @@ public class GeocodingController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
+            logger.warn("Error en autocomplete: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
 
