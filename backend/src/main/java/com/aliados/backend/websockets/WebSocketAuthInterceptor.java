@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -21,29 +22,37 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        logger.info("🔍 preSend ejecutado - Command: {}", accessor != null ? accessor.getCommand() : "null");
-
+        // SEC-3: solo autenticamos en CONNECT. El Principal queda asociado a la sesión
+        // STOMP y persiste para los frames siguientes (SUBSCRIBE/SEND), así que el resto
+        // pasa sin re-verificar.
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
-            logger.info("🔍 Auth header: {}", authHeader != null ? "presente" : "null");
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                try {
-                    FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-                    String uid = decodedToken.getUid();
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                // SEC-3: sin token válido no se abre la conexión (antes se dejaba pasar
+                // como anónimo, lo que permitía suscribirse a /topic/** sin auth).
+                throw new MessagingException("WebSocket CONNECT sin token de autenticación");
+            }
 
-                    accessor.setUser(new Principal() {
-                        @Override
-                        public String getName() {
-                            return uid;
-                        }
-                    });
+            String token = authHeader.substring(7);
+            try {
+                FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+                String uid = decodedToken.getUid();
 
-                    logger.info("✅ WebSocket autenticado para usuario: {}", uid);
-                } catch (Exception e) {
-                    logger.error("❌ Error autenticando WebSocket: {}", e.getMessage());
-                }
+                accessor.setUser(new Principal() {
+                    @Override
+                    public String getName() {
+                        return uid;
+                    }
+                });
+
+                logger.debug("WebSocket autenticado para usuario: {}", uid);
+            } catch (MessagingException e) {
+                throw e;
+            } catch (Exception e) {
+                // Token presente pero inválido/expirado → rechazamos la conexión.
+                logger.warn("WebSocket CONNECT con token inválido: {}", e.getMessage());
+                throw new MessagingException("Token de WebSocket inválido");
             }
         }
 

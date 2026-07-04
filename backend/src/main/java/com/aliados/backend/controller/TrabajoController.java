@@ -43,8 +43,11 @@ public class TrabajoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TrabajoResponseDTO> getTrabajoById(@PathVariable Long id) {
-        TrabajoResponseDTO trabajo = trabajoService.getTrabajoById(id);
+    public ResponseEntity<TrabajoResponseDTO> getTrabajoById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String uid = authentication.getName();
+        TrabajoResponseDTO trabajo = trabajoService.getTrabajoById(id, uid);
         return ResponseEntity.ok(trabajo);
     }
 

@@ -54,8 +54,10 @@ public class UserController {
             UserResponseDTO user = userService.registerUser(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (FirebaseAuthException e) {
+            // SEC-4: no exponer el detalle interno de Firebase al cliente; se loguea server-side.
+            logger.warn("Registro con token inválido: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Token inválido: " + e.getMessage());
+                    .body("Token inválido");
         }
         // ConflictException→409, NotFoundException→404 y RuntimeException→400
         // los maneja GlobalExceptionHandler (no los atrapamos acá).

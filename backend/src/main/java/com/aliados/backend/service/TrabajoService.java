@@ -136,10 +136,36 @@ public class TrabajoService {
                 .collect(Collectors.toList());
     }
 
-    public TrabajoResponseDTO getTrabajoById(Long id) {
+    public TrabajoResponseDTO getTrabajoById(Long id, String firebaseUid) {
         Trabajo trabajo = trabajoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
+
+        // SEC-2 (IDOR): solo pueden ver el trabajo su cliente, el proveedor asignado,
+        // un proveedor con oferta para ese trabajo (aún sin aceptar), o un ADMIN.
+        User solicitante = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new ForbiddenException("No autorizado"));
+        if (!puedeVerTrabajo(trabajo, solicitante)) {
+            throw new ForbiddenException("No autorizado");
+        }
+
         return mapToDTO(trabajo);
+    }
+
+    private boolean puedeVerTrabajo(Trabajo trabajo, User solicitante) {
+        if (solicitante.getRole() == UserRole.ADMIN) {
+            return true;
+        }
+        Long solicitanteId = solicitante.getId();
+        if (trabajo.getCliente() != null && trabajo.getCliente().getId().equals(solicitanteId)) {
+            return true;
+        }
+        if (trabajo.getProveedor() != null && trabajo.getProveedor().getId().equals(solicitanteId)) {
+            return true;
+        }
+        // Proveedor al que se le ofreció el trabajo (ServiceDetail lo lee antes de proponer/aceptar).
+        return trabajoOfertaRepository
+                .findByTrabajoIdAndProveedorId(trabajo.getId(), solicitanteId)
+                .isPresent();
     }
 
     @Transactional
