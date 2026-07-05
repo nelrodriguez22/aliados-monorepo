@@ -71,6 +71,7 @@ public class UserService {
     // el cooldown visible lo maneja el frontend.
     private static final Duration RESEND_COOLDOWN = Duration.ofSeconds(60);
     private final Map<String, Instant> lastResendByEmail = new ConcurrentHashMap<>();
+    private final Map<String, Instant> lastPasswordResetByEmail = new ConcurrentHashMap<>();
 
     @Transactional
     public UserResponseDTO registerUser(RegisterDTO dto) {
@@ -187,6 +188,43 @@ public class UserService {
             sendVerificationEmail(user);
             logger.debug("📧 Reenvío de verificación disparado para {}", email);
         });
+    }
+
+    /**
+     * Envía el email branded de recuperación de contraseña. Endpoint público, así que
+     * NUNCA lanza ni revela si el email existe (anti-enumeración): cualquier resultado
+     * termina silencioso. El caller responde siempre genérico.
+     */
+    public void forgotPassword(String rawEmail) {
+        if (rawEmail == null || rawEmail.isBlank()) return;
+        String email = rawEmail.trim().toLowerCase();
+
+        // Backstop anti-spam: si se pidió hace menos de RESEND_COOLDOWN, ignorar.
+        Instant last = lastPasswordResetByEmail.get(email);
+        if (last != null && Duration.between(last, Instant.now()).compareTo(RESEND_COOLDOWN) < 0) {
+            logger.debug("⏳ Reset de contraseña ignorado por cooldown");
+            return;
+        }
+
+        String resetLink;
+        try {
+            resetLink = FirebaseAuth.getInstance().generatePasswordResetLink(email);
+        } catch (Exception e) {
+            // Email inexistente en Firebase (u otro error): no filtrar nada, salir.
+            logger.debug("Reset de contraseña solicitado para email no resoluble en Firebase");
+            return;
+        }
+
+        String oobCode = extractParam(resetLink, "oobCode");
+        String apiKey = extractParam(resetLink, "apiKey");
+        String customLink = frontendUrl + "/restablecer-contrasena?mode=resetPassword&oobCode=" + oobCode + "&apiKey=" + apiKey;
+
+        // Nombre para el saludo del email (fallback si no está en la DB).
+        String nombre = userRepository.findByEmail(email).map(User::getNombre).orElse(null);
+
+        lastPasswordResetByEmail.put(email, Instant.now());
+        emailService.sendPasswordResetEmail(email, nombre, customLink);
+        logger.debug("📧 Reset de contraseña disparado");
     }
 
     // NUEVOS MÉTODOS PARA WEBSOCKET
