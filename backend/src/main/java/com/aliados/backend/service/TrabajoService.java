@@ -162,10 +162,14 @@ public class TrabajoService {
         if (trabajo.getProveedor() != null && trabajo.getProveedor().getId().equals(solicitanteId)) {
             return true;
         }
-        // Proveedor al que se le ofreció el trabajo (ServiceDetail lo lee antes de proponer/aceptar).
+        // SEC-10: proveedor con una oferta ACTIVA (OFRECIDA o PROPUSO) para este trabajo
+        // — ServiceDetail lo lee antes de proponer/aceptar. Una oferta ya cerrada (DURMIO)
+        // NO habilita seguir viendo el trabajo (el acceso expira con la oferta).
         return trabajoOfertaRepository
                 .findByTrabajoIdAndProveedorId(trabajo.getId(), solicitanteId)
-                .isPresent();
+                .map(o -> o.getResultado() == ResultadoOferta.OFRECIDA
+                        || o.getResultado() == ResultadoOferta.PROPUSO)
+                .orElse(false);
     }
 
     @Transactional

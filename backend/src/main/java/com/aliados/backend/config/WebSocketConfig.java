@@ -26,13 +26,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // SEC-6: sin HandshakeInterceptor de token por query param. La autenticación se
+        // hace 100% por el header Authorization del frame STOMP CONNECT (WebSocketAuthInterceptor);
+        // el front nunca manda el token en la URL (quedaría en logs/proxies/historial).
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(
                         "https://aliados-app-22.web.app",
                         "https://aliados-app.convivirtech.com.ar",
                         "http://localhost:*"
                 )
-                .addInterceptors(new com.aliados.backend.websockets.WebSocketHandshakeInterceptor())
                 .withSockJS();
     }
 

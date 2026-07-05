@@ -81,7 +81,7 @@ public class EmailService {
             ResponseEntity<String> resp = restTemplate.postForEntity(
                     RESEND_ENDPOINT, new HttpEntity<>(payload, headers), String.class);
             int status = resp.getStatusCode().value();
-            logger.info("✅ Email aceptado por Resend → {} (status {})", toEmail, status);
+            logger.debug("✅ Email aceptado por Resend → {} (status {})", toEmail, status);
             return new SendResult(status, resp.getBody(), null);
         } catch (HttpStatusCodeException e) {
             logger.error("❌ Resend rechazó el envío a {}. Status: {}, Body: {}",

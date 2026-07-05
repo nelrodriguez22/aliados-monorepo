@@ -19,13 +19,19 @@ Resumen de estado:
 - [x] **SEC-2** (ALTO) — IDOR: lectura de cualquier trabajo por ID — ✅ resuelto (rama `fix/seguridad-sec1-a-sec4`)
 - [x] **SEC-3** (MEDIO) — WebSocket: CONNECT no rechaza tokens inválidos → suscripción anónima a `/topic/**` — ✅ resuelto (rama `fix/seguridad-sec1-a-sec4`)
 - [x] **SEC-4** (MEDIO) — Fuga de mensajes internos de excepción al cliente — ✅ resuelto (rama `fix/seguridad-sec1-a-sec4`)
-- [ ] **SEC-5** (BAJO) — "Cifrado" de localStorage con clave embebida en el bundle (falsa sensación de seguridad)
-- [ ] **SEC-6** (BAJO) — Token de WebSocket viajando por query param del handshake
-- [ ] **SEC-7** (BAJO) — Logging ruidoso en producción expone UIDs y flujo de auth
-- [ ] **SEC-8** (BAJO) — `proponerTrabajo` parsea `Map` crudo sin validar tipos → 500 en vez de 400
+- [x] **SEC-5** (BAJO) — "Cifrado" de localStorage con clave embebida en el bundle — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): ya no se persiste el `user`; se quitó el AES decorativo
+- [x] **SEC-6** (BAJO) — Token de WebSocket viajando por query param del handshake — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): eliminado el `WebSocketHandshakeInterceptor` (código muerto)
+- [x] **SEC-7** (BAJO) — Logging ruidoso en producción expone UIDs y flujo de auth — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): `info`→`debug` en el happy-path que expone UID/email/nombre
+- [x] **SEC-8** (BAJO) — `proponerTrabajo` parsea `Map` crudo sin validar tipos → 500 en vez de 400 — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): `ProponerTrabajoDTO` con `@Valid`
+- [x] **SEC-9** (MEDIO) — La Google Maps API key puede terminar en los logs al loguear `e.getMessage()` — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): `redactApiKey()` sanitiza la key antes de loguear
+- [x] **SEC-10** (BAJO) — Scope de autorización obsoleto: un proveedor con oferta ya `DURMIO` sigue viendo el trabajo — ✅ resuelto (rama `fix/seguridad-sec5-a-sec8`): acceso limitado a ofertas `OFRECIDA`/`PROPUSO`
 
 > **Nota SEC-7 (parcial):** al arreglar SEC-3 se bajaron a `DEBUG`/`WARN` los logs ruidosos del
 > `WebSocketAuthInterceptor` (antes `INFO` con UIDs y emojis). Queda pendiente barrer el resto del código.
+>
+> **SEC-9 y SEC-10** los detectó la revisión de seguridad automática sobre el PR #6 (los propios fixes
+> SEC-2/SEC-4). Como esta rama (`fix/seguridad-sec5-a-sec8`) está apilada sobre PR #6, se resolvieron acá
+> junto con SEC-5–8.
 
 ---
 
@@ -189,6 +195,52 @@ robustez/DoS menor y superficie de error mal manejada.
 
 **Fix propuesto:** usar un DTO con `@Valid` (como en `crearTrabajo`) en vez de `Map` crudo, con
 tipos y validaciones declarativas.
+
+---
+
+## SEC-9 — La Google Maps API key puede filtrarse a los logs 🟡 MEDIO
+
+**Ubicación:** `backend/src/main/java/com/aliados/backend/controller/GeocodingController.java`
+(los tres `catch` de `reverse`/`forward`/`autocomplete`)
+
+**Descripción:** al resolver SEC-4 se movió `e.getMessage()` de la respuesta al cliente hacia
+`logger.warn("... {}", e.getMessage())`. La URI que arma el controller incluye
+`.queryParam("key", apiKey)`. Si `RestTemplate` falla con una excepción de red
+(`ResourceAccessException`), su mensaje puede incluir la URL completa **con `?key=<GOOGLE_MAPS_API_KEY>`**,
+que termina persistida en los logs.
+
+**Impacto:** exposición del secreto (API key de Google Maps) a cualquiera con acceso a los logs.
+Regresión introducida por el propio fix de SEC-4.
+
+**PoC teórico:** provocar un timeout/IO error hacia `maps.googleapis.com` (p. ej. red caída) →
+el `logger.warn` escribe la URL con la key.
+
+**Fix propuesto:** no loguear `e.getMessage()` crudo. Redactar la `apiKey` del mensaje antes de
+loguear (o loguear solo `e.getClass().getSimpleName()`). Idealmente, un helper que sanitice el
+secreto de cualquier string de log.
+
+> Detectado por la revisión de seguridad automática del PR #6. ✅ Resuelto en `fix/seguridad-sec5-a-sec8`.
+
+---
+
+## SEC-10 — Scope de autorización obsoleto en `getTrabajoById` 🟢 BAJO
+
+**Ubicación:** `backend/src/main/java/com/aliados/backend/service/TrabajoService.java`
+(`puedeVerTrabajo`, introducido en SEC-2)
+
+**Descripción:** el chequeo de acceso usa
+`trabajoOfertaRepository.findByTrabajoIdAndProveedorId(...).isPresent()` sin filtrar por
+`ResultadoOferta`. Una oferta que ya terminó en `DURMIO` (el trabajo se resolvió sin ese proveedor)
+**deja la fila en la tabla**, así que ese proveedor sigue autorizado a ver el trabajo de forma
+indefinida (dirección del cliente, quién lo tomó, desenlace).
+
+**Impacto:** fuga de información acotada a proveedores que en algún momento recibieron la oferta.
+Menor (ya habían visto el trabajo al ser ofertados), pero el acceso debería expirar con la oferta.
+
+**Fix propuesto:** limitar el acceso a ofertas activas (`OFRECIDA` o `PROPUSO`), excluyendo `DURMIO`.
+El proveedor finalmente asignado ya está cubierto por la rama `trabajo.getProveedor()`.
+
+> Detectado por la revisión de seguridad automática del PR #6. ✅ Resuelto en `fix/seguridad-sec5-a-sec8`.
 
 ---
 

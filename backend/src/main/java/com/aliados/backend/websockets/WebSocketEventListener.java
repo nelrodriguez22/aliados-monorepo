@@ -54,10 +54,10 @@ public class WebSocketEventListener {
             var userEntity = userService.getUserEntityByFirebaseUid(firebaseUid);
 
             if (userEntity != null && userEntity.getStatus() == UserStatus.BUSY) {
-                logger.info("✅ Usuario {} conectado - Mantiene status: BUSY", firebaseUid);
+                logger.debug("✅ Usuario {} conectado - Mantiene status: BUSY", firebaseUid);
             } else {
                 userService.updateUserStatus(firebaseUid, UserStatus.ONLINE);
-                logger.info("✅ Usuario {} conectado - Status: ONLINE", firebaseUid);
+                logger.debug("✅ Usuario {} conectado - Status: ONLINE", firebaseUid);
             }
         }
     }
@@ -71,7 +71,7 @@ public class WebSocketEventListener {
             // Momento del disconnect: si el usuario vuelve a verse (reconexión → updateUserStatus
             // refresca lastSeenAt) después de este instante, NO lo marcamos offline.
             LocalDateTime disconnectAt = LocalDateTime.now();
-            logger.info("🔌 Usuario {} desconectado, verificando en 5s...", firebaseUid);
+            logger.debug("🔌 Usuario {} desconectado, verificando en 5s...", firebaseUid);
 
             scheduler.schedule(() -> {
                 try {
@@ -80,7 +80,7 @@ public class WebSocketEventListener {
 
                     // Si está BUSY no tocar — tiene trabajos en curso.
                     if (userEntity.getStatus() == UserStatus.BUSY) {
-                        logger.info("⏳ Usuario {} está BUSY, no se marca offline", firebaseUid);
+                        logger.debug("⏳ Usuario {} está BUSY, no se marca offline", firebaseUid);
                         return;
                     }
 
@@ -88,12 +88,12 @@ public class WebSocketEventListener {
                     // usuario sigue conectado → no lo marcamos offline.
                     LocalDateTime lastSeen = userEntity.getLastSeenAt();
                     if (lastSeen != null && lastSeen.isAfter(disconnectAt)) {
-                        logger.info("🔄 Usuario {} se reconectó dentro de la ventana, sigue online", firebaseUid);
+                        logger.debug("🔄 Usuario {} se reconectó dentro de la ventana, sigue online", firebaseUid);
                         return;
                     }
 
                     userService.updateUserStatus(firebaseUid, UserStatus.OFFLINE);
-                    logger.info("✅ Usuario {} marcado OFFLINE", firebaseUid);
+                    logger.debug("✅ Usuario {} marcado OFFLINE", firebaseUid);
                 } catch (Exception e) {
                     logger.error("Error en disconnect handler: {}", e.getMessage());
                 }

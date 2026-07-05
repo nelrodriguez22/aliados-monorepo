@@ -48,7 +48,7 @@ public class UserStatusController {
     public void updateStatus(@Payload UserStatusDTO statusDTO, Principal principal) {
         if (principal != null && principal.getName().equals(statusDTO.getFirebaseUid())) {
             userService.updateUserStatus(principal.getName(), statusDTO.getStatus());
-            logger.info("Usuario {} cambió estado a {}", principal.getName(), statusDTO.getStatus());
+            logger.debug("Usuario {} cambió estado a {}", principal.getName(), statusDTO.getStatus());
         }
     }
 
@@ -60,7 +60,7 @@ public class UserStatusController {
         }
 
         String firebaseUid = principal.getName();
-        logger.info("✅ Autenticación recibida para UID: {}", firebaseUid);
+        logger.debug("✅ Autenticación recibida para UID: {}", firebaseUid);
 
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
@@ -70,13 +70,13 @@ public class UserStatusController {
 
             if (trabajosActivos > 0) {
                 userService.updateUserStatus(firebaseUid, UserStatus.BUSY);
-                logger.info("✅ Usuario {} marcado como BUSY ({} trabajos activos/en cola)", firebaseUid, trabajosActivos);
+                logger.debug("✅ Usuario {} marcado como BUSY ({} trabajos activos/en cola)", firebaseUid, trabajosActivos);
             } else {
-                logger.info("✅ Usuario {} conectó WebSocket - Status actual: {}", firebaseUid, user.getStatus());
+                logger.debug("✅ Usuario {} conectó WebSocket - Status actual: {}", firebaseUid, user.getStatus());
             }
         } else {
             userService.updateUserStatus(firebaseUid, UserStatus.ONLINE);
-            logger.info("✅ Cliente {} marcado como ONLINE", firebaseUid);
+            logger.debug("✅ Cliente {} marcado como ONLINE", firebaseUid);
         }
     }
 }
