@@ -1,31 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AES from 'crypto-js/aes';
-import encUtf8 from 'crypto-js/enc-utf8';
 import type { Store } from '@/shared/types/interfaces';
 import { setSentryUser, clearSentryUser } from '@/shared/lib/sentry';
-
-const ENCRYPTION_KEY = import.meta.env.VITE_STORAGE_KEY || 'aliados-key';
-
-const encryptedStorage = {
-  getItem: (name: string) => {
-    const value = localStorage.getItem(name);
-    if (!value) return null;
-    try {
-      const bytes = AES.decrypt(value, ENCRYPTION_KEY);
-      return bytes.toString(encUtf8);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (name: string, value: string) => {
-    const encrypted = AES.encrypt(value, ENCRYPTION_KEY).toString();
-    localStorage.setItem(name, encrypted);
-  },
-  removeItem: (name: string) => {
-    localStorage.removeItem(name);
-  },
-};
 
 export const useStore = create<Store>()(
   persist(
@@ -64,17 +40,17 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'aliados-storage',
-      storage: createJSONStorage(() => encryptedStorage),
+      storage: createJSONStorage(() => localStorage),
+      // SEC-5: NO persistimos `user` (PII: nombre, email, rol) en localStorage. La sesión
+      // la sostiene Firebase Auth (IndexedDB) y el perfil se rehidrata del backend vía
+      // useProfile en cada carga (que llama login()). Solo persistimos flags no sensibles:
+      // isAuthenticated (para el gate de limpieza del AuthProvider) y theme (UX).
+      // Antes se "cifraba" con AES usando una clave embebida en el bundle: seguridad
+      // decorativa (la clave viajaba con el dato). Se eliminó por engañosa.
       partialize: (state) => ({
-        user: state.user ? { ...state.user, status: 'OFFLINE' as const } : null,
         isAuthenticated: state.isAuthenticated,
         theme: state.theme,
       }),
-      // Tras un reload el user se rehidrata sin pasar por login(): re-seteamos el
-      // contexto de Sentry para que los errores post-reload tengan id + rol.
-      onRehydrateStorage: () => (state) => {
-        if (state?.user) setSentryUser(state.user);
-      },
     }
   )
 );

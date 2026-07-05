@@ -126,7 +126,7 @@ public class UserService {
 
             boolean enviado = emailService.sendVerificationEmail(user.getEmail(), user.getNombre(), customLink);
             if (enviado) {
-                logger.info("✅ Email de verificación enviado a {}", user.getEmail());
+                logger.debug("✅ Email de verificación enviado a {}", user.getEmail());
             } else {
                 logger.error("❌ Resend no aceptó el email de verificación para {} (revisar API key / remitente)", user.getEmail());
             }
@@ -164,7 +164,7 @@ public class UserService {
         // Backstop anti-spam: si se reenvió hace menos de RESEND_COOLDOWN, ignorar.
         Instant last = lastResendByEmail.get(email);
         if (last != null && Duration.between(last, Instant.now()).compareTo(RESEND_COOLDOWN) < 0) {
-            logger.info("⏳ Reenvío de verificación ignorado por cooldown para {}", email);
+            logger.debug("⏳ Reenvío de verificación ignorado por cooldown para {}", email);
             return;
         }
 
@@ -172,12 +172,12 @@ public class UserService {
             // No reenviar si el email ya está verificado en Firebase.
             UserRecord record = FirebaseAuth.getInstance().getUserByEmail(email);
             if (record.isEmailVerified()) {
-                logger.info("✓ Reenvío omitido: {} ya está verificado", email);
+                logger.debug("✓ Reenvío omitido: {} ya está verificado", email);
                 return;
             }
         } catch (FirebaseAuthException e) {
             // Email inexistente en Firebase (u otro error): no filtrar nada, salir.
-            logger.info("Reenvío de verificación solicitado para email no resoluble en Firebase");
+            logger.debug("Reenvío de verificación solicitado para email no resoluble en Firebase");
             return;
         }
 
@@ -185,7 +185,7 @@ public class UserService {
         userRepository.findByEmail(email).ifPresent(user -> {
             lastResendByEmail.put(email, Instant.now());
             sendVerificationEmail(user);
-            logger.info("📧 Reenvío de verificación disparado para {}", email);
+            logger.debug("📧 Reenvío de verificación disparado para {}", email);
         });
     }
 

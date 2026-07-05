@@ -3,6 +3,7 @@ package com.aliados.backend.controller;
 import com.aliados.backend.dto.CancelarTrabajoDTO;
 import com.aliados.backend.dto.CrearTrabajoDTO;
 import com.aliados.backend.dto.PagedTrabajosResponse;
+import com.aliados.backend.dto.ProponerTrabajoDTO;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.service.TrabajoService;
 import jakarta.validation.Valid;
@@ -15,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -114,19 +114,15 @@ public class TrabajoController {
     @PatchMapping("/{id}/proponer")
     public ResponseEntity<TrabajoResponseDTO> proponerTrabajo(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> body,
+            @Valid @RequestBody ProponerTrabajoDTO dto,
             Authentication authentication) {
         String uid = authentication.getName();
-        Integer tiempoEstimado = (Integer) body.get("tiempoEstimadoMinutos");
-        Double latitud = body.get("latitud") != null ? ((Number) body.get("latitud")).doubleValue() : null;
-        Double longitud = body.get("longitud") != null ? ((Number) body.get("longitud")).doubleValue() : null;
-        BigDecimal tarifaVisita = body.get("tarifaVisita") != null ? new BigDecimal(body.get("tarifaVisita").toString()) : null;
-
-        if (tiempoEstimado == null) {
-            throw new IllegalArgumentException("Tiempo estimado es requerido");
-        }
-
-        TrabajoResponseDTO trabajo = trabajoService.proponerTrabajo(id, uid, tiempoEstimado, latitud, longitud, tarifaVisita);
+        TrabajoResponseDTO trabajo = trabajoService.proponerTrabajo(
+                id, uid,
+                dto.getTiempoEstimadoMinutos(),
+                dto.getLatitud(),
+                dto.getLongitud(),
+                dto.getTarifaVisita());
         return ResponseEntity.ok(trabajo);
     }
 

@@ -2,6 +2,7 @@ package com.aliados.backend.service;
 
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.entity.Oficio;
+import com.aliados.backend.entity.ResultadoOferta;
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.TrabajoOferta;
@@ -98,7 +99,7 @@ class TrabajoAutorizacionTest {
     }
 
     @Test
-    void getTrabajoById_proveedorConOferta_devuelve() {
+    void getTrabajoById_proveedorConOfertaActiva_devuelve() {
         User cliente = user(1L, "cliente-uid", UserRole.CLIENT);
         User proveedor = user(50L, "prov-uid", UserRole.PROVIDER);
         Trabajo t = trabajoDe(cliente, null); // aún no asignado; solo tiene oferta
@@ -106,11 +107,34 @@ class TrabajoAutorizacionTest {
         when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
         when(userRepository.findByFirebaseUid("prov-uid")).thenReturn(Optional.of(proveedor));
         when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(100L, 50L))
-                .thenReturn(Optional.of(new TrabajoOferta()));
+                .thenReturn(Optional.of(oferta(ResultadoOferta.OFRECIDA)));
         lenient().when(calificacionRepository.findByTrabajoId(100L)).thenReturn(Optional.empty());
 
         TrabajoResponseDTO dto = trabajoService.getTrabajoById(100L, "prov-uid");
 
         assertThat(dto.getId()).isEqualTo(100L);
+    }
+
+    // SEC-10: una oferta que ya terminó (DURMIO) no debe seguir dando acceso al trabajo.
+    @Test
+    void getTrabajoById_proveedorConOfertaDurmio_lanzaForbidden() {
+        User cliente = user(1L, "cliente-uid", UserRole.CLIENT);
+        User proveedor = user(50L, "prov-uid", UserRole.PROVIDER);
+        Trabajo t = trabajoDe(cliente, null);
+
+        when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        when(userRepository.findByFirebaseUid("prov-uid")).thenReturn(Optional.of(proveedor));
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(100L, 50L))
+                .thenReturn(Optional.of(oferta(ResultadoOferta.DURMIO)));
+        lenient().when(calificacionRepository.findByTrabajoId(100L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> trabajoService.getTrabajoById(100L, "prov-uid"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    private TrabajoOferta oferta(ResultadoOferta resultado) {
+        TrabajoOferta o = new TrabajoOferta();
+        o.setResultado(resultado);
+        return o;
     }
 }

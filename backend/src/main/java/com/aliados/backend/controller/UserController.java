@@ -105,7 +105,7 @@ public class UserController {
 
         if (user.getRole() == UserRole.PROVIDER && status == UserStatus.ONLINE) {
             trabajoService.asignarTrabajosAProveedorQueSeConecta(user);
-            logger.info("✅ Trabajos pendientes asignados a proveedor {}", user.getNombre());
+            logger.debug("✅ Trabajos pendientes asignados a proveedor {}", user.getNombre());
         }
 
         return ResponseEntity.ok().build();

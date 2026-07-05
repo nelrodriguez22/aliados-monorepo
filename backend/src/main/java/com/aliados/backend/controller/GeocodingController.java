@@ -59,7 +59,7 @@ public class GeocodingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
-            logger.warn("Error en reverse geocode: {}", e.getMessage());
+            logger.warn("Error en reverse geocode: {}", redactApiKey(e.getMessage()));
             return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
@@ -82,7 +82,7 @@ public class GeocodingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
-            logger.warn("Error en forward geocode: {}", e.getMessage());
+            logger.warn("Error en forward geocode: {}", redactApiKey(e.getMessage()));
             return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
@@ -120,7 +120,7 @@ public class GeocodingController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             // SEC-4: no exponer el detalle interno al cliente; se loguea server-side.
-            logger.warn("Error en autocomplete: {}", e.getMessage());
+            logger.warn("Error en autocomplete: {}", redactApiKey(e.getMessage()));
             return ResponseEntity.status(500).body(Map.of("error", "No se pudo procesar la solicitud de geocoding"));
         }
     }
@@ -128,6 +128,14 @@ public class GeocodingController {
     @SuppressWarnings("unchecked")
     private Map<String, Object> getMap(URI uri) {
         return restTemplate.getForObject(uri, Map.class);
+    }
+
+    // SEC-9: la URI que arma este controller lleva ?key=<apiKey>. El mensaje de una
+    // excepción de red (p. ej. ResourceAccessException) puede incluir esa URL completa,
+    // así que redactamos la key antes de loguear para que el secreto no quede en los logs.
+    private String redactApiKey(String msg) {
+        if (msg == null || apiKey == null || apiKey.isBlank()) return msg;
+        return msg.replace(apiKey, "***");
     }
 
     // El UID viene del Authentication (lo setea FirebaseAuthFilter); el endpoint
