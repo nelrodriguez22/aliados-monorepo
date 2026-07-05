@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -194,7 +195,12 @@ public class UserService {
      * Envía el email branded de recuperación de contraseña. Endpoint público, así que
      * NUNCA lanza ni revela si el email existe (anti-enumeración): cualquier resultado
      * termina silencioso. El caller responde siempre genérico.
+     *
+     * @Async: el envío (Firebase + Resend) corre en otro thread para que el controller
+     * responda en tiempo constante. Sin esto, un email existente tardaría más (hace
+     * trabajo de red) que uno inexistente → timing side channel para enumerar usuarios.
      */
+    @Async
     public void forgotPassword(String rawEmail) {
         if (rawEmail == null || rawEmail.isBlank()) return;
         String email = rawEmail.trim().toLowerCase();
