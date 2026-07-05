@@ -72,6 +72,15 @@ public class UserController {
                 "message", "Si el email está registrado y sin verificar, te reenviamos el enlace de verificación."));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
+        // Respuesta genérica e idéntica siempre (anti-enumeración): no revela si el
+        // email existe. El envío real (con su cooldown) ocurre en el service.
+        userService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Si el email está registrado, te enviamos un enlace para restablecer tu contraseña."));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser(Authentication authentication) {
         String uid = authentication.getName();
