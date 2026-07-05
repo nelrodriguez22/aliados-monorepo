@@ -6,6 +6,8 @@ export const ROUTES = {
   REGISTER: '/registro',
   CHECK_EMAIL: '/verifica-tu-correo',
   VERIFICATION_SUCCESS: '/verificacion-exitosa',
+  RECOVER_PASSWORD: '/recuperar-contrasena',
+  RESET_PASSWORD: '/restablecer-contrasena',
   ONBOARDING: '/completar-perfil',
 
   //cliente
