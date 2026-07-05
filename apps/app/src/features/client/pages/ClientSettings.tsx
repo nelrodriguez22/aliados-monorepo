@@ -7,8 +7,7 @@ import { Bell, Lock, Moon, Sun, Mail, MessageSquare, KeyRound } from "lucide-rea
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/shared/lib/firebase";
+import { apiClient } from "@/shared/lib/apiClient";
 import toast from "react-hot-toast";
 
 // ── Toggle switch reutilizable ──
@@ -113,8 +112,8 @@ export function ClientSettings() {
     if (!user?.email) return;
     setSendingReset(true);
     try {
-      await sendPasswordResetEmail(auth, user.email);
-      toast.success('Email enviado para restablecer tu contraseña');
+      await apiClient.post("/api/users/forgot-password", { email: user.email }, false);
+      toast.success('Te enviamos un email para restablecer tu contraseña');
     } catch {
       toast.error('Error al enviar email');
     } finally {

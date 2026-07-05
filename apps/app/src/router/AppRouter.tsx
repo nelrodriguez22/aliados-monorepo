@@ -11,6 +11,8 @@ import { Login } from "@/features/auth/pages/Login";
 import { Register } from "@/features/auth/pages/Register";
 import { VerificationSuccess } from "@/features/auth/pages/VerificationSuccess";
 import { CheckEmail } from "@/features/auth/pages/CheckEmail";
+import { RecoverPassword } from "@/features/auth/pages/RecoverPassword";
+import { ResetPassword } from "@/features/auth/pages/ResetPassword";
 import { OnboardingGoogle } from "@/features/auth/pages/OnboardingGoogle";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 import { ROUTES } from "@/shared/constants/routes";
@@ -77,6 +79,8 @@ export function AppRouter() {
             <Route path="registro" element={<Register />} />
             <Route path="verifica-tu-correo" element={<CheckEmail />} />
             <Route path="verificacion-exitosa" element={<VerificationSuccess />} />
+            <Route path="recuperar-contrasena" element={<RecoverPassword />} />
+            <Route path="restablecer-contrasena" element={<ResetPassword />} />
             <Route path="completar-perfil" element={<OnboardingGoogle />} />
           </Route>
 

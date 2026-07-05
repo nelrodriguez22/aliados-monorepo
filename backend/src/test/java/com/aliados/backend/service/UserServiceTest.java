@@ -6,6 +6,7 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,7 +25,13 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
     @Mock UserRepository userRepository;
+    @Mock EmailService emailService;
     @InjectMocks UserService service;
+
+    @BeforeEach
+    void initFrontendUrl() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "frontendUrl", "https://app.test");
+    }
 
     private User cliente(String uid) {
         User u = new User();
@@ -69,5 +76,53 @@ class UserServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         verify(userRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void forgotPassword_emailNull_noEnviaNada() {
+        service.forgotPassword(null);
+        service.forgotPassword("   ");
+        org.mockito.Mockito.verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void forgotPassword_emailInexistenteEnFirebase_silencioso() throws Exception {
+        try (org.mockito.MockedStatic<com.google.firebase.auth.FirebaseAuth> fb =
+                     org.mockito.Mockito.mockStatic(com.google.firebase.auth.FirebaseAuth.class)) {
+            com.google.firebase.auth.FirebaseAuth fa = org.mockito.Mockito.mock(com.google.firebase.auth.FirebaseAuth.class);
+            fb.when(com.google.firebase.auth.FirebaseAuth::getInstance).thenReturn(fa);
+            org.mockito.Mockito.when(fa.generatePasswordResetLink("nadie@test.local"))
+                    .thenThrow(new RuntimeException("no such user"));
+
+            service.forgotPassword("nadie@test.local");
+
+            org.mockito.Mockito.verifyNoInteractions(emailService);
+        }
+    }
+
+    @Test
+    void forgotPassword_emailValido_generaLinkYManda() throws Exception {
+        try (org.mockito.MockedStatic<com.google.firebase.auth.FirebaseAuth> fb =
+                     org.mockito.Mockito.mockStatic(com.google.firebase.auth.FirebaseAuth.class)) {
+            com.google.firebase.auth.FirebaseAuth fa = org.mockito.Mockito.mock(com.google.firebase.auth.FirebaseAuth.class);
+            fb.when(com.google.firebase.auth.FirebaseAuth::getInstance).thenReturn(fa);
+            org.mockito.Mockito.when(fa.generatePasswordResetLink("ana@test.local"))
+                    .thenReturn("https://x/__/auth/action?mode=resetPassword&oobCode=ABC&apiKey=KEY");
+
+            User ana = new User();
+            ana.setEmail("ana@test.local");
+            ana.setNombre("Ana");
+            when(userRepository.findByEmail("ana@test.local")).thenReturn(Optional.of(ana));
+
+            service.forgotPassword("ana@test.local");
+
+            org.mockito.ArgumentCaptor<String> link = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(emailService).sendPasswordResetEmail(
+                    org.mockito.ArgumentMatchers.eq("ana@test.local"),
+                    org.mockito.ArgumentMatchers.eq("Ana"),
+                    link.capture());
+            assertThat(link.getValue())
+                    .isEqualTo("https://app.test/restablecer-contrasena?mode=resetPassword&oobCode=ABC&apiKey=KEY");
+        }
     }
 }

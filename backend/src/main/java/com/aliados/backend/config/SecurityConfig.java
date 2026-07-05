@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 "/queue/**",        // Suscripciones a queues
                                 "/user/**",          // Mensajes a usuarios específicos
                                 "/api/mudanzas/tiers",
-                                "/api/users/resend-verification"
+                                "/api/users/resend-verification",
+                                "/api/users/forgot-password"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
