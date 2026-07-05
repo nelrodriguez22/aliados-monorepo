@@ -8,6 +8,10 @@ on:
       - 'apps/landing/**'
       - 'packages/**'
       - '.github/workflows/deploy.yml'
+      # Config de Firebase Hosting (headers, rewrites, targets): un cambio acá debe
+      # gatear el deploy, si no queda mergeado en main pero sin aplicarse en prod.
+      - 'firebase.json'
+      - '.firebaserc'
 
 # Un solo deploy a la vez: pushes seguidos cancelan el deploy en curso y corre el último.
 # Evita que dos corridas se solapen y choquen en el release de Firebase Hosting
