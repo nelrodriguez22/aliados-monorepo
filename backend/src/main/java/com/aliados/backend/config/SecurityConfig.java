@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
 @Configuration
 @EnableWebSecurity
@@ -44,6 +45,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
+                // HSTS explícito. Detrás del proxy TLS de Railway la request puede no verse
+                // "secure", así que deshabilitamos el HSTS condicional de Spring y escribimos
+                // el header siempre (el acceso real al backend es siempre HTTPS).
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts -> hsts.disable())
+                        .addHeaderWriter(new StaticHeadersWriter(
+                                "Strict-Transport-Security", "max-age=31536000; includeSubDomains")))
                 .addFilterBefore(firebaseAuthFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
