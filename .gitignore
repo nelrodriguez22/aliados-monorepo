@@ -42,3 +42,10 @@ yarn-error.log*
 build/
 .firebase/
 .idea/
+
+# Eclipse / Buildship (generado por el IDE a partir de build.gradle)
+backend/bin/
+backend/.settings/
+backend/.project
+backend/.classpath
+backend/.factorypath
