@@ -158,7 +158,12 @@ public class UserService {
      * Reenvía el email de verificación. Pensado para un endpoint público, así que
      * NUNCA lanza ni revela si el email existe / está verificado (anti-enumeración):
      * cualquier resultado termina silencioso. El caller responde siempre genérico.
+     *
+     * @Async: el envío (Firebase + Resend) corre en otro thread para que el controller
+     * responda en tiempo constante. Sin esto, un email existente tardaría más (hace
+     * trabajo de red) que uno inexistente → timing side channel para enumerar usuarios.
      */
+    @Async
     public void resendVerification(String rawEmail) {
         if (rawEmail == null || rawEmail.isBlank()) return;
         String email = rawEmail.trim().toLowerCase();
