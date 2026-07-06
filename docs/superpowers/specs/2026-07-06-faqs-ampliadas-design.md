@@ -100,14 +100,16 @@ no cambia.
 
 ## Testing
 
-Test de componente con vitest + testing-library (siguiendo el patrón de tests existentes
-de la app):
+La app no tiene infra de tests de componentes (vitest corre en `environment: "node"` y
+solo incluye `*.test.ts`; no hay testing-library ni jsdom). Decisión: no agregar infra —
+se testea la lógica pura extraída a `faqs.ts`, siguiendo el patrón de los tests existentes:
 
-1. Renderiza ambas tabs y las preguntas de la tab activa.
-2. Con `user.role = 'PROVIDER'` abre en "Profesionales"; con `'CLIENT'` en "Clientes".
-3. Cambiar de tab muestra las preguntas de la otra audiencia.
-4. Clic en una pregunta expande la respuesta; segundo clic la colapsa.
-5. Clic en el overlay (o botón cerrar) llama a `onClose`.
+1. `defaultAudiencia('PROVIDER')` → `'proveedor'`; `'CLIENT'`, `'ADMIN'` y `undefined`
+   (usuario no cargado) → `'cliente'`.
+2. Sanidad del contenido: 17 FAQs en total, 11 de audiencia `'cliente'` y 6 de
+   `'proveedor'`, sin preguntas duplicadas, sin campos vacíos.
+
+El comportamiento visual del modal (tabs, acordeón, overlay) se verifica manualmente.
 
 ## Fuera de alcance
 
