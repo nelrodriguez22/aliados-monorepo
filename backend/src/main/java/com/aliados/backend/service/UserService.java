@@ -162,10 +162,8 @@ public class UserService {
      * @Async: el envío (Firebase + Resend) corre en otro thread para que el controller
      * responda en tiempo constante. Sin esto, un email existente tardaría más (hace
      * trabajo de red) que uno inexistente → timing side channel para enumerar usuarios.
-     * (Anotación fully-qualified a propósito: evita colisionar con el import que agrega
-     * el PR #12 en este mismo archivo, sin importar el orden de merge.)
      */
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public void resendVerification(String rawEmail) {
         if (rawEmail == null || rawEmail.isBlank()) return;
         String email = rawEmail.trim().toLowerCase();
