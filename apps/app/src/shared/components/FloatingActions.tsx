@@ -133,9 +133,14 @@ export function FaqModal({ onClose }: { onClose: () => void }) {
   const user = useStore((state) => state.user);
   const [tab, setTab] = useState<FaqAudiencia>(() => defaultAudiencia(user?.role));
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center sm:bg-black/40 sm:p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center sm:bg-black/40 sm:p-4"
       onClick={onClose}
     >
       <div
