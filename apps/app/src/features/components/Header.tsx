@@ -8,7 +8,7 @@ import { NotificationsDropdown } from "@/features/components/header/Notification
 import { UserMenu } from "@/features/components/header/UserMenu";
 import { ProviderStatusToggle } from "@/features/components/header/ProviderStatusToggle";
 import { ThemeToggle } from "@/shared/components/ThemeToggle";
-import { ChatWindow, FaqWindow, BugReportWindow } from "@/shared/components/FloatingActions";
+import { ChatWindow, FaqModal, BugReportWindow } from "@/shared/components/FloatingActions";
 import { Download, MoreVertical, CircleHelp, Bug, Bot } from "lucide-react";
 
 export function Header() {
@@ -178,7 +178,7 @@ export function Header() {
         </div>
       </header>
 
-      {faqOpen  && <FaqWindow       onClose={() => setFaqOpen(false)}  />}
+      {faqOpen  && <FaqModal        onClose={() => setFaqOpen(false)}  />}
       {bugOpen  && <BugReportWindow onClose={() => setBugOpen(false)}  />}
       {chatOpen && <ChatWindow      onClose={() => setChatOpen(false)} />}
     </>

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Bot, Bug, CheckCircle, ChevronDown, CircleHelp, Send, X } from "lucide-react";
 import { apiClient } from "@/shared/lib/apiClient";
+import { FAQS, defaultAudiencia, type FaqAudiencia } from "@/shared/constants/faqs";
+import { useStore } from "@/shared/store/useStore";
 
 // ── Chat ────────────────────────────────────────────────────────────────────
 
@@ -97,41 +99,6 @@ export function ChatWindow({ onClose }: { onClose: () => void }) {
 
 // ── FAQ ─────────────────────────────────────────────────────────────────────
 
-const FAQS = [
-  {
-    q: "¿Cómo solicito un servicio?",
-    a: "Desde tu panel, hacé clic en una de las tarjetas de 'Servicios populares' (Electricista, Plomero, Cerrajero, Gasista, Mudanzas) o usá el buscador y hacé clic en 'Buscar'. Luego completá la dirección (podés usar el GPS), describí el problema y adjuntá fotos opcionales. Confirmá con el botón 'Solicitar servicio'.",
-  },
-  {
-    q: "¿Cómo hago seguimiento de mi servicio?",
-    a: "Tus solicitudes activas aparecen en 'Trabajos activos' del panel principal. Hacé clic en cualquiera para ver el estado en tiempo real. Las mudanzas activas se muestran en la sección 'Mudanzas activas'. Recibirás notificaciones push cuando haya novedades.",
-  },
-  {
-    q: "¿Cuáles son los métodos de pago aceptados?",
-    a: "Aceptamos tarjetas de crédito y débito (Visa, Mastercard y Amex) y cuentas bancarias. Podés agregar o eliminar métodos desde tu perfil en 'Métodos de pago'.",
-  },
-  {
-    q: "¿Puedo cancelar una solicitud?",
-    a: "Sí, podés cancelar mientras el estado sea 'Buscando proveedor'. Entrá al seguimiento del trabajo y usá la opción de cancelar; te pedirá ingresar el motivo. Una vez que el proveedor está en camino o trabajando ya no es posible cancelar.",
-  },
-  {
-    q: "¿Cómo sé que el proveedor es confiable?",
-    a: "Todos los proveedores pasan por un proceso de verificación antes de operar. Al recibir una propuesta podés ver el perfil del proveedor con su calificación promedio y reseñas de trabajos anteriores antes de aceptar.",
-  },
-  {
-    q: "¿Cómo califico al proveedor?",
-    a: "Al completarse el servicio accedés automáticamente a la pantalla de calificación con estrellas (1 a 5) y comentario opcional. También podés calificar más tarde desde 'Historial de trabajos' en tu panel, haciendo clic en los trabajos con badge 'Sin calificar'.",
-  },
-  {
-    q: "¿Cómo activo o desactivo mi disponibilidad? (proveedores)",
-    a: "En el encabezado de la app encontrarás el toggle que alterna entre 'Disponible' y 'Desconectado'. Al activarlo empezás a recibir solicitudes de trabajo. No podés desconectarte mientras tenés un trabajo en curso; el sistema te mostrará el estado 'Ocupado' automáticamente.",
-  },
-  {
-    q: "¿Cómo contacto a soporte?",
-    a: "Podés reportar un problema con el botón de bug de esta barra, o consultarnos por el asistente de chat. Para casos urgentes escribinos a soporte@aliados.com.",
-  },
-];
-
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
 
@@ -157,28 +124,61 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-export function FaqWindow({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="chat-window-enter fixed inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-surface sm:inset-auto sm:bottom-20 sm:right-[76px] sm:h-[480px] sm:w-96 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl dark:sm:border-dark-border">
-      <div className="flex items-center justify-between border-b border-slate-100 bg-brand-600 px-4 py-3 dark:border-dark-border dark:bg-dark-brand">
-        <div className="flex items-center gap-2">
-          <CircleHelp size={18} className="text-white" />
-          <span className="text-sm font-semibold text-white">Preguntas frecuentes</span>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="cursor-pointer rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <X size={16} />
-        </button>
-      </div>
+const TABS: { value: FaqAudiencia; label: string }[] = [
+  { value: "cliente",   label: "Clientes" },
+  { value: "proveedor", label: "Profesionales" },
+];
 
-      <div className="flex-1 overflow-y-auto">
-        {FAQS.map((faq) => (
-          <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-        ))}
+export function FaqModal({ onClose }: { onClose: () => void }) {
+  const user = useStore((state) => state.user);
+  const [tab, setTab] = useState<FaqAudiencia>(() => defaultAudiencia(user?.role));
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center sm:bg-black/40 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="chat-window-enter flex h-full w-full flex-col overflow-hidden bg-white dark:bg-dark-surface sm:h-[70vh] sm:max-w-xl sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl dark:sm:border-dark-border"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 bg-brand-600 px-4 py-3 dark:border-dark-border dark:bg-dark-brand">
+          <div className="flex items-center gap-2">
+            <CircleHelp size={18} className="text-white" />
+            <span className="text-sm font-semibold text-white">Preguntas frecuentes</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="cursor-pointer rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex border-b border-slate-100 dark:border-dark-border">
+          {TABS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              className={`flex-1 cursor-pointer py-2.5 text-sm font-medium transition-colors ${
+                tab === value
+                  ? "border-b-2 border-brand-600 text-brand-600 dark:border-dark-brand dark:text-dark-brand"
+                  : "text-slate-500 hover:text-slate-700 dark:text-dark-text-secondary dark:hover:text-dark-text"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {FAQS.filter((faq) => faq.audiencia === tab).map((faq) => (
+            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -381,7 +381,7 @@ export function FloatingActions() {
 
   return (
     <>
-      {faqOpen  && <FaqWindow       onClose={() => setFaqOpen(false)}  />}
+      {faqOpen  && <FaqModal        onClose={() => setFaqOpen(false)}  />}
       {bugOpen  && <BugReportWindow onClose={() => setBugOpen(false)}  />}
       {chatOpen && <ChatWindow      onClose={() => setChatOpen(false)} />}
 
