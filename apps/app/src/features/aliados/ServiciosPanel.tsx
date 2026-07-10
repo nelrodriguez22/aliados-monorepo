@@ -98,6 +98,7 @@ export function ServiciosPanel() {
         <div className="relative flex-1 min-w-[10rem]">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
+            aria-label="Buscar servicio por número"
             className="w-full rounded border border-slate-300 py-1 pl-8 pr-2 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-slate-200"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -105,6 +106,7 @@ export function ServiciosPanel() {
           />
         </div>
         <select
+          aria-label="Filtrar por tipo de servicio"
           className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-slate-200"
           value={tipo}
           onChange={(e) => {
@@ -115,6 +117,7 @@ export function ServiciosPanel() {
           {TIPOS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
         </select>
         <select
+          aria-label="Filtrar por estado"
           className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-slate-200"
           value={estado}
           onChange={(e) => setEstado(e.target.value)}
