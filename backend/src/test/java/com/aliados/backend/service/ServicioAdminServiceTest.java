@@ -207,6 +207,20 @@ class ServicioAdminServiceTest {
     }
 
     @Test
+    void paginaGiganteNoDesborda_devuelveVaciaConTotal() {
+        List<Trabajo> trabajos = new java.util.ArrayList<>();
+        for (long i = 1; i <= 3; i++) {
+            trabajos.add(trabajo(i, TrabajoEstado.PENDIENTE, LocalDateTime.now().minusMinutes(i)));
+        }
+        when(trabajoRepository.findAllForAdmin()).thenReturn(trabajos);
+
+        ServiciosAdminResponse r = service.buscar(null, "TRABAJO", null, 250_000_000, 10);
+
+        assertThat(r.items()).isEmpty();
+        assertThat(r.total()).isEqualTo(3);
+    }
+
+    @Test
     void lookupPorIdConFiltroEstado_excluyeSiNoMatchea() {
         when(trabajoRepository.findByIdForAdmin(1L))
                 .thenReturn(Optional.of(trabajo(1L, TrabajoEstado.PENDIENTE, LocalDateTime.now())));

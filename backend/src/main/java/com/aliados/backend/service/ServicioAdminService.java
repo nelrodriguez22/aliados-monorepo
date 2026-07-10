@@ -100,9 +100,10 @@ public class ServicioAdminService {
                 .sorted(Comparator.comparing(ServicioAdminItemDTO::createdAt).reversed())
                 .toList();
 
-        int from = Math.max(0, page) * Math.max(1, size);
-        int to = Math.min(filtrados.size(), from + Math.max(1, size));
-        List<ServicioAdminItemDTO> pagina = from >= filtrados.size() ? List.of() : filtrados.subList(from, to);
+        // long: page*size puede desbordar int con valores grandes/maliciosos (ej. page=250000000).
+        long from = (long) Math.max(0, page) * Math.max(1, size);
+        long to = Math.min(filtrados.size(), from + Math.max(1, size));
+        List<ServicioAdminItemDTO> pagina = from >= filtrados.size() ? List.of() : filtrados.subList((int) from, (int) to);
         return new ServiciosAdminResponse(pagina, filtrados.size());
     }
 

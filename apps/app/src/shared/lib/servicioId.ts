@@ -8,6 +8,10 @@ export function formatServicioId(tipo: TipoServicio, id: number): string {
 
 // Tolerante: mayúsculas/minúsculas, con/sin #, con/sin guión.
 // Número pelado → tipo null (el caller busca en ambos tipos).
+// Espejo documentado en frontend de la gramática parseQ del backend
+// (ServicioAdminService.parseQ). Hoy solo lo usan los tests: el panel admin
+// manda el q crudo y el backend re-implementa el parseo; se mantiene acá
+// para validación client-side cuando haya un consumidor de producto.
 export function parseServicioId(
   input: string,
 ): { tipo: TipoServicio | null; id: number } | null {
