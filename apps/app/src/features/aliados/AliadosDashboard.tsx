@@ -16,6 +16,7 @@ import { VersionGatePanel } from './VersionGatePanel';
 import { BroadcastPanel } from './BroadcastPanel';
 import { OficiosPanel } from './OficiosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
+import { ServiciosPanel } from './ServiciosPanel';
 
 const STAT_CONFIG = [
   { key: 'clientes',    label: 'Clientes',        icon: Users,        bg: tw.iconBg.brand,  color: 'text-brand-600 dark:text-dark-brand',          tooltip: 'Total de clientes registrados en la plataforma' },
@@ -169,7 +170,7 @@ const PaginationBtn = ({ onClick, disabled, label, active }: { onClick: () => vo
 
 const AliadosDashboard = () => {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'stats' | 'config'>('stats');
+  const [tab, setTab] = useState<'stats' | 'servicios' | 'config'>('stats');
 
   const { data: stats, isLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['admin-stats'],
@@ -279,7 +280,7 @@ const AliadosDashboard = () => {
 
         {/* Tabs */}
         <div className="mb-6 flex gap-6 border-b border-slate-200 dark:border-dark-border">
-          {([['stats', 'Estadísticas'], ['config', 'Configuración']] as const).map(([key, label]) => (
+          {([['stats', 'Estadísticas'], ['servicios', 'Servicios'], ['config', 'Configuración']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -649,6 +650,10 @@ const AliadosDashboard = () => {
         </SectionCard>
 
           </>
+        )}
+
+        {tab === 'servicios' && (
+          <ServiciosPanel />
         )}
 
         {tab === 'config' && (
