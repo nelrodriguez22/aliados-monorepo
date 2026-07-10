@@ -84,7 +84,7 @@ export function JobCompleted() {
               <CheckCircle className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-2">
                 <p className="text-sm font-semibold text-green-800 dark:text-green-300">
                   ¡Trabajo terminado!
                 </p>
