@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -64,7 +65,10 @@ export function ProviderCompletedJob() {
 
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
+              <div className="flex items-baseline gap-2">
+                <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               {trabajo.completedAt && (
                 <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>{formatDateTime(trabajo.completedAt)}</p>
               )}

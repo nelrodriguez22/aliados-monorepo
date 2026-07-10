@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
@@ -200,6 +201,7 @@ export function ProviderMudanzaDetail() {
                 <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>
                   Mudanza {mudanza.tierNombre}
                 </h1>
+                <ServicioIdBadge tipo="MUDANZA" id={mudanza.id} />
               </div>
               <p className={`text-sm ${tw.text.secondary}`}>Cliente: {mudanza.clienteNombre}</p>
             </div>

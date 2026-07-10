@@ -7,6 +7,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Badge } from "@/shared/components/ui/Badge";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { MapPin, Clock, User, X, Loader2, FileText, Navigation } from "lucide-react";
@@ -98,7 +99,10 @@ export function ActiveJob() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Trabajo en curso</h1>
+            <div className="flex items-baseline gap-2">
+              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Trabajo en curso</h1>
+              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+            </div>
             <div className="mt-1.5">
               <Badge variant="info" showPulse>En curso</Badge>
             </div>

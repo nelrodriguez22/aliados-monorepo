@@ -13,9 +13,22 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
+
+    // Listado admin: fetch de cliente/proveedor/oficio para evitar N+1 al mapear DTOs.
+    // Sin parámetro nullable de estado (el filtro se hace en memoria en el service):
+    // un ":estado IS NULL OR" acá repite el bug de tipado de Postgres documentado
+    // en UsuarioAdminService#buscar.
+    @Query("SELECT t FROM Trabajo t JOIN FETCH t.cliente LEFT JOIN FETCH t.proveedor " +
+           "JOIN FETCH t.oficio ORDER BY t.createdAt DESC")
+    List<Trabajo> findAllForAdmin();
+
+    @Query("SELECT t FROM Trabajo t JOIN FETCH t.cliente LEFT JOIN FETCH t.proveedor " +
+           "JOIN FETCH t.oficio WHERE t.id = :id")
+    Optional<Trabajo> findByIdForAdmin(@Param("id") Long id);
 
     // @EntityGraph: trae cliente/proveedor/oficio en la misma query (evita N+1 al mapear).
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
