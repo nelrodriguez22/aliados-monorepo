@@ -11,9 +11,18 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MudanzaRepository extends JpaRepository<Mudanza, Long> {
+
+    @Query("SELECT m FROM Mudanza m JOIN FETCH m.cliente LEFT JOIN FETCH m.proveedor " +
+           "ORDER BY m.createdAt DESC")
+    List<Mudanza> findAllForAdmin();
+
+    @Query("SELECT m FROM Mudanza m JOIN FETCH m.cliente LEFT JOIN FETCH m.proveedor " +
+           "WHERE m.id = :id")
+    Optional<Mudanza> findByIdForAdmin(@Param("id") Long id);
 
     // @EntityGraph: trae las asociaciones que usa el DTO en una sola query (evita N+1).
     @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
