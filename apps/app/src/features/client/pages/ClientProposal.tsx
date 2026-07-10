@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -104,7 +105,10 @@ export function ClientProposal() {
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
+              <div className="flex items-baseline gap-2">
+                <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               <div className="mt-1.5">
                 <Badge variant="info">Pendiente de respuesta</Badge>
               </div>

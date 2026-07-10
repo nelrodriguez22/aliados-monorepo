@@ -4,6 +4,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Badge } from "@/shared/components/ui/Badge";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -126,7 +127,10 @@ export function ServiceDetail() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Detalle del trabajo</h1>
+            <div className="flex items-baseline gap-2">
+              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Detalle del trabajo</h1>
+              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+            </div>
             <div className="mt-1.5">
               <Badge variant="warning">Pendiente de respuesta</Badge>
             </div>

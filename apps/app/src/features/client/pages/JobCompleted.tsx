@@ -5,6 +5,7 @@ import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
+import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { Loader2, CheckCircle, Star } from "lucide-react";
@@ -83,9 +84,12 @@ export function JobCompleted() {
               <CheckCircle className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                ¡Trabajo terminado!
-              </p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                  ¡Trabajo terminado!
+                </p>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
                 El servicio se completó exitosamente
               </p>
