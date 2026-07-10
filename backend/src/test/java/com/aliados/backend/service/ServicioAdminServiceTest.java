@@ -103,6 +103,24 @@ class ServicioAdminServiceTest {
     }
 
     @Test
+    void numeroPeladoQueDesbordaLong_devuelveVacioSinConsultarRepos() {
+        ServiciosAdminResponse r = service.buscar("99999999999999999999", null, null, 0, 10);
+
+        assertThat(r.items()).isEmpty();
+        assertThat(r.total()).isZero();
+        verifyNoInteractions(trabajoRepository, mudanzaRepository);
+    }
+
+    @Test
+    void numeroConPrefijoQueDesbordaLong_devuelveVacioSinConsultarRepos() {
+        ServiciosAdminResponse r = service.buscar("T-99999999999999999999", null, null, 0, 10);
+
+        assertThat(r.items()).isEmpty();
+        assertThat(r.total()).isZero();
+        verifyNoInteractions(trabajoRepository, mudanzaRepository);
+    }
+
+    @Test
     void sinQ_listaAmbosTiposOrdenadosPorFechaDesc() {
         LocalDateTime ayer = LocalDateTime.now().minusDays(1);
         LocalDateTime hoy = LocalDateTime.now();
@@ -172,6 +190,20 @@ class ServicioAdminServiceTest {
 
         assertThat(r.items()).hasSize(5);
         assertThat(r.total()).isEqualTo(15);
+    }
+
+    @Test
+    void paginaFueraDeRango_devuelveVaciaConTotalCompleto() {
+        List<Trabajo> trabajos = new java.util.ArrayList<>();
+        for (long i = 1; i <= 3; i++) {
+            trabajos.add(trabajo(i, TrabajoEstado.PENDIENTE, LocalDateTime.now().minusMinutes(i)));
+        }
+        when(trabajoRepository.findAllForAdmin()).thenReturn(trabajos);
+
+        ServiciosAdminResponse r = service.buscar(null, "TRABAJO", null, 5, 10);
+
+        assertThat(r.items()).isEmpty();
+        assertThat(r.total()).isEqualTo(3);
     }
 
     @Test

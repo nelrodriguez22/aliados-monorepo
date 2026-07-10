@@ -9,7 +9,6 @@ import com.aliados.backend.repository.TrabajoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -41,10 +40,23 @@ public class ServicioAdminService {
         Matcher m = Q_CON_PREFIJO.matcher(s);
         if (m.matches()) {
             String tipo = m.group(1).equals("T") ? "TRABAJO" : "MUDANZA";
-            return new ParsedQ(tipo, Long.parseLong(m.group(2)));
+            Long id = parseLongSeguro(m.group(2));
+            return id != null ? new ParsedQ(tipo, id) : new ParsedQ(null, null);
         }
-        if (Q_NUMERO.matcher(s).matches()) return new ParsedQ(null, Long.parseLong(s));
+        if (Q_NUMERO.matcher(s).matches()) {
+            Long id = parseLongSeguro(s);
+            if (id != null) return new ParsedQ(null, id);
+        }
         return new ParsedQ(null, null); // no parseable
+    }
+
+    // Overflow de Long (ej. 20 dígitos) = no parseable, nunca excepción.
+    private static Long parseLongSeguro(String s) {
+        try {
+            return Long.parseLong(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -84,8 +96,8 @@ public class ServicioAdminService {
 
         List<ServicioAdminItemDTO> filtrados = items.stream()
                 .filter(i -> filtroEstado == null || i.estado().equals(filtroEstado))
-                .sorted(Comparator.comparing(ServicioAdminItemDTO::createdAt,
-                        Comparator.nullsLast(Comparator.<LocalDateTime>naturalOrder())).reversed())
+                // createdAt es @Column(nullable=false) en ambas entidades: no hace falta null-handling.
+                .sorted(Comparator.comparing(ServicioAdminItemDTO::createdAt).reversed())
                 .toList();
 
         int from = Math.max(0, page) * Math.max(1, size);
