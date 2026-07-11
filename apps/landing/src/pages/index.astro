@@ -12,20 +12,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
   <title>Aliados — El profesional que necesitás, cuando lo necesitás</title>
   <meta name="description" content="Conectamos clientes con profesionales de confianza en Rosario. Electricistas, plomeros, cerrajeros y más." />
   <link rel="icon" type="image/png" href="/favicon.png" />
-  {
-    import.meta.env.PROD && (
-      <>
-        {/* Google tag (gtag.js) — solo en build de producción */}
-        <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-C69HGKX2XV" />
-        <script is:inline>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-C69HGKX2XV');
-        </script>
-      </>
-    )
-  }
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -195,7 +181,6 @@ const REGISTER_URL = `${APP_URL}/registro`;
     .hero-orb-4 { width: 500px; height: 500px; bottom: -180px; left: -180px; background: radial-gradient(circle, rgba(26,138,191,0.18) 0%, rgba(5,64,96,0.08) 45%, transparent 70%); filter: blur(56px); animation: drift2 19s ease-in-out infinite reverse; }
     html.dark .hero-orb-4 { background: radial-gradient(circle, rgba(56,182,232,0.22) 0%, rgba(26,138,191,0.10) 45%, transparent 70%); }
     .hero-orb-3 { width: 450px; height: 450px; top: 40%; left: 50%; background: radial-gradient(circle, rgba(26,138,191,0.08) 0%, transparent 65%); filter: blur(40px); z-index: -1; animation: drift3 33s ease-in-out infinite reverse; }
-
 
     @keyframes drift1 {
       0%,100% { transform: translate(0, 0) scale(1); }
@@ -451,8 +436,8 @@ const REGISTER_URL = `${APP_URL}/registro`;
       <nav class="desktop-nav">
         <a href="#como-funciona">Cómo funciona</a>
         <a href="#servicios">Servicios</a>
-        <a href="#faq">FAQ</a>
         <a href="#proveedores">Para profesionales</a>
+        <a href="#faq">FAQ</a>
       </nav>
       <div class="header-btns">
         <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
