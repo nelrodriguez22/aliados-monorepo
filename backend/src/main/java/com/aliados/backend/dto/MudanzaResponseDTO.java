@@ -80,4 +80,6 @@ public class MudanzaResponseDTO {
     private LocalDateTime completedAt;
     private LocalDateTime cancelledAt;
     private String motivoCancelacion;
+
+    private String codigoProveedor;
 }

@@ -732,6 +732,11 @@ public class MudanzaService {
         if (m.getProveedor() != null) {
             dto.setProveedorId(m.getProveedor().getId());
             dto.setProveedorNombre(m.getProveedor().getNombre());
+            dto.setCodigoProveedor(
+                com.aliados.backend.util.CodigoProveedor.format(
+                    m.getProveedor().getOficio() != null
+                        ? m.getProveedor().getOficio().getNombre() : null,
+                    m.getProveedor().getId()));
         }
 
         // Tier actual
