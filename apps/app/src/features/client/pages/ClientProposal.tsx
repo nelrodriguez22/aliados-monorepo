@@ -4,6 +4,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -152,6 +153,7 @@ export function ClientProposal() {
                 </div>
                 <div>
                   <p className={`text-sm font-semibold ${tw.text.primary}`}>{trabajo.proveedorNombre}</p>
+                  <CodigoProveedorChip codigo={trabajo.codigoProveedor} className="mt-1" />
                   {trabajo.proveedorPromedioCalificacion > 0 && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />

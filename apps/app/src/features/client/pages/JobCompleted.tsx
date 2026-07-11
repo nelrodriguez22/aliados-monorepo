@@ -6,6 +6,7 @@ import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { Loader2, CheckCircle, Star } from "lucide-react";
@@ -137,6 +138,7 @@ export function JobCompleted() {
                   <div>
                     <p className={`text-sm font-semibold ${tw.text.primary}`}>{trabajo.proveedorNombre}</p>
                     <p className={`text-xs ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
+                    <CodigoProveedorChip codigo={trabajo.codigoProveedor} className="mt-1" />
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
 import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
@@ -18,6 +19,7 @@ interface MudanzaDetail {
   clienteNombre: string;
   proveedorId: number | null;
   proveedorNombre: string | null;
+  codigoProveedor: string | null;
   tierId: number;
   tierNombre: string;
   tierEmoji: string;
@@ -384,6 +386,7 @@ export function MudanzaDetail() {
                     <div>
                       <p className={`text-xs ${tw.text.muted}`}>Proveedor</p>
                       <p className={`text-sm font-medium ${tw.text.primary}`}>{mudanza.proveedorNombre}</p>
+                      <CodigoProveedorChip codigo={mudanza.codigoProveedor} className="mt-1" />
                     </div>
                   </div>
                 </>
