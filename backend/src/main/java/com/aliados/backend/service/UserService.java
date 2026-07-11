@@ -348,6 +348,10 @@ public class UserService {
             dto.setCantidadCalificaciones(user.getCantidadCalificaciones() != null ? user.getCantidadCalificaciones() : 0L);
             Long completados = trabajoRepository.countByProveedorIdAndEstado(user.getId(), TrabajoEstado.COMPLETADO);
             dto.setTotalTrabajosCompletados(completados != null ? completados : 0L);
+            dto.setCodigo(
+                com.aliados.backend.util.CodigoProveedor.format(
+                    user.getOficio() != null ? user.getOficio().getNombre() : null,
+                    user.getId()));
         }
         return dto;
     }
