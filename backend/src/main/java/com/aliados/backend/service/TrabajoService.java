@@ -369,6 +369,10 @@ public class TrabajoService {
             // #8: promedio denormalizado en la entidad proveedor (sin query).
             Double promedio = trabajo.getProveedor().getPromedioCalificacion();
             dto.setProveedorPromedioCalificacion(promedio != null ? promedio : 0.0);
+            dto.setCodigoProveedor(
+                com.aliados.backend.util.CodigoProveedor.format(
+                    trabajo.getOficio() != null ? trabajo.getOficio().getNombre() : null,
+                    trabajo.getProveedor().getId()));
         }
 
         calificacionRepository.findByTrabajoId(trabajo.getId()).ifPresent(cal -> {
@@ -507,6 +511,10 @@ public class TrabajoService {
             dto.setProveedorNombre(trabajo.getProveedor().getNombre());
             Double promedio = promediosPorProveedor.get(trabajo.getProveedor().getId());
             dto.setProveedorPromedioCalificacion(promedio != null ? promedio : 0.0);
+            dto.setCodigoProveedor(
+                com.aliados.backend.util.CodigoProveedor.format(
+                    trabajo.getOficio() != null ? trabajo.getOficio().getNombre() : null,
+                    trabajo.getProveedor().getId()));
         }
 
         Calificacion cal = calificacionPorTrabajo.get(trabajo.getId());
