@@ -83,6 +83,22 @@ public class Trabajo {
     @Column(precision = 12, scale = 2)
     private BigDecimal tarifaVisita;
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoPresupuesto;
+
+    @Column(length = 1000)
+    private String notaResumen;
+
+    private Boolean presupuestoAceptado;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoPagado;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoPago estadoPago;
+
+    private LocalDateTime pagadoAt;
+
     @Column(nullable = false)
     private Integer reintentos = 0;
 }
