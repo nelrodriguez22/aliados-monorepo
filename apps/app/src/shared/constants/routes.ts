@@ -40,6 +40,7 @@ export const ROUTES = {
     NOTIFICATIONS: '/proveedor/notificaciones',
     PROFILE: '/proveedor/perfil',
     SETTINGS: '/proveedor/configuracion',
+    CREDENCIAL: '/proveedor/credencial',
   },
 
   // Admin

@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
-import { CredencialProveedor } from "@/features/provider/components/CredencialProveedor";
 import { tw } from "@/shared/styles/design-system";
 import { User as UserIcon, Phone, Mail, MapPin, Briefcase, Shield, Star, CheckCircle, Camera, Loader2 } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
@@ -16,7 +15,6 @@ export function ClientProfile() {
   const navigate = useNavigate();
   const { user, login } = useStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [showCredencial, setShowCredencial] = useState(false);
   const isProvider = user?.role === 'PROVIDER';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -251,13 +249,6 @@ export function ClientProfile() {
                     value={user?.oficio?.nombre || 'No asignado'}
                     hint="Para cambiar tu oficio, contactá a soporte"
                   />
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCredencial(true)}
-                    className="w-full text-xs min-[375px]:text-sm"
-                  >
-                    Mi credencial
-                  </Button>
                 </>
               )}
             </Card>
@@ -297,15 +288,6 @@ export function ClientProfile() {
           </div>
         </div>
       </div>
-
-      <CredencialProveedor
-        open={showCredencial}
-        onClose={() => setShowCredencial(false)}
-        nombre={user?.name ?? ''}
-        oficio={user?.oficio?.nombre}
-        fotoPerfil={user?.fotoPerfil}
-        codigo={user?.codigo}
-      />
     </div>
   );
 }
