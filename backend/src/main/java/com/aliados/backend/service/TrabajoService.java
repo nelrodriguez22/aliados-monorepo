@@ -402,6 +402,12 @@ public class TrabajoService {
         dto.setAcceptedAt(trabajo.getAcceptedAt());
         dto.setCompletedAt(trabajo.getCompletedAt());
         dto.setTarifaVisita(trabajo.getTarifaVisita());
+        dto.setMontoPresupuesto(trabajo.getMontoPresupuesto());
+        dto.setNotaResumen(trabajo.getNotaResumen());
+        dto.setPresupuestoAceptado(trabajo.getPresupuestoAceptado());
+        dto.setMontoPagado(trabajo.getMontoPagado());
+        dto.setEstadoPago(trabajo.getEstadoPago());
+        dto.setPagadoAt(trabajo.getPagadoAt());
         return dto;
     }
 
@@ -544,6 +550,12 @@ public class TrabajoService {
         dto.setAcceptedAt(trabajo.getAcceptedAt());
         dto.setCompletedAt(trabajo.getCompletedAt());
         dto.setTarifaVisita(trabajo.getTarifaVisita());
+        dto.setMontoPresupuesto(trabajo.getMontoPresupuesto());
+        dto.setNotaResumen(trabajo.getNotaResumen());
+        dto.setPresupuestoAceptado(trabajo.getPresupuestoAceptado());
+        dto.setMontoPagado(trabajo.getMontoPagado());
+        dto.setEstadoPago(trabajo.getEstadoPago());
+        dto.setPagadoAt(trabajo.getPagadoAt());
         return dto;
     }
 
