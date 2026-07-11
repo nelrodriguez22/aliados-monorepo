@@ -39,6 +39,7 @@ const ServiceDetail       = lazy(() => import("@/features/provider/pages/Service
 const ActiveJob           = lazy(() => import("@/features/provider/pages/ActiveJob").then(m => ({ default: m.ActiveJob })));
 const ProviderCompletedJob = lazy(() => import("@/features/provider/pages/ProviderCompletedJob").then(m => ({ default: m.ProviderCompletedJob })));
 const ProviderReviews     = lazy(() => import("@/features/provider/pages/ProviderReviews").then(m => ({ default: m.ProviderReviews })));
+const ProviderCredencial  = lazy(() => import("@/features/provider/pages/ProviderCredencial").then(m => ({ default: m.ProviderCredencial })));
 const Notifications       = lazy(() => import("@/features/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const AliadosDashboard    = lazy(() => import("@/features/aliados/AliadosDashboard"));
 const MudanzaRequest      = lazy(() => import("@/features/client/pages/MudanzaRequest").then(m => ({ default: m.MudanzaRequest })));
@@ -117,6 +118,7 @@ export function AppRouter() {
                 <Route path="perfil"             element={<ClientProfile />} />
                 <Route path="configuracion"      element={<ClientSettings />} />
                 <Route path="resenas"            element={<ProviderReviews />} />
+                <Route path="credencial"         element={<ProviderCredencial />} />
                 <Route path="mudanza/:id"        element={<ProviderMudanzaDetail />} />
                 <Route path="mudanzas"            element={<ProviderMudanzaDetail />} />
               </Route>

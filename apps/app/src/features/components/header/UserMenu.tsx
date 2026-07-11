@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Briefcase, CreditCard, Settings, LogOut, Star } from "lucide-react";
+import { User, Briefcase, CreditCard, Settings, LogOut, Star, IdCard } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
 import { useStore } from "@/shared/store/useStore";
@@ -156,6 +156,7 @@ export function UserMenu({ variant }: UserMenuProps) {
                     </span>
                   ) : undefined}
                 />
+                <Item onClick={() => go(ROUTES.PROVIDER.CREDENCIAL)} icon={IdCard} label="Mi credencial" />
                 <Item onClick={() => go(ROUTES.PROVIDER.SETTINGS)} icon={Settings} label="Configuración" />
               </>
             )}
