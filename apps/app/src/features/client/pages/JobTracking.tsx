@@ -4,6 +4,7 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -162,6 +163,7 @@ export function JobTracking() {
               {trabajo.proveedorNombre}
             </h2>
             <p className={`text-xs min-[375px]:text-sm ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
+            <CodigoProveedorChip codigo={trabajo.codigoProveedor} className="mt-1" />
             {trabajo.proveedorPromedioCalificacion > 0 && (
               <div className="mt-1 flex items-center gap-0.5">
                 {[1,2,3,4,5].map((s) => (

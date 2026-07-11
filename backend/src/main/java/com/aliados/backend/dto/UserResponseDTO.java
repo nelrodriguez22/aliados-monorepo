@@ -33,4 +33,5 @@ public class UserResponseDTO {
     private Long totalTrabajosCompletados;
 
     private OficioResponseDTO oficio;
+    private String codigo;
 }

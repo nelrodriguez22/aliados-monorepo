@@ -31,4 +31,5 @@ public class TrabajoResponseDTO {
     private Double proveedorPromedioCalificacion;
     private Integer calificacionEstrellas;
     private BigDecimal tarifaVisita;
+    private String codigoProveedor;
 }

@@ -20,6 +20,7 @@
     "dayjs": "1.11.19",
     "firebase": "12.9.0",
     "lucide-react": "0.563.0",
+    "qrcode.react": "4.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hot-toast": "2.6.0",

@@ -44,6 +44,7 @@ export interface User {
   promedioCalificacion?: number;
   cantidadCalificaciones?: number;
   totalTrabajosCompletados?: number;
+  codigo?: string | null;
 }
 
 export interface Store {

@@ -25,17 +25,18 @@ public interface MudanzaRepository extends JpaRepository<Mudanza, Long> {
     Optional<Mudanza> findByIdForAdmin(@Param("id") Long id);
 
     // @EntityGraph: trae las asociaciones que usa el DTO en una sola query (evita N+1).
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
+    // Incluye "proveedor.oficio" porque mapToDTO lee m.getProveedor().getOficio().getNombre().
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "proveedor.oficio", "tier", "tierOriginal"})
     List<Mudanza> findByClienteFirebaseUidOrderByCreatedAtDesc(String firebaseUid);
 
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "proveedor.oficio", "tier", "tierOriginal"})
     List<Mudanza> findByProveedorIdAndEstadoOrderByCompletedAtDesc(Long proveedorId, MudanzaEstado estado);
 
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "proveedor.oficio", "tier", "tierOriginal"})
     @Query("SELECT m FROM Mudanza m WHERE m.proveedor.id = :proveedorId AND m.estado = 'EN_CURSO'")
     Mudanza findMudanzaEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
 
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "proveedor.oficio", "tier", "tierOriginal"})
     @Query("SELECT m FROM Mudanza m WHERE m.estado = :estado ORDER BY m.createdAt ASC")
     List<Mudanza> findByEstadoOrderByCreatedAtAsc(@Param("estado") MudanzaEstado estado);
 
@@ -47,6 +48,6 @@ public interface MudanzaRepository extends JpaRepository<Mudanza, Long> {
 
     boolean existsByFechaConfirmadaAndTurnoAndEstadoNotIn(LocalDate fechaConfirmada, MudanzaTurno turno, List<MudanzaEstado> estados);
 
-    @EntityGraph(attributePaths = {"cliente", "proveedor", "tier", "tierOriginal"})
+    @EntityGraph(attributePaths = {"cliente", "proveedor", "proveedor.oficio", "tier", "tierOriginal"})
     List<Mudanza> findByProveedorIdAndEstadoIn(Long proveedorId, List<MudanzaEstado> estados);
 }
