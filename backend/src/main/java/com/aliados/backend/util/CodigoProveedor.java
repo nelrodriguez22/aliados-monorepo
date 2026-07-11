@@ -1,6 +1,7 @@
 package com.aliados.backend.util;
 
 import java.text.Normalizer;
+import java.util.Locale;
 
 /**
  * Código identificatorio legible del proveedor: PREFIJO-NNNN.
@@ -24,7 +25,7 @@ public final class CodigoProveedor {
         }
         String prefijo = soloLetras
                 .substring(0, Math.min(3, soloLetras.length()))
-                .toUpperCase();
+                .toUpperCase(Locale.ROOT);
         return prefijo + "-" + String.format("%04d", id);
     }
 }
