@@ -65,7 +65,7 @@ export function ProviderCompletedJob() {
 
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-2">
                 <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
                 <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
               </div>

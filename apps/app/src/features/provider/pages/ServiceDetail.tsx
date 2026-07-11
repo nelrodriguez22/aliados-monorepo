@@ -127,7 +127,7 @@ export function ServiceDetail() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="flex items-baseline gap-2">
+            <div className="flex flex-wrap items-baseline gap-2">
               <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Detalle del trabajo</h1>
               <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
             </div>

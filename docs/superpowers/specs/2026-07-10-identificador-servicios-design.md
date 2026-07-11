@@ -124,6 +124,20 @@ el volumen pre-launch es mínimo; la simplicidad gana. Si el volumen crece, se r
   on-demand, estado vacío, expansión de fila; siguiendo los tests existentes en
   `features/aliados/__tests__`.
 
+## Addendum 2026-07-10: copiar + ayuda en el badge
+
+El `ServicioIdBadge` (solo vistas de cliente y proveedor; el admin queda como está)
+incorpora dos íconos junto al número:
+
+- **Copiar**: copia el ID tal cual se ve (`#T-123`) al portapapeles; feedback discreto,
+  el ícono cambia a un check verde ~1,5 s y vuelve (sin toast).
+- **Ayuda**: ícono de interrogación con el `Tooltip` compartido (`multiline`) que
+  explica: «Este es el ID único de la operación. Guardalo como referencia para hacer
+  reclamos o consultas a soporte.»
+
+Limitación conocida y aceptada: el tooltip es hover-based (mismo componente que usa el
+admin); en mobile no hay hover, el texto de ayuda solo se ve en desktop.
+
 ## Fuera de alcance
 
 - Código legible no secuencial (tipo `SRV-A3F9K2`): descartado por ahora, requeriría
