@@ -37,8 +37,8 @@
 **Frontend (crear):**
 - `apps/app/src/features/provider/components/CredencialProveedor.tsx` — modal credencial con QR.
 - `apps/app/src/shared/components/CodigoProveedorChip.tsx` — chip para la card del cliente.
-- `apps/app/src/shared/components/__tests__/CodigoProveedorChip.test.tsx`
-- `apps/app/src/features/provider/components/__tests__/CredencialProveedor.test.tsx`
+
+**Nota sobre tests de frontend:** el repo no tiene infraestructura de tests de componentes React (`vitest.config.ts` usa `environment: "node"`, `include: ["src/**/*.test.ts"]`, y no están `@testing-library/react`/`jest-dom`). Los componentes previos (`ServicioIdBadge`, `FaqModal`) se validan **visualmente**. Se sigue ese patrón: los componentes nuevos (Tasks 6 y 8) se verifican a ojo en la Task 10; no se agregan tests de render. Los tests de backend (Task 1) sí se escriben (JUnit ya existe).
 
 **Frontend (modificar):**
 - `apps/app/package.json` — dependencia `qrcode.react`.
@@ -402,39 +402,13 @@ Nota sobre lockfile: incluir `pnpm-lock.yaml` sólo si `pnpm add` lo modificó (
 
 **Files:**
 - Create: `apps/app/src/shared/components/CodigoProveedorChip.tsx`
-- Create: `apps/app/src/shared/components/__tests__/CodigoProveedorChip.test.tsx`
 
 **Interfaces:**
 - Produces: `<CodigoProveedorChip codigo={...} className?={...} />` — renderiza `null` si `codigo` es falsy; si no, un chip con ícono `ShieldCheck` + el código en monoespaciado.
 
-- [ ] **Step 1: Escribir el test que falla**
+**Tests:** sin test de render (ver "Nota sobre tests de frontend" arriba); se verifica visualmente en Task 10.
 
-Create `apps/app/src/shared/components/__tests__/CodigoProveedorChip.test.tsx`:
-
-```tsx
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { CodigoProveedorChip } from '@/shared/components/CodigoProveedorChip';
-
-describe('CodigoProveedorChip', () => {
-  it('muestra el código cuando está presente', () => {
-    render(<CodigoProveedorChip codigo="ELE-0047" />);
-    expect(screen.getByText('ELE-0047')).toBeInTheDocument();
-  });
-
-  it('no renderiza nada sin código', () => {
-    const { container } = render(<CodigoProveedorChip codigo={null} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-});
-```
-
-- [ ] **Step 2: Correr el test para ver que falla**
-
-Run: `cd apps/app && pnpm exec vitest run src/shared/components/__tests__/CodigoProveedorChip.test.tsx`
-Expected: FAIL — el módulo `CodigoProveedorChip` no existe.
-
-- [ ] **Step 3: Implementar el chip**
+- [ ] **Step 1: Implementar el chip**
 
 Create `apps/app/src/shared/components/CodigoProveedorChip.tsx`:
 
@@ -461,16 +435,15 @@ export function CodigoProveedorChip({ codigo, className = '' }: Props) {
 }
 ```
 
-- [ ] **Step 4: Correr el test para ver que pasa**
+- [ ] **Step 2: Verificar compilación**
 
-Run: `cd apps/app && pnpm exec vitest run src/shared/components/__tests__/CodigoProveedorChip.test.tsx`
-Expected: PASS (2 tests).
+Run: `cd apps/app && pnpm exec tsc --noEmit`
+Expected: sin errores.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add apps/app/src/shared/components/CodigoProveedorChip.tsx \
-        apps/app/src/shared/components/__tests__/CodigoProveedorChip.test.tsx
+git add apps/app/src/shared/components/CodigoProveedorChip.tsx
 git commit -m "$(cat <<'EOF'
 feat(codigo-proveedor): chip CodigoProveedorChip para las cards del cliente
 
@@ -568,54 +541,14 @@ EOF
 
 **Files:**
 - Create: `apps/app/src/features/provider/components/CredencialProveedor.tsx`
-- Create: `apps/app/src/features/provider/components/__tests__/CredencialProveedor.test.tsx`
 
 **Interfaces:**
 - Consumes: `qrcode.react` (`QRCodeSVG`, Task 5).
 - Produces: `<CredencialProveedor open={boolean} onClose={() => void} nombre={string} oficio={string | null | undefined} fotoPerfil={string | null | undefined} codigo={string | null | undefined} />` — modal a pantalla completa; muestra el QR + código, o un fallback "Código no disponible" si `codigo` es falsy; devuelve `null` si `open` es `false`.
 
-- [ ] **Step 1: Escribir el test que falla**
+**Tests:** sin test de render (ver "Nota sobre tests de frontend" arriba); se verifica visualmente en Task 10.
 
-Create `apps/app/src/features/provider/components/__tests__/CredencialProveedor.test.tsx`:
-
-```tsx
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { CredencialProveedor } from '@/features/provider/components/CredencialProveedor';
-
-const base = {
-  open: true,
-  onClose: () => {},
-  nombre: 'Juan Pérez',
-  oficio: 'Electricista',
-  fotoPerfil: null,
-};
-
-describe('CredencialProveedor', () => {
-  it('no renderiza nada si open=false', () => {
-    const { container } = render(<CredencialProveedor {...base} open={false} codigo="ELE-0047" />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('muestra el código y el nombre cuando hay código', () => {
-    render(<CredencialProveedor {...base} codigo="ELE-0047" />);
-    expect(screen.getByText('ELE-0047')).toBeInTheDocument();
-    expect(screen.getByText('Juan Pérez')).toBeInTheDocument();
-  });
-
-  it('muestra fallback sin código', () => {
-    render(<CredencialProveedor {...base} codigo={null} />);
-    expect(screen.getByText(/Código no disponible/i)).toBeInTheDocument();
-  });
-});
-```
-
-- [ ] **Step 2: Correr el test para ver que falla**
-
-Run: `cd apps/app && pnpm exec vitest run src/features/provider/components/__tests__/CredencialProveedor.test.tsx`
-Expected: FAIL — el módulo no existe.
-
-- [ ] **Step 3: Implementar la credencial**
+- [ ] **Step 1: Implementar la credencial**
 
 Create `apps/app/src/features/provider/components/CredencialProveedor.tsx`:
 
@@ -694,16 +627,15 @@ export function CredencialProveedor({ open, onClose, nombre, oficio, fotoPerfil,
 
 Nota: el fondo del QR se deja blanco fijo (`bg-white p-3`) para que sea legible/escaneable también en tema oscuro.
 
-- [ ] **Step 4: Correr el test para ver que pasa**
+- [ ] **Step 2: Verificar compilación**
 
-Run: `cd apps/app && pnpm exec vitest run src/features/provider/components/__tests__/CredencialProveedor.test.tsx`
-Expected: PASS (3 tests).
+Run: `cd apps/app && pnpm exec tsc --noEmit`
+Expected: sin errores.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add apps/app/src/features/provider/components/CredencialProveedor.tsx \
-        apps/app/src/features/provider/components/__tests__/CredencialProveedor.test.tsx
+git add apps/app/src/features/provider/components/CredencialProveedor.tsx
 git commit -m "$(cat <<'EOF'
 feat(codigo-proveedor): credencial del proveedor a pantalla completa con QR
 
@@ -845,7 +777,7 @@ EOF
 - Credencial con QR + botón en perfil (spec §3) → Tasks 5, 8, 9. ✓
 - Chip en las 4 vistas del cliente (spec §4) → Tasks 6, 7. ✓
 - Manejo de errores (spec §5): null sin proveedor (Tasks 2-3 usan el bloque `if proveedor != null`); oficio nulo → helper devuelve null y credencial muestra fallback (Task 1 + Task 8); chip no renderiza sin código (Task 6). ✓
-- Testing (spec §6): helper JUnit (Task 1), credencial + chip vitest (Tasks 6, 8). ✓
+- Testing (spec §6): helper JUnit (Task 1). Los tests de componentes con testing-library del spec se sustituyen por verificación visual (Task 10 step 3), siguiendo el patrón del repo (sin infra de tests de render; `ServicioIdBadge`/`FaqModal` se validan a ojo). Decisión confirmada con el usuario en el pre-flight. ✓
 
 **Placeholder scan:** sin TBD/TODO. Los únicos "ajustá el nombre de la variable" (Task 7 steps 2-4) son porque JobCompleted/ClientProposal/MudanzaDetail no se leyeron en detalle; el campo (`codigoProveedor`) y el componente son fijos, solo la variable local del trabajo/mudanza puede diferir. Aceptable.
 
