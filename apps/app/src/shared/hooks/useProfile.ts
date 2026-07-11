@@ -54,6 +54,7 @@ export function useProfile(firebaseUser: FirebaseUser | null) {
         promedioCalificacion: data.promedioCalificacion ?? 0,
         cantidadCalificaciones: data.cantidadCalificaciones ?? 0,
         totalTrabajosCompletados: data.totalTrabajosCompletados ?? 0,
+        codigo: data.codigo ?? null,
       };
 
       // Sincronizar store con la verdad del backend
