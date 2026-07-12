@@ -46,6 +46,8 @@ const AliadosDashboard    = lazy(() => import("@/features/aliados/AliadosDashboa
 const MudanzaRequest      = lazy(() => import("@/features/client/pages/MudanzaRequest").then(m => ({ default: m.MudanzaRequest })));
 const MudanzaDetail       = lazy(() => import("@/features/client/pages/MudanzaDetail").then(m => ({ default: m.MudanzaDetail })));
 const ProviderMudanzaDetail = lazy(() => import("@/features/provider/pages/ProviderMudanzaDetail").then(m => ({ default: m.ProviderMudanzaDetail })));
+const Terminos            = lazy(() => import("@/features/legal/Terminos").then(m => ({ default: m.Terminos })));
+const Privacidad          = lazy(() => import("@/features/legal/Privacidad").then(m => ({ default: m.Privacidad })));
 
 // ── Loader ──
 const PageLoader = () => (
@@ -88,6 +90,10 @@ export function AppRouter() {
 
           {/* ── App (con header + footer) ── */}
           <Route element={<MainLayout />}>
+
+            {/* Legales — públicas (accesibles sin login, ej. desde el footer o el registro) */}
+            <Route path="terminos"   element={<Terminos />} />
+            <Route path="privacidad" element={<Privacidad />} />
 
             {/* Cliente */}
             <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>

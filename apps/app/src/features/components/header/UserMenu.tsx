@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Briefcase, CreditCard, Settings, LogOut, Star, IdCard } from "lucide-react";
+import { User, Briefcase, Settings, LogOut, Star, IdCard } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
 import { useStore } from "@/shared/store/useStore";
@@ -139,7 +139,8 @@ export function UserMenu({ variant }: UserMenuProps) {
               <>
                 <Item onClick={() => go(ROUTES.CLIENT.PROFILE)}                         icon={User}       label="Mi perfil" />
                 <Item onClick={() => go(`${ROUTES.CLIENT.DASHBOARD}?view=all`)}         icon={Briefcase}  label="Historial de trabajos" />
-                <Item onClick={() => go(ROUTES.CLIENT.PAYMENT_METHODS)}                 icon={CreditCard} label="Métodos de pago" />
+                {/* Oculto pre-launch: aún no hay pagos reales. Reactivar cuando se habiliten métodos de pago. */}
+                {/* <Item onClick={() => go(ROUTES.CLIENT.PAYMENT_METHODS)}                 icon={CreditCard} label="Métodos de pago" /> */}
                 <Item onClick={() => go(ROUTES.CLIENT.SETTINGS)}                        icon={Settings}   label="Configuración" />
               </>
             )}

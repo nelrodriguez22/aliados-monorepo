@@ -344,9 +344,9 @@ export function Register() {
                   />
                   <span className={`text-xs ${tw.text.secondary}`}>
                     Acepto los{' '}
-                    <button type="button" className={`cursor-pointer font-semibold ${tw.text.brand}`}>Términos y Condiciones</button>
+                    <a href={ROUTES.TERMS} target="_blank" rel="noopener noreferrer" className={`cursor-pointer font-semibold ${tw.text.brand}`}>Términos y Condiciones</a>
                     {' '}y la{' '}
-                    <button type="button" className={`cursor-pointer font-semibold ${tw.text.brand}`}>Política de Privacidad</button>
+                    <a href={ROUTES.PRIVACY} target="_blank" rel="noopener noreferrer" className={`cursor-pointer font-semibold ${tw.text.brand}`}>Política de Privacidad</a>
                   </span>
                 </div>
 
