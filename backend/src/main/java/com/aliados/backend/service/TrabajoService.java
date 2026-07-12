@@ -228,6 +228,40 @@ public class TrabajoService {
         return mapToDTO(trabajo);
     }
 
+    @Transactional
+    public TrabajoResponseDTO presupuestarTrabajo(Long trabajoId, String proveedorFirebaseUid,
+                                                  BigDecimal montoPresupuesto, String notaResumen) {
+        User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
+                .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
+
+        Trabajo trabajo = trabajoRepository.findById(trabajoId)
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
+
+        if (!trabajo.getEstado().equals(TrabajoEstado.EN_CURSO)) {
+            throw new RuntimeException("El trabajo no está en curso");
+        }
+        if (!trabajo.getProveedor().getId().equals(proveedor.getId())) {
+            throw new ForbiddenException("No autorizado");
+        }
+
+        trabajo.setMontoPresupuesto(montoPresupuesto);
+        trabajo.setNotaResumen(notaResumen);
+        trabajo.setEstado(TrabajoEstado.PRESUPUESTADO);
+        trabajo.setEstadoPago(EstadoPago.PENDIENTE_PAGO);
+        trabajo = trabajoRepository.save(trabajo);
+
+        notificacionService.enviarNotificacion(
+                trabajo.getCliente().getFirebaseUid(),
+                TipoNotificacion.PRESUPUESTO_RECIBIDO,
+                "Presupuesto recibido",
+                "Tu profesional de " + trabajo.getOficio().getNombre() + " te envió un presupuesto. Revisalo para continuar.",
+                trabajo.getId(),
+                "/cliente/seguimiento/" + trabajo.getId()
+        );
+
+        return mapToDTO(trabajo);
+    }
+
     /** Cierre compartido de un trabajo: pasa a COMPLETADO, promueve la cola o libera al
      *  proveedor. NO emite las notificaciones "completado" del trabajo actual (las pone
      *  el caller, porque el texto difiere entre completar y responder-presupuesto). */
