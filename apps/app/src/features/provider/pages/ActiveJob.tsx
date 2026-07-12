@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
-import { apiClient } from "@/shared/lib/apiClient";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
@@ -11,37 +9,17 @@ import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { MapPin, Clock, User, X, Loader2, FileText, Navigation } from "lucide-react";
-import toast from "react-hot-toast";
 import { formatTime } from "@/shared/lib/dayjs";
-import { useStore } from "@/shared/store/useStore";
 
 export function ActiveJob() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const updateUserStatus = useStore((state) => state.updateUserStatus);
 
   const { data: trabajo, isLoading, isError, error, refetch } = useTrabajo(id, {
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
-  });
-
-  const completarMutation = useMutation({
-    mutationFn: () => apiClient.patch(`/api/trabajos/${id}/completar`),
-    onSuccess: async () => {
-      queryClient.setQueryData(['trabajo-activo'], null);
-      queryClient.removeQueries({ queryKey: ['trabajo-activo'] });
-      queryClient.invalidateQueries({ queryKey: ['trabajos-completados'] });
-      queryClient.invalidateQueries({ queryKey: ['trabajos-en-cola'] });
-      try {
-        const d = await apiClient.get('/api/users/me');
-        updateUserStatus(d.status || 'ONLINE');
-      } catch { /* WebSocket lo actualizará */ }
-      navigate(ROUTES.PROVIDER.DASHBOARD);
-    },
-    onError: () => toast.error('Error al completar el trabajo'),
   });
 
   if (isLoading) {
@@ -253,17 +231,16 @@ export function ActiveJob() {
               />
             </Card>
 
-            {/* Completar */}
+            {/* Presupuesto */}
             <Card>
               <p className={`text-xs mb-3 ${tw.text.secondary}`}>
-                Una vez finalizado el servicio, marcá el trabajo como completado.
+                Cuando termines de revisar, enviá el presupuesto al cliente.
               </p>
               <Button
-                fullWidth variant="success"
-                onClick={() => completarMutation.mutate()}
-                disabled={completarMutation.isPending}
+                onClick={() => navigate(ROUTES.PROVIDER.PRESUPUESTO(id!))}
+                className="w-full"
               >
-                {completarMutation.isPending ? 'Completando...' : 'Marcar como completado'}
+                Enviar presupuesto
               </Button>
             </Card>
 

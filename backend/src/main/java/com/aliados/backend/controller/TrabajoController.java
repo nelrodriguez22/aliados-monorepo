@@ -3,7 +3,9 @@ package com.aliados.backend.controller;
 import com.aliados.backend.dto.CancelarTrabajoDTO;
 import com.aliados.backend.dto.CrearTrabajoDTO;
 import com.aliados.backend.dto.PagedTrabajosResponse;
+import com.aliados.backend.dto.PresupuestarTrabajoDTO;
 import com.aliados.backend.dto.ProponerTrabajoDTO;
+import com.aliados.backend.dto.ResponderPresupuestoDTO;
 import com.aliados.backend.dto.TrabajoResponseDTO;
 import com.aliados.backend.service.TrabajoService;
 import jakarta.validation.Valid;
@@ -57,6 +59,27 @@ public class TrabajoController {
             Authentication authentication) {
         String uid = authentication.getName();
         TrabajoResponseDTO trabajo = trabajoService.completarTrabajo(id, uid);
+        return ResponseEntity.ok(trabajo);
+    }
+
+    @PatchMapping("/{id}/presupuestar")
+    public ResponseEntity<TrabajoResponseDTO> presupuestarTrabajo(
+            @PathVariable Long id,
+            @Valid @RequestBody PresupuestarTrabajoDTO dto,
+            Authentication authentication) {
+        String uid = authentication.getName();
+        TrabajoResponseDTO trabajo = trabajoService.presupuestarTrabajo(
+                id, uid, dto.getMontoPresupuesto(), dto.getNotaResumen());
+        return ResponseEntity.ok(trabajo);
+    }
+
+    @PatchMapping("/{id}/responder-presupuesto")
+    public ResponseEntity<TrabajoResponseDTO> responderPresupuesto(
+            @PathVariable Long id,
+            @Valid @RequestBody ResponderPresupuestoDTO dto,
+            Authentication authentication) {
+        String uid = authentication.getName();
+        TrabajoResponseDTO trabajo = trabajoService.responderPresupuesto(id, uid, dto.getAceptar());
         return ResponseEntity.ok(trabajo);
     }
 

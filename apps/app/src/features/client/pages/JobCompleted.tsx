@@ -112,7 +112,19 @@ export function JobCompleted() {
             </div>
           </Card>
 
-          {/* Calificación */}
+          {/* Mensaje contextual según cómo terminó el presupuesto post-visita */}
+          {trabajo.presupuestoAceptado === false && (
+            <p className={`mb-4 text-sm ${tw.text.muted}`}>
+              Rechazaste el presupuesto: se cobró solo la visita de ${Number(trabajo.tarifaVisita ?? 15000).toLocaleString('es-AR')}. Igual podés calificar al profesional.
+            </p>
+          )}
+          {trabajo.presupuestoAceptado === true && trabajo.montoPagado != null && (
+            <p className={`mb-4 text-sm ${tw.text.muted}`}>
+              Pagaste ${Number(trabajo.montoPagado).toLocaleString('es-AR')} por el trabajo.
+            </p>
+          )}
+
+          {/* Calificación — disponible tanto si se aceptó como si se rechazó el presupuesto */}
           <Card>
             {trabajo.calificado ? (
               <div className="flex flex-col items-center gap-3 py-8 text-center">

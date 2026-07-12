@@ -34,7 +34,7 @@ const TIPOS: { key: TipoFiltro; label: string }[] = [
   { key: 'MUDANZA', label: 'Mudanzas' },
 ];
 
-const ESTADOS_TRABAJO = ['PENDIENTE', 'PROPUESTO', 'EN_CURSO', 'EN_COLA', 'COMPLETADO', 'CANCELADO'];
+const ESTADOS_TRABAJO = ['PENDIENTE', 'PROPUESTO', 'EN_CURSO', 'PRESUPUESTADO', 'EN_COLA', 'COMPLETADO', 'CANCELADO'];
 const ESTADOS_MUDANZA = ['PENDIENTE', 'RESERVADO', 'CONTRAPROPUESTO', 'ACEPTADO', 'EN_CURSO', 'FINALIZADO', 'PENDIENTE_PAGO_EXTRA', 'COMPLETADO', 'CANCELADO'];
 const ESTADOS_COMUNES = ['PENDIENTE', 'EN_CURSO', 'COMPLETADO', 'CANCELADO'];
 
@@ -45,6 +45,7 @@ const ESTADO_CHIP: Record<string, string> = {
   CONTRAPROPUESTO: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
   ACEPTADO: 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400',
   EN_CURSO: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
+  PRESUPUESTADO: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
   EN_COLA: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
   FINALIZADO: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
   PENDIENTE_PAGO_EXTRA: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',

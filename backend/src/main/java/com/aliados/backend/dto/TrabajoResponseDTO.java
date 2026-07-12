@@ -1,5 +1,6 @@
 package com.aliados.backend.dto;
 
+import com.aliados.backend.entity.EstadoPago;
 import com.aliados.backend.entity.TrabajoEstado;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -31,5 +32,11 @@ public class TrabajoResponseDTO {
     private Double proveedorPromedioCalificacion;
     private Integer calificacionEstrellas;
     private BigDecimal tarifaVisita;
+    private BigDecimal montoPresupuesto;
+    private String notaResumen;
+    private Boolean presupuestoAceptado;
+    private BigDecimal montoPagado;
+    private EstadoPago estadoPago;
+    private LocalDateTime pagadoAt;
     private String codigoProveedor;
 }

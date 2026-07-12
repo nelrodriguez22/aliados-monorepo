@@ -57,13 +57,19 @@ public interface TrabajoRepository extends JpaRepository<Trabajo, Long> {
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
     Page<Trabajo> findByProveedorIdAndEstado(Long proveedorId, TrabajoEstado estado, Pageable pageable);
 
+    // "Trabajo actual" del proveedor: EN_CURSO o PRESUPUESTADO (el proveedor sigue OCUPADO
+    // en el domicilio esperando la respuesta del cliente al presupuesto — decisión 5 del
+    // spec de presupuesto post-visita). A lo sumo uno de los dos existe por proveedor a la
+    // vez (aceptarPropuesta empuja a EN_COLA si ya hay uno), así que el single-result es seguro.
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})
-    @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado = 'EN_CURSO'")
+    @Query("SELECT t FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'PRESUPUESTADO')")
     Trabajo findTrabajoEnCursoByProveedorId(@Param("proveedorId") Long proveedorId);
 
     Long countByProveedorIdAndEstado(Long proveedorId, TrabajoEstado estado);
 
-    @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'EN_COLA')")
+    // Incluye PRESUPUESTADO: el proveedor sigue ocupando su cupo mientras el cliente
+    // decide sobre el presupuesto (mismo motivo que arriba).
+    @Query("SELECT COUNT(t) FROM Trabajo t WHERE t.proveedor.id = :proveedorId AND t.estado IN ('EN_CURSO', 'EN_COLA', 'PRESUPUESTADO')")
     int countTrabajosActivosYCola(@Param("proveedorId") Long proveedorId);
 
     @EntityGraph(attributePaths = {"cliente", "proveedor", "oficio"})

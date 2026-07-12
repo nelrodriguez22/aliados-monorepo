@@ -241,6 +241,7 @@ export function ClientDashboard() {
     if (estado === 'PENDIENTE') return { variant: 'warning' as const,  label: 'Buscando proveedor',  pulse: true };
     if (estado === 'PROPUESTO') return { variant: 'info' as const,     label: 'Propuesta recibida',  pulse: true };
     if (estado === 'EN_CURSO')  return { variant: 'info' as const,     label: 'En camino',           pulse: true };
+    if (estado === 'PRESUPUESTADO') return { variant: 'warning' as const, label: 'Presupuesto recibido', pulse: true };
     if (estado === 'EN_COLA')   return { variant: 'queue' as const,    label: 'En cola',             pulse: true };
     return { variant: 'neutral' as const, label: estado, pulse: false };
   };
