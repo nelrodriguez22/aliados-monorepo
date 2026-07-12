@@ -205,11 +205,37 @@ public class TrabajoService {
             throw new ForbiddenException("No autorizado");
         }
 
+        cerrarTrabajoCompletado(trabajo, proveedor);
+
+        notificacionService.enviarNotificacion(
+                trabajo.getCliente().getFirebaseUid(),
+                TipoNotificacion.TRABAJO_COMPLETADO,
+                "Trabajo Completado",
+                "El servicio de " + trabajo.getOficio().getNombre() + " fue completado. ¡Calificá a tu profesional!",
+                trabajo.getId(),
+                "/cliente/completado/" + trabajo.getId()
+        );
+
+        notificacionService.enviarNotificacion(
+                proveedor.getFirebaseUid(),
+                TipoNotificacion.TRABAJO_COMPLETADO_PROVEEDOR,
+                "Trabajo Completado",
+                "Completaste el servicio de " + trabajo.getOficio().getNombre() + " exitosamente",
+                trabajo.getId(),
+                "/proveedor/completado/" + trabajo.getId()
+        );
+
+        return mapToDTO(trabajo);
+    }
+
+    /** Cierre compartido de un trabajo: pasa a COMPLETADO, promueve la cola o libera al
+     *  proveedor. NO emite las notificaciones "completado" del trabajo actual (las pone
+     *  el caller, porque el texto difiere entre completar y responder-presupuesto). */
+    private void cerrarTrabajoCompletado(Trabajo trabajo, User proveedor) {
         trabajo.setEstado(TrabajoEstado.COMPLETADO);
         trabajo.setCompletedAt(LocalDateTime.now());
-        trabajo = trabajoRepository.save(trabajo);
+        trabajoRepository.save(trabajo);
 
-        // Promover siguiente trabajo en cola
         List<Trabajo> trabajosEnCola = trabajoRepository.findTrabajosEnCola(proveedor.getId());
 
         if (!trabajosEnCola.isEmpty()) {
@@ -235,30 +261,9 @@ public class TrabajoService {
                     "/cliente/seguimiento/" + siguiente.getId()
             );
         } else {
-            // No hay más trabajos → ONLINE
             userService.updateUserStatus(proveedor.getFirebaseUid(), UserStatus.ONLINE);
             asignarTrabajosAProveedorQueSeConecta(proveedor);
         }
-
-        notificacionService.enviarNotificacion(
-                trabajo.getCliente().getFirebaseUid(),
-                TipoNotificacion.TRABAJO_COMPLETADO,
-                "Trabajo Completado",
-                "El servicio de " + trabajo.getOficio().getNombre() + " fue completado. ¡Calificá a tu profesional!",
-                trabajo.getId(),
-                "/cliente/completado/" + trabajo.getId()
-        );
-
-        notificacionService.enviarNotificacion(
-                proveedor.getFirebaseUid(),
-                TipoNotificacion.TRABAJO_COMPLETADO_PROVEEDOR,
-                "Trabajo Completado",
-                "Completaste el servicio de " + trabajo.getOficio().getNombre() + " exitosamente",
-                trabajo.getId(),
-                "/proveedor/completado/" + trabajo.getId()
-        );
-
-        return mapToDTO(trabajo);
     }
 
     // Solo los trabajos ACTIVOS del cliente (lista chica). El historial completado va
