@@ -262,6 +262,44 @@ public class TrabajoService {
         return mapToDTO(trabajo);
     }
 
+    @Transactional
+    public TrabajoResponseDTO responderPresupuesto(Long trabajoId, String clienteFirebaseUid, boolean aceptar) {
+        User cliente = userRepository.findByFirebaseUid(clienteFirebaseUid)
+                .orElseThrow(() -> new NotFoundException("Cliente no encontrado"));
+
+        Trabajo trabajo = trabajoRepository.findById(trabajoId)
+                .orElseThrow(() -> new NotFoundException("Trabajo no encontrado"));
+
+        if (!trabajo.getEstado().equals(TrabajoEstado.PRESUPUESTADO)) {
+            throw new RuntimeException("El trabajo no tiene un presupuesto pendiente");
+        }
+        if (!trabajo.getCliente().getId().equals(cliente.getId())) {
+            throw new ForbiddenException("No autorizado");
+        }
+
+        User proveedor = trabajo.getProveedor();
+
+        trabajo.setPresupuestoAceptado(aceptar);
+        trabajo.setMontoPagado(aceptar ? trabajo.getMontoPresupuesto() : trabajo.getTarifaVisita());
+        trabajo.setEstadoPago(EstadoPago.PAGADO);
+        trabajo.setPagadoAt(LocalDateTime.now());
+
+        cerrarTrabajoCompletado(trabajo, proveedor);
+
+        notificacionService.enviarNotificacion(
+                proveedor.getFirebaseUid(),
+                aceptar ? TipoNotificacion.PRESUPUESTO_ACEPTADO : TipoNotificacion.PRESUPUESTO_RECHAZADO,
+                aceptar ? "Presupuesto aceptado" : "Presupuesto rechazado",
+                aceptar
+                        ? trabajo.getCliente().getNombre() + " aceptó tu presupuesto de " + trabajo.getOficio().getNombre() + "."
+                        : trabajo.getCliente().getNombre() + " rechazó el presupuesto; se cobra solo la visita.",
+                trabajo.getId(),
+                "/proveedor/completado/" + trabajo.getId()
+        );
+
+        return mapToDTO(trabajo);
+    }
+
     /** Cierre compartido de un trabajo: pasa a COMPLETADO, promueve la cola o libera al
      *  proveedor. NO emite las notificaciones "completado" del trabajo actual (las pone
      *  el caller, porque el texto difiere entre completar y responder-presupuesto). */
