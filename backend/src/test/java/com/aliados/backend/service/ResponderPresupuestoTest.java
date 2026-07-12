@@ -26,7 +26,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -110,6 +112,39 @@ class ResponderPresupuestoTest {
 
         assertThatThrownBy(() -> trabajoService.responderPresupuesto(10L, "otro", true))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    // Regresión: PRESUPUESTADO cuenta como "trabajo actual" del proveedor (decisión 5 del
+    // spec — el proveedor sigue ocupado esperando la respuesta del cliente). Si el cliente
+    // acepta OTRA propuesta mientras ese trabajo sigue PRESUPUESTADO, el nuevo debe ir a
+    // EN_COLA, no a EN_CURSO (dos trabajos "actuales" a la vez sería el bug).
+    @Test
+    void aceptarPropuesta_proveedorConTrabajoPresupuestado_vaAEnCola() {
+        User cliente = user(1L, "cli", UserRole.CLIENT);
+        User prov = user(2L, "prov", UserRole.PROVIDER);
+
+        Trabajo nuevaPropuesta = new Trabajo();
+        Oficio of = new Oficio(); of.setId(1L); of.setNombre("Electricista");
+        nuevaPropuesta.setId(20L);
+        nuevaPropuesta.setCliente(cliente);
+        nuevaPropuesta.setProveedor(prov);
+        nuevaPropuesta.setOficio(of);
+        nuevaPropuesta.setEstado(TrabajoEstado.PROPUESTO);
+
+        Trabajo trabajoPresupuestado = presupuestado(cliente, prov);
+
+        when(userRepository.findByFirebaseUid("cli")).thenReturn(Optional.of(cliente));
+        when(trabajoRepository.findById(20L)).thenReturn(Optional.of(nuevaPropuesta));
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        when(trabajoRepository.countTrabajosActivosYCola(anyLong())).thenReturn(1);
+        // El repo (ya corregido) reconoce PRESUPUESTADO como "trabajo en curso" del proveedor.
+        when(trabajoRepository.findTrabajoEnCursoByProveedorId(2L)).thenReturn(trabajoPresupuestado);
+        when(trabajoRepository.save(any(Trabajo.class))).thenAnswer(i -> i.getArgument(0));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(anyLong(), any())).thenReturn(List.of());
+
+        trabajoService.aceptarPropuesta(20L, "cli");
+
+        assertThat(nuevaPropuesta.getEstado()).isEqualTo(TrabajoEstado.EN_COLA);
     }
 
     @Test

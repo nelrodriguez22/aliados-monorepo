@@ -341,7 +341,8 @@ public class TrabajoService {
     // Solo los trabajos ACTIVOS del cliente (lista chica). El historial completado va
     // por getHistorialCliente (paginado) para no traer todo el historial sin límite (#20-B).
     private static final List<TrabajoEstado> ESTADOS_ACTIVOS_CLIENTE = List.of(
-            TrabajoEstado.PENDIENTE, TrabajoEstado.EN_CURSO, TrabajoEstado.PROPUESTO, TrabajoEstado.EN_COLA);
+            TrabajoEstado.PENDIENTE, TrabajoEstado.EN_CURSO, TrabajoEstado.PROPUESTO, TrabajoEstado.EN_COLA,
+            TrabajoEstado.PRESUPUESTADO);
 
     public List<TrabajoResponseDTO> getTrabajosByCliente(String firebaseUid) {
         User cliente = userRepository.findByFirebaseUid(firebaseUid)
