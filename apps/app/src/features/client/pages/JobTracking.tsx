@@ -94,6 +94,9 @@ export function JobTracking() {
       <div className={tw.pageBg}>
         <div className={tw.container}>
           <div className="mx-auto max-w-lg space-y-4">
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>← Volver</Button>
+            </div>
             <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
             <Card>
               <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio?.nombre}</p>

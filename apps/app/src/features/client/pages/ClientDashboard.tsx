@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck } from "lucide-react";
+import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck, FileText } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
@@ -169,6 +169,10 @@ export function ClientDashboard() {
   const mudanzasActivas = mudanzasCliente.filter((m: any) =>
     ['PENDIENTE', 'RESERVADO', 'CONTRAPROPUESTO', 'ACEPTADO', 'EN_CURSO', 'FINALIZADO', 'PENDIENTE_PAGO_EXTRA'].includes(m.estado)
   );
+
+  // Presupuestos esperando respuesta del cliente: van en su propia sección
+  // destacada arriba, no mezclados con el resto de los activos.
+  const presupuestosPendientes = todosTrabajos.filter((t: any) => t.estado === 'PRESUPUESTADO');
 
   const trabajosActivos = todosTrabajos.filter((t: any) =>
     ['PENDIENTE', 'EN_CURSO', 'PROPUESTO', 'EN_COLA'].includes(t.estado)
@@ -377,6 +381,46 @@ export function ClientDashboard() {
                 ))}
               </div>
             </div>
+
+            {/* Presupuestos por responder — destacado (acción requerida), arriba de los activos */}
+            {presupuestosPendientes.length > 0 && (
+              <div className="mb-8">
+                <h2 className="mb-3 flex items-center gap-2 text-base min-[375px]:text-lg font-semibold text-amber-700 dark:text-amber-400">
+                  <FileText className="h-5 w-5 shrink-0" />
+                  {presupuestosPendientes.length === 1
+                    ? 'Tenés un presupuesto para responder'
+                    : `Tenés ${presupuestosPendientes.length} presupuestos para responder`}
+                </h2>
+                <div className="space-y-2 min-[375px]:space-y-3">
+                  {presupuestosPendientes.map((trabajo: any) => (
+                    <div
+                      key={trabajo.id}
+                      onClick={() => navigate(ROUTES.CLIENT.TRACKING(trabajo.id))}
+                      className="cursor-pointer rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 transition-all duration-150
+                        hover:border-amber-400 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]
+                        dark:border-amber-500/30 dark:bg-amber-500/10 dark:hover:border-amber-500/50"
+                    >
+                      <div className="flex items-center gap-2 min-[375px]:gap-3">
+                        <div className="flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+                          <FileText className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm truncate ${tw.text.primary}`}>
+                            {trabajo.proveedorNombre}
+                          </p>
+                          <p className={`mt-0.5 text-xs ${tw.text.secondary}`}>
+                            {trabajo.oficio.nombre} · ${Number(trabajo.montoPresupuesto ?? 0).toLocaleString('es-AR')}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white">
+                          Responder
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Trabajos activos */}
             <div className="mb-8" data-onboarding="client-active">

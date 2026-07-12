@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
@@ -19,6 +19,17 @@ export function PresupuestoTrabajo() {
   const [monto, setMonto] = useState("");
   const [nota, setNota] = useState("");
 
+  // Solo se puede presupuestar mientras el trabajo está EN_CURSO. Si ya se envió
+  // (PRESUPUESTADO o posterior), no debe poder volver a verse este formulario:
+  // avisamos y redirigimos al dashboard reemplazando el historial.
+  const yaPresupuestado = trabajo != null && trabajo.estado !== "EN_CURSO";
+  useEffect(() => {
+    if (yaPresupuestado) {
+      toast("Ya enviaste este presupuesto");
+      navigate(ROUTES.PROVIDER.DASHBOARD, { replace: true });
+    }
+  }, [yaPresupuestado, navigate]);
+
   const enviarMutation = useMutation({
     mutationFn: () =>
       apiClient.patch(`/api/trabajos/${id}/presupuestar`, {
@@ -29,17 +40,33 @@ export function PresupuestoTrabajo() {
       queryClient.invalidateQueries({ queryKey: ["trabajo", id] });
       queryClient.invalidateQueries({ queryKey: ["trabajo-activo"] });
       toast.success("Presupuesto enviado al cliente");
-      navigate(ROUTES.PROVIDER.DASHBOARD);
+      navigate(ROUTES.PROVIDER.DASHBOARD, { replace: true });
     },
-    onError: () => toast.error("No se pudo enviar el presupuesto"),
+    onError: (err: any) => {
+      // El backend rechaza re-presupuestar porque el estado ya no es EN_CURSO.
+      if (typeof err?.message === "string" && err.message.includes("no está en curso")) {
+        toast("Ya enviaste este presupuesto");
+        navigate(ROUTES.PROVIDER.DASHBOARD, { replace: true });
+        return;
+      }
+      toast.error("No se pudo enviar el presupuesto");
+    },
   });
 
   const montoValido = monto !== "" && Number(monto) > 0;
+
+  // Mientras redirige (ya presupuestado) no mostramos el formulario para no
+  // dejar que se re-envíe ni que "parpadee" antes de navegar.
+  if (yaPresupuestado) return null;
 
   return (
     <div className={tw.pageBg}>
       <div className={tw.container}>
         <div className="mx-auto max-w-lg space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(id!))}>← Volver</Button>
+          </div>
+
           <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
 
           <Card>

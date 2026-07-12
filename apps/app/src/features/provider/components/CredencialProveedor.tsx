@@ -51,9 +51,14 @@ export function CredencialProveedor({ open, onClose, nombre, oficio, fotoPerfil,
 
       {codigo ? (
         <>
-          <p className="font-mono text-4xl font-extrabold tracking-widest text-slate-900 dark:text-white">
-            {codigo}
-          </p>
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              ID
+            </p>
+            <p className="font-mono text-4xl font-extrabold tracking-widest text-slate-900 dark:text-white">
+              {codigo}
+            </p>
+          </div>
           <div className="rounded-lg bg-white p-3">
             <QRCodeSVG value={codigo} size={180} />
           </div>
