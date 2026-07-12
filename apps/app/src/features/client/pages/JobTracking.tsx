@@ -39,6 +39,18 @@ export function JobTracking() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Responder al presupuesto post-visita (aceptar o rechazar). El trabajo
+  // pasa a COMPLETADO en el back; al invalidar la query, el useEffect de
+  // abajo detecta el nuevo estado y redirige a JobCompleted.
+  const responderMutation = useMutation({
+    mutationFn: (aceptar: boolean) =>
+      apiClient.patch(`/api/trabajos/${jobId}/responder-presupuesto`, { aceptar }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trabajo', jobId] });
+    },
+    onError: () => toast.error('No se pudo procesar tu respuesta'),
+  });
+
   useEffect(() => {
     if (trabajo?.estado === 'COMPLETADO') {
       queryClient.refetchQueries({ queryKey: ['trabajos-cliente'] });
@@ -47,6 +59,7 @@ export function JobTracking() {
     if (trabajo?.estado === 'PROPUESTO') {
       navigate(ROUTES.CLIENT.PROPOSAL(trabajo.id), { replace: true });
     }
+    // PRESUPUESTADO se renderiza inline (ver más abajo), no redirige.
   }, [trabajo?.estado]);
 
   const Loading = () => (
@@ -70,6 +83,50 @@ export function JobTracking() {
   }
 
   if (isLoading || !trabajo || trabajo.estado === 'COMPLETADO') return <Loading />;
+
+  // PRESUPUESTADO: el proveedor terminó la visita y cargó un presupuesto
+  // para el trabajo completo. El cliente decide si lo acepta (paga el
+  // monto del trabajo) o lo rechaza (paga solo la tarifa de visita).
+  if (trabajo.estado === 'PRESUPUESTADO') {
+    const montoTrabajo = Number(trabajo.montoPresupuesto ?? 0);
+    const visita = Number(trabajo.tarifaVisita ?? 15000);
+    return (
+      <div className={tw.pageBg}>
+        <div className={tw.container}>
+          <div className="mx-auto max-w-lg space-y-4">
+            <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
+            <Card>
+              <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio?.nombre}</p>
+              {trabajo.notaResumen && (
+                <p className={`mt-2 text-sm ${tw.text.primary}`}>{trabajo.notaResumen}</p>
+              )}
+              <p className={`mt-4 text-3xl font-bold ${tw.text.primary}`}>
+                ${montoTrabajo.toLocaleString('es-AR')}
+              </p>
+              <p className={`mt-1 text-xs ${tw.text.muted}`}>
+                Si no aceptás, pagás solo la visita (${visita.toLocaleString('es-AR')}).
+              </p>
+            </Card>
+            <Button
+              onClick={() => responderMutation.mutate(true)}
+              disabled={responderMutation.isPending}
+              className="w-full"
+            >
+              Aceptar y pagar ${montoTrabajo.toLocaleString('es-AR')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => responderMutation.mutate(false)}
+              disabled={responderMutation.isPending}
+              className="w-full"
+            >
+              Rechazar (pagás solo la visita ${visita.toLocaleString('es-AR')})
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isPendiente = trabajo.estado === 'PENDIENTE';
   const enCurso    = trabajo.estado === 'EN_CURSO';
