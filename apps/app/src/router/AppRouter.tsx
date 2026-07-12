@@ -40,6 +40,7 @@ const ActiveJob           = lazy(() => import("@/features/provider/pages/ActiveJ
 const ProviderCompletedJob = lazy(() => import("@/features/provider/pages/ProviderCompletedJob").then(m => ({ default: m.ProviderCompletedJob })));
 const ProviderReviews     = lazy(() => import("@/features/provider/pages/ProviderReviews").then(m => ({ default: m.ProviderReviews })));
 const ProviderCredencial  = lazy(() => import("@/features/provider/pages/ProviderCredencial").then(m => ({ default: m.ProviderCredencial })));
+const PresupuestoTrabajo  = lazy(() => import("@/features/provider/pages/PresupuestoTrabajo").then(m => ({ default: m.PresupuestoTrabajo })));
 const Notifications       = lazy(() => import("@/features/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const AliadosDashboard    = lazy(() => import("@/features/aliados/AliadosDashboard"));
 const MudanzaRequest      = lazy(() => import("@/features/client/pages/MudanzaRequest").then(m => ({ default: m.MudanzaRequest })));
@@ -113,6 +114,7 @@ export function AppRouter() {
                 <Route path="dashboard"          element={<ProviderDashboard />} />
                 <Route path="trabajo/:id"        element={<ServiceDetail />} />
                 <Route path="trabajo-activo/:id" element={<ActiveJob />} />
+                <Route path="presupuesto/:id"    element={<PresupuestoTrabajo />} />
                 <Route path="completado/:jobId"  element={<ProviderCompletedJob />} />
                 <Route path="notificaciones"     element={<Notifications />} />
                 <Route path="perfil"             element={<ClientProfile />} />

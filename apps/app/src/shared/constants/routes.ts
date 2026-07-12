@@ -41,6 +41,7 @@ export const ROUTES = {
     PROFILE: '/proveedor/perfil',
     SETTINGS: '/proveedor/configuracion',
     CREDENCIAL: '/proveedor/credencial',
+    PRESUPUESTO: (id: string | number = ':id') => `/proveedor/presupuesto/${id}`,
   },
 
   // Admin
