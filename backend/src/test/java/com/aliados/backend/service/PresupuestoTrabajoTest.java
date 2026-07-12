@@ -5,6 +5,7 @@ import com.aliados.backend.entity.EstadoPago;
 import com.aliados.backend.entity.Oficio;
 import com.aliados.backend.entity.Trabajo;
 import com.aliados.backend.entity.TrabajoEstado;
+import com.aliados.backend.entity.TipoNotificacion;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.exception.ForbiddenException;
@@ -25,6 +26,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,6 +79,14 @@ class PresupuestoTrabajoTest {
         assertThat(t.getNotaResumen()).isEqualTo("Cambio de tablero");
         assertThat(t.getEstadoPago()).isEqualTo(EstadoPago.PENDIENTE_PAGO);
         assertThat(dto.getEstadoPago()).isEqualTo(EstadoPago.PENDIENTE_PAGO);
+
+        verify(notificacionService).enviarNotificacion(
+                eq("cli"),
+                eq(TipoNotificacion.PRESUPUESTO_RECIBIDO),
+                anyString(),
+                anyString(),
+                eq(10L),
+                eq("/cliente/seguimiento/10"));
     }
 
     @Test
@@ -87,6 +100,8 @@ class PresupuestoTrabajoTest {
 
         assertThatThrownBy(() -> trabajoService.presupuestarTrabajo(10L, "otro", new BigDecimal("100000"), null))
                 .isInstanceOf(ForbiddenException.class);
+
+        verify(trabajoRepository, never()).save(any(Trabajo.class));
     }
 
     @Test
@@ -100,5 +115,7 @@ class PresupuestoTrabajoTest {
 
         assertThatThrownBy(() -> trabajoService.presupuestarTrabajo(10L, "prov", new BigDecimal("100000"), null))
                 .isInstanceOf(RuntimeException.class);
+
+        verify(trabajoRepository, never()).save(any(Trabajo.class));
     }
 }
