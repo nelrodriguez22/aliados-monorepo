@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck, FileText } from "lucide-react";
+import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck, FileText, ChevronDown } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
@@ -584,13 +584,20 @@ export function ClientDashboard() {
                     </Card>
                   ))}
                   {hasNextPage && (
-                    <button
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                      className={`mx-auto mt-1 block text-xs font-medium cursor-pointer disabled:opacity-50 ${tw.text.brand}`}
-                    >
-                      {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
-                    </button>
+                    <div className="flex items-center gap-3 pt-2">
+                      <span className="h-px flex-1 bg-slate-200 dark:bg-dark-border" />
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                        className="shrink-0 text-xs min-[375px]:text-sm px-4 py-1.5"
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          {isFetchingNextPage ? 'Cargando...' : <>Cargar más <ChevronDown className="h-4 w-4" /></>}
+                        </span>
+                      </Button>
+                      <span className="h-px flex-1 bg-slate-200 dark:bg-dark-border" />
+                    </div>
                   )}
                 </div>
               ) : (

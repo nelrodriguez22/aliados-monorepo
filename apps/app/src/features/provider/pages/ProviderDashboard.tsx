@@ -18,7 +18,7 @@ import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import {
   Bell, MapPin, Clock, CheckCircle,
-  Star, ClipboardList, ZapOff, Users, Truck, X, Calendar,
+  Star, ClipboardList, ZapOff, Users, Truck, X, Calendar, ChevronDown,
 } from "lucide-react";
 
 // ── Skeletons ──
@@ -615,13 +615,20 @@ export function ProviderDashboard() {
                     />
                   ))}
                   {hasNextPage && (
-                    <button
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                      className={`mx-auto mt-1 block text-xs font-medium cursor-pointer disabled:opacity-50 transition ${tw.text.brand} hover:opacity-70`}
-                    >
-                      {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
-                    </button>
+                    <div className="flex items-center gap-3 pt-2">
+                      <span className="h-px flex-1 bg-slate-200 dark:bg-dark-border" />
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                        className="shrink-0 text-xs min-[375px]:text-sm px-4 py-1.5"
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          {isFetchingNextPage ? 'Cargando...' : <>Cargar más <ChevronDown className="h-4 w-4" /></>}
+                        </span>
+                      </Button>
+                      <span className="h-px flex-1 bg-slate-200 dark:bg-dark-border" />
+                    </div>
                   )}
                 </div>
               )}
