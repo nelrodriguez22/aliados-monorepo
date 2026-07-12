@@ -9,6 +9,8 @@ export const ROUTES = {
   RECOVER_PASSWORD: '/recuperar-contrasena',
   RESET_PASSWORD: '/restablecer-contrasena',
   ONBOARDING: '/completar-perfil',
+  TERMS: '/terminos',
+  PRIVACY: '/privacidad',
 
   //cliente
   CLIENT: {
