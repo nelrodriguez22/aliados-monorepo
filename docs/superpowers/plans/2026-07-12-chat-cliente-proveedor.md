@@ -241,8 +241,12 @@ public class Mensaje {
     @JoinColumn(name = "emisor_id", nullable = false)
     private User emisor;
 
+    // `length = 20` NO es opcional: el proyecto usa `ddl-auto=validate`, así que Hibernate compara
+    // la entidad contra el esquema real AL ARRANCAR. La columna es VARCHAR(20); sin `length`,
+    // Hibernate asume 255 y la app ENTERA no levanta (SchemaManagementException) — no sólo el
+    // chat. `compileJava` no lo detecta. Misma convención que TrabajoOferta.resultado.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private TipoMensaje tipo;
 
     @Column(columnDefinition = "TEXT")
