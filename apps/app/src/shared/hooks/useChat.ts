@@ -15,17 +15,33 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
   const [hayMas, setHayMas] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const paginaRef = useRef(0);
+  // Espejo de `mensajes` accesible sin volver inestable la identidad de los callbacks que lo
+  // necesitan (ver `reintentar`): un useCallback que dependiera de `mensajes` cambiaría de
+  // identidad en cada mensaje nuevo.
+  const mensajesRef = useRef<MensajeUI[]>([]);
   // OJO: NO usar useWebSocket() acá directo — abriría una segunda conexión. subscribe()
   // se consume del contexto, que comparte la única conexión real del WebSocketProvider.
   const { subscribe } = useWebSocketContext();
 
+  useEffect(() => {
+    mensajesRef.current = mensajes;
+  }, [mensajes]);
+
   // Historial inicial. La API devuelve descendente (más recientes primero); la UI los quiere
   // ascendentes (el más viejo arriba), así que se invierte.
   useEffect(() => {
-    if (conversacionId == null) return;
+    if (conversacionId == null) {
+      // Sin esto, al volver a "sin conversación seleccionada" quedarían pintados los
+      // mensajes de la última conversación abierta.
+      setMensajes([]);
+      return;
+    }
 
     let cancelado = false;
     setCargando(true);
+    // Limpiar acá (y no sólo cuando resuelve el fetch) evita que, al saltar de la
+    // conversación A a la B, se vean las burbujas de A bajo el header de B mientras carga.
+    setMensajes([]);
     paginaRef.current = 0;
 
     ChatService.listarMensajes(conversacionId, 0)
@@ -54,32 +70,47 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
     });
   }, [conversacionId, subscribe]);
 
-  // Marcar leídos: el último mensaje confirmado que hay en pantalla.
-  useEffect(() => {
-    if (conversacionId == null || mensajes.length === 0) return;
-    const confirmados = mensajes.filter((m) => !m.estadoEnvio);
-    if (confirmados.length === 0) return;
-    const ultimo = confirmados[confirmados.length - 1];
-    ChatService.marcarLeido(conversacionId, ultimo.id).catch(() => { /* no bloquea la UI */ });
-  }, [conversacionId, mensajes]);
+  // Marcar leídos: el último mensaje confirmado que hay en pantalla. Depende del id de ese
+  // mensaje (no del array completo) para no redisparar el POST en cada cambio de `mensajes`
+  // que no mueva el último confirmado (por ejemplo, el propio mensaje optimista apareciendo).
+  const confirmados = mensajes.filter((m) => !m.estadoEnvio);
+  const ultimoConfirmadoId = confirmados.length > 0 ? confirmados[confirmados.length - 1].id : null;
 
+  useEffect(() => {
+    if (conversacionId == null || ultimoConfirmadoId == null) return;
+    ChatService.marcarLeido(conversacionId, ultimoConfirmadoId).catch(() => { /* no bloquea la UI */ });
+  }, [conversacionId, ultimoConfirmadoId]);
+
+  // El log es inmutable y sólo crece por el frente (nunca se borra ni se edita un mensaje).
+  // Por eso el offset del servidor sólo puede desplazarse hacia adelante cuando llegan
+  // mensajes nuevos entre que se pidió una página y la siguiente: puede hacer que una página
+  // ya vista se repita (duplicado), pero jamás que se salte un mensaje. Con esa garantía,
+  // deduplicar por id al anteponer alcanza para tener una paginación correcta, sin necesidad
+  // de migrar a paginación por cursor.
   const cargarMas = useCallback(async () => {
     if (conversacionId == null || !hayMas) return;
     const siguiente = paginaRef.current + 1;
     const page = await ChatService.listarMensajes(conversacionId, siguiente);
     paginaRef.current = siguiente;
-    setMensajes((prev) => [...[...page.content].reverse(), ...prev]);
+    setMensajes((prev) => {
+      const idsExistentes = new Set(prev.map((m) => m.id));
+      const nuevos = [...page.content].reverse().filter((m) => !idsExistentes.has(m.id));
+      return [...nuevos, ...prev];
+    });
     setHayMas(!page.last);
   }, [conversacionId, hayMas]);
 
   const enviarOptimista = useCallback(
     async (
       borrador: Omit<MensajeUI, "id" | "conversacionId" | "creadoAt">,
-      llamada: () => Promise<Mensaje>
+      llamada: () => Promise<Mensaje>,
+      // Presente sólo cuando es un reintento: reemplaza la burbuja fallida en su lugar en
+      // vez de agregar una nueva al final (ver `reintentar`).
+      claveLocalExistente?: string
     ) => {
       if (conversacionId == null) return;
 
-      const claveLocal = `local-${Date.now()}-${Math.random()}`;
+      const claveLocal = claveLocalExistente ?? `local-${Date.now()}-${Math.random()}`;
       const optimista: MensajeUI = {
         ...borrador,
         id: -1,
@@ -87,15 +118,26 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
         creadoAt: new Date().toISOString(),
         estadoEnvio: "enviando",
         claveLocal,
-      } as MensajeUI;
+      };
 
-      setMensajes((prev) => [...prev, optimista]);
+      setMensajes((prev) =>
+        claveLocalExistente
+          ? prev.map((m) => (m.claveLocal === claveLocalExistente ? optimista : m))
+          : [...prev, optimista]
+      );
 
       try {
         const confirmado = await llamada();
-        setMensajes((prev) =>
-          prev.map((m) => (m.claveLocal === claveLocal ? { ...confirmado } : m))
-        );
+        setMensajes((prev) => {
+          // Si el eco del socket llegara antes de que resuelva este POST (hoy el backend no
+          // lo hace: sólo publica al destinatario, nunca al emisor), ya habría una entrada
+          // con `confirmado.id` en la lista. Sin este filtro quedarían dos entradas con el
+          // mismo id al reemplazar la optimista. Es una bomba de tiempo: el día que se
+          // agregue eco al emisor (por ejemplo para sincronizar entre dispositivos), este
+          // filtro es lo que evita el duplicado.
+          const sinEco = prev.filter((m) => m.claveLocal === claveLocal || m.id !== confirmado.id);
+          return sinEco.map((m) => (m.claveLocal === claveLocal ? { ...confirmado } : m));
+        });
       } catch {
         // NO se borra: el usuario tiene que ver que su mensaje no salió, y poder reintentar.
         setMensajes((prev) =>
@@ -110,32 +152,35 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
 
   // emisorId real (no -1): la burbuja decide "es mío" comparando emisorId, sin heurísticas.
   const enviarTexto = useCallback(
-    (contenido: string) =>
+    (contenido: string, claveLocalExistente?: string) =>
       enviarOptimista(
-        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: usuarioId, emisorNombre: "" } as any,
-        () => ChatService.enviarTexto(conversacionId!, contenido)
+        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: usuarioId, emisorNombre: "" },
+        () => ChatService.enviarTexto(conversacionId!, contenido),
+        claveLocalExistente
       ),
     [conversacionId, usuarioId, enviarOptimista]
   );
 
   const enviarImagen = useCallback(
-    (imagenUrl: string) =>
+    (imagenUrl: string, claveLocalExistente?: string) =>
       enviarOptimista(
-        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: usuarioId, emisorNombre: "" } as any,
-        () => ChatService.enviarImagen(conversacionId!, imagenUrl)
+        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: usuarioId, emisorNombre: "" },
+        () => ChatService.enviarImagen(conversacionId!, imagenUrl),
+        claveLocalExistente
       ),
     [conversacionId, usuarioId, enviarOptimista]
   );
 
   const reintentar = useCallback(
     (claveLocal: string) => {
-      const fallido = mensajes.find((m) => m.claveLocal === claveLocal);
+      const fallido = mensajesRef.current.find((m) => m.claveLocal === claveLocal);
       if (!fallido) return;
-      setMensajes((prev) => prev.filter((m) => m.claveLocal !== claveLocal));
-      if (fallido.tipo === "TEXTO") enviarTexto(fallido.contenido!);
-      else enviarImagen(fallido.imagenUrl!);
+      // Reemplaza en el lugar (vía claveLocalExistente en enviarOptimista): un mensaje que
+      // falló en el medio del hilo no "salta" al final al reintentarlo.
+      if (fallido.tipo === "TEXTO") enviarTexto(fallido.contenido!, claveLocal);
+      else enviarImagen(fallido.imagenUrl!, claveLocal);
     },
-    [mensajes, enviarTexto, enviarImagen]
+    [enviarTexto, enviarImagen]
   );
 
   return {
