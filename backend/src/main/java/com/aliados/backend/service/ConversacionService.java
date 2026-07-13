@@ -2,7 +2,6 @@ package com.aliados.backend.service;
 
 import com.aliados.backend.entity.*;
 import com.aliados.backend.repository.ConversacionRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,17 +67,36 @@ public class ConversacionService {
         throw new IllegalStateException("Conversación " + conversacion.getId() + " sin padre");
     }
 
-    /**
-     * Idempotente: si ya existe la conversación del trabajo, la devuelve.
-     * <p>
-     * Si dos aceptaciones concurrentes del mismo trabajo llegan a la vez, ambas pueden pasar
-     * el {@code findByTrabajoId} inicial en "no existe" y ambas intentan {@code save}. La
-     * constraint {@code uq_conversacion_trabajo} rechaza al perdedor con
-     * {@link DataIntegrityViolationException}; en vez de dejarla propagar, volvemos a buscar
-     * y devolvemos la conversación que ganó la carrera.
-     */
+    // ─────────────────────────────────────────────────────────────────────────────────────
+    // CREACIÓN DE LA CONVERSACIÓN — LEER ANTES DE "ARREGLAR" LA CARRERA CONCURRENTE
+    //
+    // Estos métodos se llaman DENTRO de la transacción de la aceptación (TrabajoService
+    // .aceptarPropuesta / MudanzaService.aceptarMudanza y .aceptarContrapropuesta), con
+    // propagación REQUIRED. Eso es DELIBERADO: la conversación tiene que commitear
+    // atómicamente con la aceptación. Si la creáramos en una transacción propia
+    // (REQUIRES_NEW) que commitea aparte y después la aceptación hiciera rollback,
+    // quedaría una conversación huérfana colgada de un trabajo en PROPUESTO — exactamente
+    // el dato corrupto que resolverModo() denuncia con IllegalStateException.
+    //
+    // Consecuencia: el check-then-act de abajo TIENE una carrera si dos aceptaciones
+    // concurrentes del mismo trabajo/mudanza llegan a la vez, y NO se puede resolver acá
+    // con un catch(DataIntegrityViolationException) + reintento del findByXId. En Postgres
+    // una sentencia fallida aborta la transacción entera: el SELECT del reintento correría
+    // sobre una transacción ya abortada y fallaría igual. Un catch-retry se vería verde en
+    // tests con el repo mockeado y explotaría en producción.
+    //
+    // La garantía real de unicidad son las constraints uq_conversacion_trabajo /
+    // uq_conversacion_mudanza (V11__chat_conversaciones.sql). Ante un doble-accept
+    // concurrente, el perdedor rollbackea su transacción COMPLETA (aceptación incluida):
+    // nunca existen dos conversaciones, los datos quedan consistentes, el usuario ve un
+    // error, recarga, y el trabajo figura aceptado una sola vez. Es correcto y seguro.
+    // ─────────────────────────────────────────────────────────────────────────────────────
+
+    /** Idempotente: si ya existe la conversación del trabajo, la devuelve. */
     @Transactional
     public Conversacion crearParaTrabajo(Trabajo trabajo) {
+        // proveedor es nullable en Trabajo, pero conversacion.proveedor_id es NOT NULL: sin
+        // esta guarda el error sería una constraint de base opaca en vez de decir qué faltó.
         if (trabajo.getProveedor() == null) {
             throw new IllegalStateException(
                     "No se puede crear la conversación: el trabajo " + trabajo.getId()
@@ -90,24 +108,14 @@ public class ConversacionService {
                     c.setTrabajo(trabajo);
                     c.setCliente(trabajo.getCliente());
                     c.setProveedor(trabajo.getProveedor());
-                    try {
-                        return conversacionRepository.save(c);
-                    } catch (DataIntegrityViolationException e) {
-                        return conversacionRepository.findByTrabajoId(trabajo.getId())
-                                .orElseThrow(() -> e);
-                    }
+                    return conversacionRepository.save(c);
                 });
     }
 
-    /**
-     * Idempotente: si ya existe la conversación de la mudanza, la devuelve.
-     * <p>
-     * Misma protección anti-carrera que {@link #crearParaTrabajo(Trabajo)}: si el
-     * {@code save} choca contra {@code uq_conversacion_mudanza}, recuperamos y devolvemos la
-     * conversación ganadora en vez de propagar la excepción al perdedor.
-     */
+    /** Idempotente: si ya existe la conversación de la mudanza, la devuelve. */
     @Transactional
     public Conversacion crearParaMudanza(Mudanza mudanza) {
+        // Misma guarda que en crearParaTrabajo: proveedor nullable vs. proveedor_id NOT NULL.
         if (mudanza.getProveedor() == null) {
             throw new IllegalStateException(
                     "No se puede crear la conversación: la mudanza " + mudanza.getId()
@@ -119,12 +127,7 @@ public class ConversacionService {
                     c.setMudanza(mudanza);
                     c.setCliente(mudanza.getCliente());
                     c.setProveedor(mudanza.getProveedor());
-                    try {
-                        return conversacionRepository.save(c);
-                    } catch (DataIntegrityViolationException e) {
-                        return conversacionRepository.findByMudanzaId(mudanza.getId())
-                                .orElseThrow(() -> e);
-                    }
+                    return conversacionRepository.save(c);
                 });
     }
 }
