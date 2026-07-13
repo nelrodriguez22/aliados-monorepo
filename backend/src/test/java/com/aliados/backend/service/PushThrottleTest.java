@@ -46,4 +46,27 @@ class PushThrottleTest {
         throttle.deboNotificar(10L, 2L);
         assertThat(throttle.deboNotificar(10L, 3L)).isTrue();
     }
+
+    @Test
+    void supresionesConsecutivas_noAdelantanLaVentana() {
+        // Verifica que intentos suprimidos NO resetean la ventana.
+        // Si cada intento (incluso suprimido) moviera el reloj, una conversación activa
+        // nunca volvería a notificar: cada mensaje nuevo empujaría la ventana hacia adelante.
+
+        // t=0: primera push, debe emitir
+        assertThat(throttle.deboNotificar(10L, 2L)).isTrue();
+
+        // t=2min: dentro de la ventana, se suprime
+        ahora.set(ahora.get().plus(Duration.ofMinutes(2)));
+        assertThat(throttle.deboNotificar(10L, 2L)).isFalse();
+
+        // t=4min: sigue suprimido, y la última push sigue siendo la de t=0
+        ahora.set(ahora.get().plus(Duration.ofMinutes(2)));
+        assertThat(throttle.deboNotificar(10L, 2L)).isFalse();
+
+        // t=6min: han pasado 6 minutos desde la última push real (t=0).
+        // La ventana de 5 minutos ya expiró, así que debe emitir.
+        ahora.set(ahora.get().plus(Duration.ofMinutes(2)));
+        assertThat(throttle.deboNotificar(10L, 2L)).isTrue();
+    }
 }
