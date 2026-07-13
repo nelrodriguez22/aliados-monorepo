@@ -24,7 +24,7 @@ public class Mensaje {
     private User emisor;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private TipoMensaje tipo;
 
     @Column(columnDefinition = "TEXT")
