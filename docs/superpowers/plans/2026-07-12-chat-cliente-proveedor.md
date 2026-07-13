@@ -1107,6 +1107,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
@@ -1137,16 +1138,28 @@ public class PushThrottle {
     public boolean deboNotificar(Long conversacionId, Long destinatarioId) {
         String clave = conversacionId + ":" + destinatarioId;
         Instant ahora = reloj.get();
+        AtomicBoolean emitir = new AtomicBoolean(false);
 
-        // merge() es atómico: dos mensajes concurrentes no pueden colarse ambos.
-        Instant previa = ultimaPush.get(clave);
-        if (previa != null && Duration.between(previa, ahora).compareTo(VENTANA) < 0) {
-            return false;
-        }
-        ultimaPush.put(clave, ahora);
-        return true;
+        // compute() es atómico sobre la clave. Con get()+put() (check-then-act) dos mensajes
+        // concurrentes podrían leer ambos "sin push previa" y emitir los dos: justo la doble
+        // vibración que esta clase existe para evitar.
+        ultimaPush.compute(clave, (k, previa) -> {
+            if (previa != null && Duration.between(previa, ahora).compareTo(VENTANA) < 0) {
+                return previa; // dentro de la ventana: no notificar y NO mover el reloj
+            }
+            emitir.set(true);
+            return ahora;
+        });
+
+        return emitir.get();
     }
 }
+```
+
+**Nota sobre memoria:** el mapa crece con una entrada por (conversación, destinatario) y nunca se
+purga. Está acotado por la cantidad de servicios de la plataforma y cada entrada son ~50 bytes:
+irrelevante en pre-launch. Si algún día molesta, se limpia con un barrido periódico de las
+entradas más viejas que la ventana. **No agregar esa complejidad ahora** (YAGNI).
 ```
 
 - [ ] **Step 8: Correr y verificar que pasan**
@@ -1764,7 +1777,7 @@ git commit -m "feat(chat): ChatService (autorización, log congelado, presencia,
 
 **Interfaces:**
 - Consumes: `ChatService` (Task 6).
-- Produces: `GET/POST /api/conversaciones/{id}/mensajes`, `POST /api/conversaciones/{id}/mensajes/leidos`, `GET /api/conversaciones/{id}/no-leidos`. Los DTO de trabajo y mudanza ganan `conversacionId` (nullable).
+- Produces: `GET/POST /api/conversaciones/{id}/mensajes`, `POST /api/conversaciones/{id}/mensajes/leidos`, `GET /api/conversaciones/{id}/no-leidos`. Los DTO de trabajo y mudanza ganan `conversacionId` (nullable) y `chatModo` (`ESCRITURA` | `LECTURA`, nullable — null si no hay conversación).
 
 - [ ] **Step 1: Crear `MarcarLeidoDTO`**
 
@@ -1865,18 +1878,31 @@ Asegurar (agregando los handlers que falten) que:
 cambies** — podés romper otros endpoints. En ese caso, creá una excepción propia
 `ChatCerradoException` y mapeala a 409.
 
-- [ ] **Step 4: Exponer `conversacionId` en los DTO**
+- [ ] **Step 4: Exponer `conversacionId` y `chatModo` en los DTO**
 
 En `TrabajoResponseDTO` y `MudanzaResponseDTO`, agregar:
 
 ```java
     // null = todavía no hay conversación (el cliente no aceptó aún) → la UI no muestra el chat.
     private Long conversacionId;
+
+    // ESCRITURA | LECTURA. El backend es la ÚNICA fuente de verdad de la ventana de escritura:
+    // el frontend obedece este valor y NUNCA vuelve a derivar la regla desde el estado. Si la
+    // lista de estados viviera también en el frontend, agregar un estado nuevo y olvidarse de un
+    // lado dejaría el input habilitado contra un backend que responde 409 al enviar.
+    private ModoChat chatModo;
 ```
 
 Y en el mapeo de `TrabajoService`/`MudanzaService` (junto a `dto.setProveedorId(...)`, ~línea 445
-de `TrabajoService`), setearlo desde `ConversacionRepository.findByTrabajoId(...)` /
-`findByMudanzaId(...)`.
+de `TrabajoService`), setear ambos desde `ConversacionRepository.findByTrabajoId(...)` /
+`findByMudanzaId(...)`, usando `conversacionService.resolverModo(conv)` para el modo:
+
+```java
+        conversacionRepository.findByTrabajoId(trabajo.getId()).ifPresent(conv -> {
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(conversacionService.resolverModo(conv));
+        });
+```
 
 **Ojo con el N+1:** si el mapeo se hace dentro de un bucle sobre una lista de trabajos, una
 consulta por trabajo degrada el dashboard. Si el listado devuelve muchos elementos, resolvelo con
@@ -2097,6 +2123,10 @@ import { apiClient } from "@/shared/lib/apiClient";
 
 export type TipoMensaje = "TEXTO" | "IMAGEN";
 
+// Lo decide el backend (viene en TrabajoDTO.chatModo / MudanzaDTO.chatModo). El frontend NUNCA
+// lo deriva del estado del servicio: esa regla vive sólo en ConversacionService.
+export type ModoChat = "ESCRITURA" | "LECTURA";
+
 export interface Mensaje {
   id: number;
   conversacionId: number;
@@ -2166,7 +2196,8 @@ git commit -m "feat(chat): capa de API del chat en el frontend"
 
 **Interfaces:**
 - Consumes: `ChatService` (Task 9), `useWebSocket().subscribe` (Task 8).
-- Produces: `useChat(conversacionId: number | null)` → `{ mensajes, cargando, hayMas, error, cargarMas, enviarTexto, enviarImagen, reintentar }`. Cada mensaje de la lista lleva `estadoEnvio?: 'enviando' | 'error'` (ausente = confirmado por el servidor); no hay un flag `enviando` global, porque puede haber varios mensajes en vuelo a la vez.
+- Produces: `useChat(conversacionId: number | null, usuarioId: number)` → `{ mensajes, cargando, hayMas, error, cargarMas, enviarTexto, enviarImagen, reintentar }`. Cada mensaje de la lista lleva `estadoEnvio?: 'enviando' | 'error'` (ausente = confirmado por el servidor); no hay un flag `enviando` global, porque puede haber varios mensajes en vuelo a la vez.
+- **`usuarioId` es obligatorio**: el mensaje optimista tiene que llevar el `emisorId` real para que la burbuja sepa que es propia. Deducirlo de `estadoEnvio != null` funcionaría por accidente y se rompería en cuanto un mensaje confirmado deje de tener ese flag.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
@@ -2206,7 +2237,7 @@ describe('useChat', () => {
   });
 
   it('un mensaje que llega por socket se agrega a la lista', async () => {
-    const { result } = renderHook(() => useChat(10));
+    const { result } = renderHook(() => useChat(10, 1));
     await waitFor(() => expect(result.current.cargando).toBe(false));
 
     act(() => { handlerSocket!(mensajeServidor); });
@@ -2221,7 +2252,7 @@ describe('useChat', () => {
       new Promise((res) => { resolver = res; }) as any
     );
 
-    const { result } = renderHook(() => useChat(10));
+    const { result } = renderHook(() => useChat(10, 1));
     await waitFor(() => expect(result.current.cargando).toBe(false));
 
     act(() => { result.current.enviarTexto('hola'); });
@@ -2244,7 +2275,7 @@ describe('useChat', () => {
   it('si el envío falla, el mensaje queda marcado en error (no desaparece)', async () => {
     vi.mocked(ChatService.enviarTexto).mockRejectedValue(new Error('red caída'));
 
-    const { result } = renderHook(() => useChat(10));
+    const { result } = renderHook(() => useChat(10, 1));
     await waitFor(() => expect(result.current.cargando).toBe(false));
 
     await act(async () => { await result.current.enviarTexto('hola'); });
@@ -2261,7 +2292,7 @@ describe('useChat', () => {
       { ...mensajeServidor, id: 5, contenido: 'hola' } as any
     );
 
-    const { result } = renderHook(() => useChat(10));
+    const { result } = renderHook(() => useChat(10, 1));
     await waitFor(() => expect(result.current.cargando).toBe(false));
 
     await act(async () => { await result.current.enviarTexto('hola'); });
@@ -2271,7 +2302,7 @@ describe('useChat', () => {
   });
 
   it('conversacionId null no rompe ni llama a la API', () => {
-    const { result } = renderHook(() => useChat(null));
+    const { result } = renderHook(() => useChat(null, 1));
     expect(result.current.mensajes).toEqual([]);
     expect(ChatService.listarMensajes).not.toHaveBeenCalled();
   });
@@ -2299,7 +2330,7 @@ export interface MensajeUI extends Mensaje {
   claveLocal?: string;
 }
 
-export function useChat(conversacionId: number | null) {
+export function useChat(conversacionId: number | null, usuarioId: number) {
   const [mensajes, setMensajes] = useState<MensajeUI[]>([]);
   const [cargando, setCargando] = useState(false);
   const [hayMas, setHayMas] = useState(false);
@@ -2396,22 +2427,23 @@ export function useChat(conversacionId: number | null) {
     [conversacionId]
   );
 
+  // emisorId real (no -1): la burbuja decide "es mío" comparando emisorId, sin heurísticas.
   const enviarTexto = useCallback(
     (contenido: string) =>
       enviarOptimista(
-        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: -1, emisorNombre: "" } as any,
+        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: usuarioId, emisorNombre: "" } as any,
         () => ChatService.enviarTexto(conversacionId!, contenido)
       ),
-    [conversacionId, enviarOptimista]
+    [conversacionId, usuarioId, enviarOptimista]
   );
 
   const enviarImagen = useCallback(
     (imagenUrl: string) =>
       enviarOptimista(
-        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: -1, emisorNombre: "" } as any,
+        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: usuarioId, emisorNombre: "" } as any,
         () => ChatService.enviarImagen(conversacionId!, imagenUrl)
       ),
-    [conversacionId, enviarOptimista]
+    [conversacionId, usuarioId, enviarOptimista]
   );
 
   const reintentar = useCallback(
@@ -2547,17 +2579,19 @@ import { tw } from "@/shared/styles/tw";
 import { useChat } from "@/shared/hooks/useChat";
 import { MensajeBubble } from "./MensajeBubble";
 import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
+import type { ModoChat } from "@/shared/services/ChatService";
 
 interface Props {
   conversacionId: number | null;
-  modo: "ESCRITURA" | "LECTURA";
+  // Viene del backend. ChatPanel lo obedece; no lo calcula.
+  modo: ModoChat;
   usuarioId: number;
   titulo: string;
 }
 
 export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
   const { mensajes, cargando, hayMas, cargarMas, enviarTexto, enviarImagen, reintentar } =
-    useChat(conversacionId);
+    useChat(conversacionId, usuarioId);
 
   const [borrador, setBorrador] = useState("");
   const [subiendo, setSubiendo] = useState(false);
@@ -2630,7 +2664,7 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
           <MensajeBubble
             key={m.claveLocal ?? m.id}
             mensaje={m}
-            esPropio={m.emisorId === usuarioId || m.estadoEnvio != null}
+            esPropio={m.emisorId === usuarioId}
             onReintentar={reintentar}
           />
         ))}
@@ -2735,7 +2769,7 @@ input deshabilitado) y poner:
               {/* Chat */}
               <ChatPanel
                 conversacionId={trabajo.conversacionId ?? null}
-                modo="ESCRITURA"
+                modo={trabajo.chatModo}
                 usuarioId={usuarioActual.id}
                 titulo="Chat con tu aliado"
               />
@@ -2745,11 +2779,14 @@ Agregar el import: `import { ChatPanel } from "@/shared/components/chat/ChatPane
 
 Borrar el `useState` de `message` y el import de `Send` si quedaron sin uso.
 
-**CRÍTICO — no replicar la condición vieja.** El placeholder se mostraba con
-`enCurso && trabajo.proveedorNombre`. Eso **deja fuera a `EN_COLA`**: clientes que ya aceptaron y
-esperan turno, que es justo cuando más quieren preguntar "¿cuándo venís?". La condición correcta
-es **`conversacionId != null`** — el backend ya decidió que existe conversación sólo cuando
-corresponde. `ChatPanel` devuelve `null` si es `null`.
+**CRÍTICO — no replicar la condición vieja, y no inventar una nueva.** El placeholder se mostraba
+con `enCurso && trabajo.proveedorNombre`. Eso **deja fuera a `EN_COLA`**: clientes que ya
+aceptaron y esperan turno, que es justo cuando más quieren preguntar "¿cuándo venís?".
+
+**El frontend NO decide nada acá.** No hardcodees `modo="ESCRITURA"` ni derives el modo del
+estado: usá `trabajo.chatModo`, que viene del backend. Si `conversacionId` es `null`, `ChatPanel`
+devuelve `null` solo. La regla de la ventana de escritura vive en **un único lugar**
+(`ConversacionService`) y el frontend la obedece.
 
 - [ ] **Step 2: Montar el chat en `ActiveJob.tsx` (proveedor)**
 
@@ -2758,20 +2795,22 @@ Ubicá dónde se muestran los datos del trabajo activo y agregá, siguiendo el l
 ```tsx
       <ChatPanel
         conversacionId={trabajo.conversacionId ?? null}
-        modo="ESCRITURA"
+        modo={trabajo.chatModo}
         usuarioId={usuarioActual.id}
         titulo="Chat con el cliente"
       />
 ```
 
-- [ ] **Step 3: Montar en modo lectura en las pantallas de trabajo completado**
+- [ ] **Step 3: Montar en las pantallas de trabajo completado**
 
-En `JobCompleted.tsx` y `ProviderCompletedJob.tsx`:
+En `JobCompleted.tsx` y `ProviderCompletedJob.tsx`. **También acá el modo viene del backend** — no
+lo hardcodees en `"LECTURA"`. Un trabajo `COMPLETADO` ya resuelve a `LECTURA` en
+`ConversacionService`; hardcodearlo sería volver a meter la regla en el frontend por la ventana.
 
 ```tsx
       <ChatPanel
         conversacionId={trabajo.conversacionId ?? null}
-        modo="LECTURA"
+        modo={trabajo.chatModo}
         usuarioId={usuarioActual.id}
         titulo="Historial de mensajes"
       />
@@ -2811,31 +2850,25 @@ git commit -m "feat(chat): chat en trabajos (cliente y proveedor) + historial re
 **Interfaces:**
 - Consumes: `<ChatPanel />` (Task 11); el campo `conversacionId` del DTO de mudanza (Task 7).
 
-Una sola página cubre escritura y lectura: **el modo lo determina el estado de la mudanza.**
+Una sola página cubre escritura y lectura: **el modo viene del backend en `mudanza.chatModo`.**
 
-- [ ] **Step 1: Derivar el modo del estado en `MudanzaDetail.tsx`**
-
-```tsx
-      const modoChat = ["COMPLETADO", "CANCELADO"].includes(mudanza.estado)
-        ? "LECTURA"
-        : "ESCRITURA";
-```
-
-Y montar:
+- [ ] **Step 1: Montar el chat en `MudanzaDetail.tsx`**
 
 ```tsx
       <ChatPanel
         conversacionId={mudanza.conversacionId ?? null}
-        modo={modoChat}
+        modo={mudanza.chatModo}
         usuarioId={usuarioActual.id}
         titulo="Chat con tu aliado"
       />
 ```
 
-**No hace falta listar los estados de escritura acá.** El backend ya decidió: si hay
-`conversacionId`, la mudanza fue aceptada. Los únicos estados de lectura son los dos terminales.
-Esto mantiene la regla en **un solo lugar** (`ConversacionService`) y evita que el frontend y el
-backend se desincronicen.
+**NO derives el modo en el frontend.** No escribas
+`["COMPLETADO","CANCELADO"].includes(mudanza.estado)` ni ninguna variante: eso duplicaría en el
+frontend la regla que ya vive en `ConversacionService`, y el día que se agregue un estado nuevo y
+se actualice sólo un lado, el usuario vería el input habilitado contra un backend que le responde
+**409** al enviar. En un chat que le prometimos como registro de lo acordado, ese error es
+inaceptable. La regla vive en **un solo lugar**; el frontend obedece.
 
 - [ ] **Step 2: Hacer lo mismo en `ProviderMudanzaDetail.tsx`**
 
