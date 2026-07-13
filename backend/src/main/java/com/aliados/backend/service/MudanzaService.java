@@ -48,6 +48,9 @@ public class MudanzaService {
     @Autowired
     private FeatureFlagService featureFlagService;
 
+    @Autowired
+    private ConversacionService conversacionService;
+
     private static final int MAX_MUDANZAS_POR_DIA = 2;
 
     // ════════════════════════════════════════════
@@ -191,6 +194,10 @@ public class MudanzaService {
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya está ocupado.");
         }
 
+        // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
+        // que un reintento no duplica.
+        conversacionService.crearParaMudanza(mudanza);
+
         String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
@@ -329,6 +336,10 @@ public class MudanzaService {
             String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya no está disponible.");
         }
+
+        // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
+        // que un reintento no duplica.
+        conversacionService.crearParaMudanza(mudanza);
 
         // Notificar proveedor
         notificacionService.enviarNotificacion(

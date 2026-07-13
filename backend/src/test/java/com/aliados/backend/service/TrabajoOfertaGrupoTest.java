@@ -44,6 +44,7 @@ class TrabajoOfertaGrupoTest {
     @Mock CloudinaryService cloudinaryService;
     @Mock com.aliados.backend.service.FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
+    @Mock ConversacionService conversacionService;
 
     @InjectMocks TrabajoService trabajoService;
 

@@ -69,6 +69,9 @@ public class TrabajoService {
     @Autowired
     private TrabajoOfertaRepository trabajoOfertaRepository;
 
+    @Autowired
+    private ConversacionService conversacionService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     // package-private para test; lee los límites de feature flags.
@@ -745,6 +748,10 @@ public class TrabajoService {
 
         trabajo.setAcceptedAt(LocalDateTime.now());
         trabajo = trabajoRepository.save(trabajo);
+
+        // El chat nace acá: es el momento en que el vínculo cliente-proveedor queda confirmado
+        // (tanto EN_CURSO como EN_COLA tienen chat). Idempotente, así que un reintento no duplica.
+        conversacionService.crearParaTrabajo(trabajo);
 
         // El trabajo se tomó: las ofertas OFRECIDA restantes cuentan DURMIO (estricto).
         for (TrabajoOferta o : trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA)) {

@@ -44,6 +44,7 @@ class ResponderPresupuestoTest {
     @Mock CloudinaryService cloudinaryService;
     @Mock FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
+    @Mock ConversacionService conversacionService;
 
     @InjectMocks TrabajoService trabajoService;
 

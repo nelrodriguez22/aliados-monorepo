@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -243,5 +244,107 @@ class ConversacionServiceTest {
         assertThat(guardada.getCliente()).isSameAs(mudanza.getCliente());
         assertThat(guardada.getProveedor()).isSameAs(mudanza.getProveedor());
         assertThat(resultado).isSameAs(guardada);
+    }
+
+    // --- GUARDA: PROVEEDOR NULL ---
+    // proveedor es nullable en Trabajo/Mudanza pero conversacion.proveedor_id es NOT NULL.
+    // Sin esta guarda, el error real sería una constraint de base opaca en vez de un mensaje
+    // claro sobre qué faltaba.
+
+    @Test
+    void crearParaTrabajo_sinProveedor_lanzaIllegalStateExceptionClara() {
+        Trabajo trabajo = trabajoConPartes();
+        trabajo.setProveedor(null);
+
+        assertThatThrownBy(() -> conversacionService.crearParaTrabajo(trabajo))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(String.valueOf(trabajo.getId()))
+                .hasMessageContaining("no tiene proveedor asignado");
+
+        verify(conversacionRepository, never()).findByTrabajoId(any());
+        verify(conversacionRepository, never()).save(any());
+    }
+
+    @Test
+    void crearParaMudanza_sinProveedor_lanzaIllegalStateExceptionClara() {
+        Mudanza mudanza = mudanzaConPartes();
+        mudanza.setProveedor(null);
+
+        assertThatThrownBy(() -> conversacionService.crearParaMudanza(mudanza))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(String.valueOf(mudanza.getId()))
+                .hasMessageContaining("no tiene proveedor asignado");
+
+        verify(conversacionRepository, never()).findByMudanzaId(any());
+        verify(conversacionRepository, never()).save(any());
+    }
+
+    // --- CARRERA EN LA CREACIÓN CONCURRENTE ---
+    // Dos requests de aceptación llegan a la vez: ambas ven "no existe" en el findByXId
+    // inicial y ambas intentan save(). La constraint única de base rechaza al perdedor con
+    // DataIntegrityViolationException; en vez de propagarla, el perdedor debe recuperar y
+    // devolver la conversación que ganó la carrera.
+
+    @Test
+    void crearParaTrabajo_perdedorDeLaCarrera_recuperaLaConversacionGanadora() {
+        Trabajo trabajo = trabajoConPartes();
+        Conversacion ganadora = new Conversacion();
+        ganadora.setId(42L);
+        when(conversacionRepository.findByTrabajoId(trabajo.getId()))
+                .thenReturn(Optional.empty())   // primer chequeo: todavía no existe
+                .thenReturn(Optional.of(ganadora)); // segundo chequeo (tras perder la carrera): ya existe
+        when(conversacionRepository.save(any(Conversacion.class)))
+                .thenThrow(new DataIntegrityViolationException("uq_conversacion_trabajo"));
+
+        Conversacion resultado = conversacionService.crearParaTrabajo(trabajo);
+
+        assertThat(resultado).isSameAs(ganadora);
+        verify(conversacionRepository, times(2)).findByTrabajoId(trabajo.getId());
+        verify(conversacionRepository, times(1)).save(any(Conversacion.class));
+    }
+
+    // Si ni siquiera el segundo findByXId encuentra nada (dato corrupto / bug real de la
+    // constraint), no hay que devolver silenciosamente null: hay que dejar explotar la
+    // excepción original.
+    @Test
+    void crearParaTrabajo_saveFallaYNoApareceEnElReintento_relanzaLaExcepcionOriginal() {
+        Trabajo trabajo = trabajoConPartes();
+        DataIntegrityViolationException original = new DataIntegrityViolationException("boom");
+        when(conversacionRepository.findByTrabajoId(trabajo.getId()))
+                .thenReturn(Optional.empty());
+        when(conversacionRepository.save(any(Conversacion.class))).thenThrow(original);
+
+        assertThatThrownBy(() -> conversacionService.crearParaTrabajo(trabajo))
+                .isSameAs(original);
+    }
+
+    @Test
+    void crearParaMudanza_perdedorDeLaCarrera_recuperaLaConversacionGanadora() {
+        Mudanza mudanza = mudanzaConPartes();
+        Conversacion ganadora = new Conversacion();
+        ganadora.setId(43L);
+        when(conversacionRepository.findByMudanzaId(mudanza.getId()))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(ganadora));
+        when(conversacionRepository.save(any(Conversacion.class)))
+                .thenThrow(new DataIntegrityViolationException("uq_conversacion_mudanza"));
+
+        Conversacion resultado = conversacionService.crearParaMudanza(mudanza);
+
+        assertThat(resultado).isSameAs(ganadora);
+        verify(conversacionRepository, times(2)).findByMudanzaId(mudanza.getId());
+        verify(conversacionRepository, times(1)).save(any(Conversacion.class));
+    }
+
+    @Test
+    void crearParaMudanza_saveFallaYNoApareceEnElReintento_relanzaLaExcepcionOriginal() {
+        Mudanza mudanza = mudanzaConPartes();
+        DataIntegrityViolationException original = new DataIntegrityViolationException("boom");
+        when(conversacionRepository.findByMudanzaId(mudanza.getId()))
+                .thenReturn(Optional.empty());
+        when(conversacionRepository.save(any(Conversacion.class))).thenThrow(original);
+
+        assertThatThrownBy(() -> conversacionService.crearParaMudanza(mudanza))
+                .isSameAs(original);
     }
 }
