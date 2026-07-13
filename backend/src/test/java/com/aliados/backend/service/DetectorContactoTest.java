@@ -67,4 +67,30 @@ class DetectorContactoTest {
     void toleraNull() {
         assertThat(detector.contieneContacto(null)).isFalse();
     }
+
+    // El DNI argentino tiene 8 dígitos, igual que un fijo de CABA: son indistinguibles por
+    // conteo de dígitos. Se eligió el piso de 9 dígitos en TELEFONO para NO marcar DNIs,
+    // aceptando no detectar fijos de 8 dígitos. Este test es el que impide que alguien baje
+    // el umbral de {8,} a {7,} "para que coincida con el comentario" y reintroduzca el
+    // falso positivo de DNI.
+    @Test
+    void noDetectaDni() {
+        assertThat(detector.contieneContacto("mi DNI es 35123456")).isFalse();
+    }
+
+    @Test
+    void noDetectaDniConPuntos() {
+        assertThat(detector.contieneContacto("DNI 35.123.456")).isFalse();
+    }
+
+    // El CUIT (11 dígitos) SÍ da falso positivo hoy, y es una decisión consciente, no un bug.
+    // Un CUIT en un chat cliente-proveedor es raro (la plataforma ya maneja el pago), mientras
+    // que montos y alturas aparecen todo el tiempo: el costo de este falso positivo es una fila
+    // descartable en el panel de admin. Excluirlo por formato abriría un vector de evasión:
+    // bastaría con escribir el teléfono con forma de CUIT para esquivar la detección. No
+    // "arreglar" este test para que dé false.
+    @Test
+    void detectaCuit_falsoPositivoAceptado() {
+        assertThat(detector.contieneContacto("mi CUIT es 20-12345678-9")).isTrue();
+    }
 }
