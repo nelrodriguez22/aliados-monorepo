@@ -16,6 +16,8 @@ import { ROUTES } from "@/shared/constants/routes";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
+import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
+import { UnreadBadge } from "@/shared/components/chat/UnreadBadge";
 import {
   Bell, MapPin, Clock, CheckCircle,
   Star, ClipboardList, ZapOff, Users, Truck, X, Calendar, ChevronDown,
@@ -61,12 +63,14 @@ function TrabajoCard({
   badgeContent,
   actionContent,
   onClick,
+  unreadCount,
 }: {
   trabajo: any;
   left?: React.ReactNode;
   badgeContent: React.ReactNode;   // badge (estado) arriba derecha
   actionContent?: React.ReactNode; // botón acción — si existe reemplaza al tiempo
   onClick?: () => void;
+  unreadCount?: number;            // mensajes sin leer de la conversación del trabajo
 }) {
   return (
     <Card hover={!!onClick} onClick={onClick}>
@@ -83,7 +87,10 @@ function TrabajoCard({
         </div>
         {/* Derecha: badge arriba, tiempo abajo */}
         <div className="shrink-0 flex flex-col items-end gap-1">
-          {badgeContent}
+          <div className="flex items-center">
+            {badgeContent}
+            <UnreadBadge count={unreadCount ?? 0} />
+          </div>
           {!actionContent && trabajo.tiempoEstimadoMinutos && (
             <span className={`flex items-center gap-1 text-xs ${tw.text.secondary}`}>
               <Clock className={`h-3 w-3 ${tw.text.faint}`} />
@@ -215,6 +222,20 @@ export function ProviderDashboard() {
   const limiteTrabajos = isFlete ? 8 : 3;
   const colaLlena     = (trabajoActivo ? 1 : 0) + trabajosEnCola.length >= limiteTrabajos;
   const isMainLoading = loadingCompletados;
+
+  // Badges de no leídos (#26): un único efecto junta los conversacionId de TODAS las
+  // tarjetas activas y pide los conteos en paralelo — ver useUnreadCounts. Armar este
+  // array con .map()/.filter() en cada render es seguro: el hook deriva una clave estable
+  // del conjunto de ids y sólo vuelve a pedir cuando ese conjunto cambia de verdad.
+  const conversacionIdsActivos = [
+    ...trabajosPendientes.map((t: any) => t.conversacionId),
+    ...trabajosEnCola.map((t: any) => t.conversacionId),
+    ...(trabajoActivo ? [trabajoActivo.conversacionId] : []),
+    ...mudanzasPendientes.map((m: any) => m.conversacionId),
+    ...mudanzasConfirmadas.map((m: any) => m.conversacionId),
+    ...(mudanzaActiva ? [mudanzaActiva.conversacionId] : []),
+  ].filter((id: number | null | undefined): id is number => id != null);
+  const noLeidosPorConversacion = useUnreadCounts(conversacionIdsActivos);
 
   useEffect(() => {
     if (isSupported && permission === 'default') setShowNotifBanner(true);
@@ -375,6 +396,7 @@ export function ProviderDashboard() {
                             Ver detalle
                           </Button>
                         }
+                        unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
                       />
                     ))}
                   </div>
@@ -414,6 +436,7 @@ export function ProviderDashboard() {
                         </div>
                       }
                       badgeContent={""}
+                      unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
                     />
                   ))}
                 </div>
@@ -434,6 +457,7 @@ export function ProviderDashboard() {
                   onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
                   left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
                   badgeContent={""}
+                  unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
                   actionContent={
                     <Button
                       variant="primary"
@@ -471,7 +495,7 @@ export function ProviderDashboard() {
                             {m.direccionOrigen.split(',')[0]} → {m.direccionDestino.split(',')[0]}
                           </p>
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0 flex flex-col items-end gap-1">
                           <Button
                             variant="success"
                             onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}
@@ -479,6 +503,9 @@ export function ProviderDashboard() {
                           >
                             Ver detalle
                           </Button>
+                          {m.conversacionId != null && (
+                            <UnreadBadge count={noLeidosPorConversacion[m.conversacionId] ?? 0} />
+                          )}
                         </div>
                       </div>
                     </Card>
@@ -520,8 +547,11 @@ export function ProviderDashboard() {
                             {m.direccionOrigen.split(',')[0]} → {m.direccionDestino.split(',')[0]}
                           </p>
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0 flex items-center">
                           <Badge variant="success">Confirmada</Badge>
+                          {m.conversacionId != null && (
+                            <UnreadBadge count={noLeidosPorConversacion[m.conversacionId] ?? 0} />
+                          )}
                         </div>
                       </div>
                       {m.fechaConfirmada && (
@@ -558,7 +588,10 @@ export function ProviderDashboard() {
                         {mudanzaActiva.direccionOrigen.split(',')[0]} → {mudanzaActiva.direccionDestino.split(',')[0]}
                       </p>
                     </div>
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      {mudanzaActiva.conversacionId != null && (
+                        <UnreadBadge count={noLeidosPorConversacion[mudanzaActiva.conversacionId] ?? 0} />
+                      )}
                       <Button
                         variant="primary"
                         onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}
