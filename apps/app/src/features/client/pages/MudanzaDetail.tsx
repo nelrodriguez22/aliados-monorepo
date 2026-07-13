@@ -8,6 +8,9 @@ import { tw } from "@/shared/styles/design-system";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/lib/apiClient";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
+import { ChatPanel } from "@/shared/components/chat/ChatPanel";
+import { useStore } from "@/shared/store/useStore";
+import type { ModoChat } from "@/shared/services/ChatService";
 import { ArrowLeft, Clock, Truck, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/shared/constants/routes";
@@ -15,6 +18,9 @@ import { useEffect, useState } from "react";
 
 interface MudanzaDetail {
   id: number;
+  // Vienen del backend (ConversacionService). El frontend no decide el modo: lo obedece.
+  conversacionId: number | null;
+  chatModo: ModoChat | null;
   clienteId: number;
   clienteNombre: string;
   proveedorId: number | null;
@@ -85,6 +91,7 @@ export function MudanzaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useStore();
   // Con WS conectado los cambios de estado llegan por push → poll lento de respaldo.
   const { isConnected: wsConnected } = useWebSocketContext();
 
@@ -163,7 +170,7 @@ export function MudanzaDetail() {
     );
   }
 
-  if (isLoading || !mudanza) {
+  if (isLoading || !mudanza || !user) {
     return (
       <div className={tw.pageBg}>
         <div className={tw.container}>
@@ -403,6 +410,14 @@ export function MudanzaDetail() {
               )}
             </div>
           </Card>
+
+          {/* Chat — modo lo decide el backend, nunca se deriva acá del estado */}
+          <ChatPanel
+            conversacionId={mudanza.conversacionId ?? null}
+            modo={mudanza.chatModo!}
+            usuarioId={user.id}
+            titulo="Chat con tu aliado"
+          />
 
         </div>
       </div>
