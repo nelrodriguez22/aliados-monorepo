@@ -64,7 +64,6 @@ describe("ChatPanel", () => {
         modo="ESCRITURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
     expect(container.firstChild).toBeNull();
@@ -83,7 +82,6 @@ describe("ChatPanel", () => {
         modo="ESCRITURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
 
@@ -110,7 +108,6 @@ describe("ChatPanel", () => {
         modo="ESCRITURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
 
@@ -127,7 +124,6 @@ describe("ChatPanel", () => {
         modo="LECTURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
 
@@ -147,7 +143,6 @@ describe("ChatPanel", () => {
         modo="ESCRITURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
 
@@ -168,7 +163,6 @@ describe("ChatPanel", () => {
         modo="ESCRITURA"
         usuarioId={1}
         titulo="Chat"
-        tipoUpload="TRABAJO"
       />
     );
 

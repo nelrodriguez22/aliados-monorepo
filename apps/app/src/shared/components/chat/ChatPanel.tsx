@@ -13,14 +13,9 @@ interface Props {
   modo: ModoChat;
   usuarioId: number;
   titulo: string;
-  // uploadToCloudinary exige distinguir TRABAJO/MUDANZA (afecta la carpeta de Cloudinary,
-  // no la compresión: los parámetros de ambos tipos son idénticos hoy). ChatPanel es
-  // agnóstico de ese contexto, así que lo recibe del caller en vez de derivarlo — misma
-  // regla que ya aplica a `modo`.
-  tipoUpload: "TRABAJO" | "MUDANZA";
 }
 
-export function ChatPanel({ conversacionId, modo, usuarioId, titulo, tipoUpload }: Props) {
+export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
   const { mensajes, cargando, hayMas, cargarMas, enviarTexto, enviarImagen, reintentar } =
     useChat(conversacionId, usuarioId);
 
@@ -50,7 +45,9 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo, tipoUpload 
     setSubiendo(true);
     setErrorUpload(null);
     try {
-      const url = await uploadToCloudinary(file, tipoUpload);
+      // 'CHAT' fijo: una foto del chat es una foto del chat. ChatPanel no sabe (ni tiene
+      // que saber) si la conversación cuelga de un trabajo o de una mudanza.
+      const url = await uploadToCloudinary(file, "CHAT");
       await enviarImagen(url);
     } catch {
       // Falla local: no se persistió nada. El usuario puede reintentar eligiendo de nuevo.
