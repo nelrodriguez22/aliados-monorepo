@@ -1,15 +1,18 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { ChatPanel } from "../ChatPanel";
 import { useChat } from "@/shared/hooks/useChat";
 import type { MensajeUI } from "@/shared/hooks/useChat";
+import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
 
 vi.mock("@/shared/hooks/useChat");
+vi.mock("@/shared/lib/uploadToCloudinary");
 
 // ChatPanel es el componente: acá se mockea useChat entero para no depender de su
 // implementación real (eso ya lo cubre useChat.test.ts).
 const useChatMock = vi.mocked(useChat);
+const uploadToCloudinaryMock = vi.mocked(uploadToCloudinary);
 
 function mockUseChat(overrides: Partial<ReturnType<typeof useChat>> = {}) {
   useChatMock.mockReturnValue({
@@ -169,5 +172,38 @@ describe("ChatPanel", () => {
     expect(screen.getByLabelText("Mensaje")).not.toBeNull();
     expect(screen.getByLabelText("Enviar mensaje")).not.toBeNull();
     expect(screen.getByLabelText("Adjuntar imagen")).not.toBeNull();
+  });
+
+  // Task 11 pendiente: si uploadToCloudinary falla, el usuario tiene que enterarse (mensaje de
+  // error) y poder reintentar (el input de archivo no puede quedar `disabled` para siempre).
+  it("si falla la subida de la imagen, muestra el error y libera el input para reintentar", async () => {
+    const enviarImagen = vi.fn();
+    uploadToCloudinaryMock.mockRejectedValue(new Error("network error"));
+    mockUseChat({ enviarImagen });
+
+    render(
+      <ChatPanel
+        conversacionId={10}
+        modo="ESCRITURA"
+        usuarioId={1}
+        titulo="Chat"
+      />
+    );
+
+    const input = screen.getByLabelText("Adjuntar imagen").querySelector(
+      "input[type='file']"
+    ) as HTMLInputElement;
+    const file = new File(["contenido"], "foto.jpg", { type: "image/jpeg" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText("No pudimos subir la imagen. Probá de nuevo.")).not.toBeNull();
+    });
+
+    // No se llegó a persistir ningún mensaje: la falla fue local, antes de enviarImagen.
+    expect(enviarImagen).not.toHaveBeenCalled();
+    // El estado de "subiendo" se limpió: el input vuelve a estar habilitado (se puede reintentar).
+    expect(input.disabled).toBe(false);
   });
 });

@@ -29,6 +29,9 @@ export interface WebSocketMessage {
 
 export interface User {
   uid: string;
+  // Id de base del usuario (no confundir con `uid`, que es el de Firebase). Lo
+  // necesita todo consumidor que compare contra `emisorId` de un mensaje de chat.
+  id: number;
   name: string;
   email: string;
   role: 'CLIENT' | 'PROVIDER' | 'ADMIN';
