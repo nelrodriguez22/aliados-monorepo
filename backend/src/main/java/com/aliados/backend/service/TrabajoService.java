@@ -499,10 +499,7 @@ public class TrabajoService {
 
         // Un solo trabajo: una query directa no degrada nada (el N+1 se evita en
         // mapToDTOOptimized, usado para listados).
-        conversacionRepository.findByTrabajoId(trabajo.getId()).ifPresent(conv -> {
-            dto.setConversacionId(conv.getId());
-            dto.setChatModo(conversacionService.resolverModo(conv));
-        });
+        conversacionRepository.findByTrabajoId(trabajo.getId()).ifPresent(conv -> aplicarChat(dto, conv));
 
         return dto;
     }
@@ -667,11 +664,33 @@ public class TrabajoService {
 
         Conversacion conv = conversacionPorTrabajo.get(trabajo.getId());
         if (conv != null) {
-            dto.setConversacionId(conv.getId());
-            dto.setChatModo(conversacionService.resolverModo(conv));
+            aplicarChat(dto, conv);
         }
 
         return dto;
+    }
+
+    /**
+     * Setea conversacionId + chatModo en el DTO, resolviendo el modo vía ConversacionService.
+     * MINOR 1: resolverModo() lanza IllegalStateException si el estado del padre (trabajo o
+     * mudanza) no está contemplado en los sets ESCRITURA/LECTURA de ConversacionService (p.ej.
+     * alguien agrega un TrabajoEstado nuevo y se olvida de sumarlo ahí). El chat es una feature
+     * secundaria: eso NUNCA puede tirar abajo el armado del dashboard completo (que es lo que
+     * pasaba antes: la excepción se propagaba y getTrabajosByCliente devolvía 400 entero).
+     * Por eso degradamos acá, logueando el id de la conversación para poder investigarlo.
+     * Degradamos conversacionId Y chatModo juntos (no solo el modo): si dejáramos conversacionId
+     * seteado con chatModo null, el frontend (que solo muestra el chat cuando hay
+     * conversacionId) quedaría en un estado raro. Dejando los dos en null, el frontend
+     * simplemente no muestra el chat para este trabajo/mudanza.
+     */
+    private void aplicarChat(TrabajoResponseDTO dto, Conversacion conv) {
+        try {
+            ModoChat modo = conversacionService.resolverModo(conv);
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(modo);
+        } catch (IllegalStateException e) {
+            logger.warn("No se pudo resolver el modo de chat de la conversación {}: {}", conv.getId(), e.getMessage());
+        }
     }
 
     @Transactional

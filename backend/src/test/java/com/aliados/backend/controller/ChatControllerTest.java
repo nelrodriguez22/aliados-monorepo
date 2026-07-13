@@ -6,6 +6,7 @@ import com.aliados.backend.dto.MarcarLeidoDTO;
 import com.aliados.backend.dto.MensajeResponseDTO;
 import com.aliados.backend.entity.TipoMensaje;
 import com.aliados.backend.exception.ChatCerradoException;
+import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.service.ChatService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,6 +144,13 @@ class ChatControllerTest {
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
+
+        // Sin este captor, el controller podría pasar null (o cualquier otro valor) como
+        // hastaMensajeId y el test seguiría en verde: solo miraba el status.
+        org.mockito.ArgumentCaptor<Long> hastaMensajeIdCaptor = org.mockito.ArgumentCaptor.forClass(Long.class);
+        org.mockito.Mockito.verify(chatService)
+                .marcarLeido(eq(10L), eq("uid-cliente"), hastaMensajeIdCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(hastaMensajeIdCaptor.getValue()).isEqualTo(7L);
     }
 
     @Test
@@ -188,5 +196,29 @@ class ChatControllerTest {
 
         mockMvc.perform(get("/api/conversaciones/10/no-leidos").principal(authentication))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void notFoundException_delServicio_da404() throws Exception {
+        when(chatService.listarMensajes(eq(10L), eq("uid-cliente"), any(Pageable.class)))
+                .thenThrow(new NotFoundException("Conversación no encontrada"));
+
+        mockMvc.perform(get("/api/conversaciones/10/mensajes").principal(authentication))
+                .andExpect(status().isNotFound());
+    }
+
+    // MINOR 4: gemelo de enviar_sinTipo_da400PorValidacion, pero acá el JSON ni siquiera llega a
+    // bindearse a EnviarMensajeDTO -- un enum inválido lo revienta antes, en la deserialización
+    // Jackson (HttpMessageNotReadableException, no MethodArgumentNotValidException). Sin el
+    // handler dedicado, este 400 venía con el mensaje crudo de Jackson (nombre de la clase de
+    // entidad y valores del enum expuestos); acá confirmamos que da 400 con el mensaje genérico.
+    @Test
+    void bodyMalformado_enumInvalido_da400ConMensajeGenerico() throws Exception {
+        mockMvc.perform(post("/api/conversaciones/10/mensajes")
+                        .principal(authentication)
+                        .contentType("application/json")
+                        .content("{\"tipo\":\"AUDIO\",\"contenido\":\"hola\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El cuerpo de la petición no es válido"));
     }
 }

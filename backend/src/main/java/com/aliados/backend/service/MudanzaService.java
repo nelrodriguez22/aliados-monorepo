@@ -832,11 +832,33 @@ public class MudanzaService {
                 ? conversacionPorMudanza.get(m.getId())
                 : conversacionRepository.findByMudanzaId(m.getId()).orElse(null);
         if (conv != null) {
-            dto.setConversacionId(conv.getId());
-            dto.setChatModo(conversacionService.resolverModo(conv));
+            aplicarChat(dto, conv);
         }
 
         return dto;
+    }
+
+    /**
+     * Setea conversacionId + chatModo en el DTO, resolviendo el modo vía ConversacionService.
+     * MINOR 1: resolverModo() lanza IllegalStateException si el estado del padre (trabajo o
+     * mudanza) no está contemplado en los sets ESCRITURA/LECTURA de ConversacionService (p.ej.
+     * alguien agrega un MudanzaEstado nuevo y se olvida de sumarlo ahí). El chat es una feature
+     * secundaria: eso NUNCA puede tirar abajo el armado del dashboard completo (que es lo que
+     * pasaba antes: la excepción se propagaba y los listados de mudanzas devolvían 400 enteros).
+     * Por eso degradamos acá, logueando el id de la conversación para poder investigarlo.
+     * Degradamos conversacionId Y chatModo juntos (no solo el modo): si dejáramos conversacionId
+     * seteado con chatModo null, el frontend (que solo muestra el chat cuando hay
+     * conversacionId) quedaría en un estado raro. Dejando los dos en null, el frontend
+     * simplemente no muestra el chat para esta mudanza.
+     */
+    private void aplicarChat(MudanzaResponseDTO dto, Conversacion conv) {
+        try {
+            ModoChat modo = conversacionService.resolverModo(conv);
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(modo);
+        } catch (IllegalStateException e) {
+            logger.warn("No se pudo resolver el modo de chat de la conversación {}: {}", conv.getId(), e.getMessage());
+        }
     }
 
     // Batch helper: una sola query para TODAS las conversaciones de la lista, en vez de un

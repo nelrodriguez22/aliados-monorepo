@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -121,6 +122,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "error", "Validation Error",
                 "message", mensaje,
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    // Gemelo de MethodArgumentNotValidException: JSON malformado o un enum inválido en el body
+    // (ej. {"tipo":"AUDIO"} en POST /api/conversaciones/{id}/mensajes) lanza esta excepción.
+    // OJO: HttpMessageNotReadableException extends HttpMessageConversionException extends
+    // NestedRuntimeException extends RuntimeException, así que SIN este handler específico ya
+    // caía en handleRuntimeException (no en el genérico de abajo) y devolvía 400 -- pero con
+    // e.getMessage() crudo, que expone nombres de clases y detalles internos de deserialización
+    // Jackson (verificado: "JSON parse error: Cannot deserialize value of type
+    // `com.aliados.backend.entity.TipoMensaje`..."). Acá cortamos ese leak con un mensaje
+    // genérico y evitamos el ruido en Sentry que agregaba handleRuntimeException para esta
+    // clase (no es un bug: es un body inválido que mandó el cliente).
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleMessageNotReadable(HttpMessageNotReadableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Bad Request",
+                "message", "El cuerpo de la petición no es válido",
                 "timestamp", LocalDateTime.now().toString()
         ));
     }
