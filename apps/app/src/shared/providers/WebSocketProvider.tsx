@@ -5,11 +5,18 @@ interface WebSocketContextValue {
   /** true cuando el STOMP client está conectado y recibiendo push. */
   isConnected: boolean;
   changeStatus: (status: 'ONLINE' | 'BUSY' | 'OFFLINE') => void;
+  /**
+   * Suscribe un handler a un destino STOMP sobre la conexión compartida.
+   * Devuelve la función que desuscribe. Se puede llamar aunque el socket todavía
+   * no haya conectado: la suscripción queda pendiente y se aplica al conectar.
+   */
+  subscribe: (destino: string, handler: (payload: any) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue>({
   isConnected: false,
   changeStatus: () => {},
+  subscribe: () => () => {},
 });
 
 interface WebSocketProviderProps {
@@ -18,10 +25,12 @@ interface WebSocketProviderProps {
 
 export function WebSocketProvider({ children }: WebSocketProviderProps): JSX.Element {
   // useWebSocket mantiene UNA sola conexión; el estado se comparte por contexto.
-  const { isConnected, changeStatus } = useWebSocket();
+  // Por eso subscribe() también se expone acá: llamar a useWebSocket() desde otro
+  // componente abriría un segundo socket.
+  const { isConnected, changeStatus, subscribe } = useWebSocket();
 
   return (
-    <WebSocketContext.Provider value={{ isConnected, changeStatus }}>
+    <WebSocketContext.Provider value={{ isConnected, changeStatus, subscribe }}>
       {children}
     </WebSocketContext.Provider>
   );
