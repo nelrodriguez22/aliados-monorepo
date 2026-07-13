@@ -284,4 +284,74 @@ class ConversacionServiceTest {
     // Postgres — una sentencia fallida aborta la transacción entera. La unicidad la garantizan
     // las constraints uq_conversacion_trabajo / uq_conversacion_mudanza, y ante un doble-accept
     // el perdedor rollbackea completo. Ver el comentario largo en ConversacionService.
+
+    // --- entidadIdDe: el id de la entidad padre, para la notificación ---
+    // Éste (y deepLinkChat) son el único lugar autorizado a saber que existen trabajos y
+    // mudanzas fuera de resolverModo; ChatService los consume sin conocer el vertical.
+
+    @Test
+    void entidadIdDe_conTrabajo_devuelveIdDelTrabajo() {
+        Trabajo t = new Trabajo();
+        t.setId(55L);
+        Conversacion c = new Conversacion();
+        c.setTrabajo(t);
+
+        assertThat(conversacionService.entidadIdDe(c)).isEqualTo(55L);
+    }
+
+    @Test
+    void entidadIdDe_conMudanza_devuelveIdDeLaMudanza() {
+        Mudanza m = new Mudanza();
+        m.setId(77L);
+        Conversacion c = new Conversacion();
+        c.setMudanza(m);
+
+        assertThat(conversacionService.entidadIdDe(c)).isEqualTo(77L);
+    }
+
+    // --- deepLinkChat: las 4 rutas reales (vertical x rol del destinatario) ---
+
+    @Test
+    void deepLinkChat_trabajoParaCliente_apuntaASeguimiento() {
+        Trabajo t = new Trabajo();
+        t.setId(55L);
+        Conversacion c = new Conversacion();
+        c.setTrabajo(t);
+
+        assertThat(conversacionService.deepLinkChat(c, true))
+                .isEqualTo("/cliente/seguimiento/55");
+    }
+
+    @Test
+    void deepLinkChat_trabajoParaProveedor_apuntaATrabajoActivo() {
+        Trabajo t = new Trabajo();
+        t.setId(55L);
+        Conversacion c = new Conversacion();
+        c.setTrabajo(t);
+
+        assertThat(conversacionService.deepLinkChat(c, false))
+                .isEqualTo("/proveedor/trabajo-activo/55");
+    }
+
+    @Test
+    void deepLinkChat_mudanzaParaCliente_apuntaAMudanzaCliente() {
+        Mudanza m = new Mudanza();
+        m.setId(77L);
+        Conversacion c = new Conversacion();
+        c.setMudanza(m);
+
+        assertThat(conversacionService.deepLinkChat(c, true))
+                .isEqualTo("/cliente/mudanza/77");
+    }
+
+    @Test
+    void deepLinkChat_mudanzaParaProveedor_apuntaAMudanzaProveedor() {
+        Mudanza m = new Mudanza();
+        m.setId(77L);
+        Conversacion c = new Conversacion();
+        c.setMudanza(m);
+
+        assertThat(conversacionService.deepLinkChat(c, false))
+                .isEqualTo("/proveedor/mudanza/77");
+    }
 }

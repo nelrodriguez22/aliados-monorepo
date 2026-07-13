@@ -67,6 +67,30 @@ public class ConversacionService {
         throw new IllegalStateException("Conversación " + conversacion.getId() + " sin padre");
     }
 
+    /** El id de la entidad padre (trabajo o mudanza), para asociarlo a la notificación. */
+    public Long entidadIdDe(Conversacion conversacion) {
+        if (conversacion.getTrabajo() != null) return conversacion.getTrabajo().getId();
+        if (conversacion.getMudanza() != null) return conversacion.getMudanza().getId();
+        throw new IllegalStateException("Conversación " + conversacion.getId() + " sin padre");
+    }
+
+    /**
+     * Deep link a la pantalla donde vive el chat, según el vertical (trabajo o mudanza) y el rol
+     * del destinatario. No contempla las pantallas de "completado": un chat cerrado no puede
+     * recibir mensajes nuevos, así que nunca se genera una push hacia ahí.
+     */
+    public String deepLinkChat(Conversacion conversacion, boolean destinatarioEsCliente) {
+        if (conversacion.getTrabajo() != null) {
+            Long id = conversacion.getTrabajo().getId();
+            return destinatarioEsCliente ? "/cliente/seguimiento/" + id : "/proveedor/trabajo-activo/" + id;
+        }
+        if (conversacion.getMudanza() != null) {
+            Long id = conversacion.getMudanza().getId();
+            return destinatarioEsCliente ? "/cliente/mudanza/" + id : "/proveedor/mudanza/" + id;
+        }
+        throw new IllegalStateException("Conversación " + conversacion.getId() + " sin padre");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────────────
     // CREACIÓN DE LA CONVERSACIÓN — LEER ANTES DE "ARREGLAR" LA CARRERA CONCURRENTE
     //
