@@ -1,5 +1,6 @@
 package com.aliados.backend.config;
 
+import com.aliados.backend.exception.ChatCerradoException;
 import com.aliados.backend.exception.ConflictException;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -56,6 +58,30 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    // Chat cerrado (log congelado): NO se reutiliza IllegalStateException para esto porque esa
+    // clase ya cae en handleRuntimeException (400) para otros casos del módulo de chat
+    // (ConversacionService: conversación corrupta / sin padre). Mapearla entera a 409 hubiese
+    // cambiado ese comportamiento existente.
+    @ExceptionHandler(ChatCerradoException.class)
+    public ResponseEntity<Map<String, Object>> handleChatCerrado(ChatCerradoException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "Conflict",
+                "message", e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    // Defensa IDOR del módulo de chat: ChatService.autorizar() lanza SecurityException cuando
+    // el usuario autenticado no participa de la conversación.
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, Object>> handleSecurityException(SecurityException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "Forbidden",
+                "message", e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException e) {
         logger.error("RuntimeException: {}", e.getMessage());
@@ -77,6 +103,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "error", "Validation Error",
                 "message", e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    // Falla de @Valid en un @RequestBody. Gap preexistente: no es RuntimeException (extiende
+    // Exception directamente), así que sin este handler cae en el genérico de abajo -> 500 en
+    // vez de 400. Afecta a TODOS los controllers que usan @Valid (Trabajo, Mudanza, User,
+    // Calificacion, BugReport), no solo al chat: se corrige acá porque esta tarea agrega el
+    // primer test que efectivamente ejercita ese camino.
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
+        String mensaje = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(err -> err.getDefaultMessage())
+                .orElse("Datos inválidos");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Validation Error",
+                "message", mensaje,
                 "timestamp", LocalDateTime.now().toString()
         ));
     }

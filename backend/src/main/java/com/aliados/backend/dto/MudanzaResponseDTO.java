@@ -1,5 +1,6 @@
 package com.aliados.backend.dto;
 
+import com.aliados.backend.entity.ModoChat;
 import com.aliados.backend.entity.MudanzaEstado;
 import com.aliados.backend.entity.MudanzaTurno;
 import lombok.Data;
@@ -82,4 +83,13 @@ public class MudanzaResponseDTO {
     private String motivoCancelacion;
 
     private String codigoProveedor;
+
+    // null = todavía no hay conversación (el cliente no aceptó aún) → la UI no muestra el chat.
+    private Long conversacionId;
+
+    // ESCRITURA | LECTURA. El backend es la ÚNICA fuente de verdad de la ventana de escritura:
+    // el frontend obedece este valor y NUNCA vuelve a derivar la regla desde el estado. Si la
+    // lista de estados viviera también en el frontend, agregar un estado nuevo y olvidarse de un
+    // lado dejaría el input habilitado contra un backend que responde 409 al enviar.
+    private ModoChat chatModo;
 }

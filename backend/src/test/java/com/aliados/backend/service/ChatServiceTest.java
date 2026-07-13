@@ -3,6 +3,7 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.EnviarMensajeDTO;
 import com.aliados.backend.entity.*;
 import com.aliados.backend.event.MensajeCreatedEvent;
+import com.aliados.backend.exception.ChatCerradoException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,7 +118,7 @@ class ChatServiceTest {
 
         assertThatThrownBy(() ->
                 chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola")))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(ChatCerradoException.class);
 
         verify(mensajeRepository, never()).save(any());
     }

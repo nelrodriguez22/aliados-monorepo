@@ -4,6 +4,7 @@ import com.aliados.backend.dto.EnviarMensajeDTO;
 import com.aliados.backend.dto.MensajeResponseDTO;
 import com.aliados.backend.entity.*;
 import com.aliados.backend.event.MensajeCreatedEvent;
+import com.aliados.backend.exception.ChatCerradoException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.*;
 import org.springframework.context.ApplicationEventPublisher;
@@ -62,9 +63,9 @@ public class ChatService {
         // 1. Autorización: una sola fila, sin joins al padre. Sin ramas por vertical → sin IDOR.
         autorizar(conversacion, emisor);
 
-        // 2. Log congelado.
+        // 2. Log congelado. Excepción propia (no IllegalStateException): ver ChatCerradoException.
         if (conversacionService.resolverModo(conversacion) != ModoChat.ESCRITURA) {
-            throw new IllegalStateException("El servicio está cerrado: el chat es sólo lectura");
+            throw new ChatCerradoException("El servicio está cerrado: el chat es sólo lectura");
         }
 
         // 3. Coherencia contenido/tipo.

@@ -9,6 +9,7 @@ import com.aliados.backend.entity.User;
 import com.aliados.backend.entity.UserRole;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.ConversacionRepository;
 import com.aliados.backend.repository.OficioRepository;
 import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
@@ -45,6 +46,7 @@ class ResponderPresupuestoTest {
     @Mock FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
     @Mock ConversacionService conversacionService;
+    @Mock ConversacionRepository conversacionRepository;
 
     @InjectMocks TrabajoService trabajoService;
 

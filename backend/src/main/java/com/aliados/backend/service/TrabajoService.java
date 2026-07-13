@@ -8,6 +8,7 @@ import com.aliados.backend.entity.*;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.ConversacionRepository;
 import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
 import com.aliados.backend.repository.UserRepository;
@@ -72,6 +73,9 @@ public class TrabajoService {
     @Autowired
     private ConversacionService conversacionService;
 
+    @Autowired
+    private ConversacionRepository conversacionRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     // package-private para test; lee los límites de feature flags.
@@ -133,9 +137,10 @@ public class TrabajoService {
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+        Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
 
         return trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
                 .collect(Collectors.toList());
     }
 
@@ -356,9 +361,10 @@ public class TrabajoService {
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+        Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
 
         return trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
                 .collect(Collectors.toList());
     }
 
@@ -373,9 +379,10 @@ public class TrabajoService {
         List<Trabajo> trabajos = page.getContent();
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+        Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
 
         List<TrabajoResponseDTO> content = trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
                 .collect(Collectors.toList());
 
         long sinCalificar = trabajoRepository.countSinCalificarByCliente(firebaseUid);
@@ -489,6 +496,14 @@ public class TrabajoService {
         dto.setMontoPagado(trabajo.getMontoPagado());
         dto.setEstadoPago(trabajo.getEstadoPago());
         dto.setPagadoAt(trabajo.getPagadoAt());
+
+        // Un solo trabajo: una query directa no degrada nada (el N+1 se evita en
+        // mapToDTOOptimized, usado para listados).
+        conversacionRepository.findByTrabajoId(trabajo.getId()).ifPresent(conv -> {
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(conversacionService.resolverModo(conv));
+        });
+
         return dto;
     }
 
@@ -558,9 +573,10 @@ public class TrabajoService {
         List<Trabajo> trabajos = page.getContent();
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+        Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
 
         List<TrabajoResponseDTO> content = trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
                 .collect(Collectors.toList());
 
         return new PagedTrabajosResponse(content, page.hasNext(), page.getTotalElements(), 0);
@@ -588,7 +604,18 @@ public class TrabajoService {
         return promedios;
     }
 
-    private TrabajoResponseDTO mapToDTOOptimized(Trabajo trabajo, Map<Long, Calificacion> calificacionPorTrabajo, Map<Long, Double> promediosPorProveedor) {
+    // Batch: una sola query para TODAS las conversaciones de la lista, en vez de un
+    // findByTrabajoId por fila (N+1 que degradaría el dashboard).
+    private Map<Long, Conversacion> conversacionesPorTrabajo(List<Trabajo> trabajos) {
+        List<Long> trabajoIds = trabajos.stream().map(Trabajo::getId).collect(Collectors.toList());
+        if (trabajoIds.isEmpty()) return Map.of();
+        return conversacionRepository.findByTrabajoIdIn(trabajoIds).stream()
+                .collect(Collectors.toMap(c -> c.getTrabajo().getId(), c -> c, (a, b) -> a));
+    }
+
+    private TrabajoResponseDTO mapToDTOOptimized(Trabajo trabajo, Map<Long, Calificacion> calificacionPorTrabajo,
+                                                  Map<Long, Double> promediosPorProveedor,
+                                                  Map<Long, Conversacion> conversacionPorTrabajo) {
         TrabajoResponseDTO dto = new TrabajoResponseDTO();
         dto.setId(trabajo.getId());
         dto.setClienteId(trabajo.getCliente().getId());
@@ -637,6 +664,13 @@ public class TrabajoService {
         dto.setMontoPagado(trabajo.getMontoPagado());
         dto.setEstadoPago(trabajo.getEstadoPago());
         dto.setPagadoAt(trabajo.getPagadoAt());
+
+        Conversacion conv = conversacionPorTrabajo.get(trabajo.getId());
+        if (conv != null) {
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(conversacionService.resolverModo(conv));
+        }
+
         return dto;
     }
 
@@ -846,9 +880,10 @@ public class TrabajoService {
 
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
+        Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
 
         return trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor))
+                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
                 .collect(Collectors.toList());
     }
 
