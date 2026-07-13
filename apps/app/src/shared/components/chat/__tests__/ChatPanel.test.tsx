@@ -72,6 +72,23 @@ describe("ChatPanel", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  // El backend garantiza que conversacionId y chatModo viajan juntos o ninguno de los dos.
+  // Este caso (conversacionId presente pero modo null) no debería darse en producción, pero
+  // si el invariante se rompiera, ChatPanel tiene que fallar cerrado (no renderizar) en vez
+  // de reventar tratando de leer `modo === "LECTURA"` sobre null.
+  it("modo null con conversacionId no nulo tampoco renderiza nada", () => {
+    mockUseChat();
+    const { container } = render(
+      <ChatPanel
+        conversacionId={10}
+        modo={null}
+        usuarioId={1}
+        titulo="Chat"
+      />
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
   // XSS: un mensaje con HTML/markup en el contenido tiene que verse como TEXTO, no
   // ejecutarse ni insertarse como markup. Si esto falla, es un dangerouslySetInnerHTML
   // colado en la burbuja.

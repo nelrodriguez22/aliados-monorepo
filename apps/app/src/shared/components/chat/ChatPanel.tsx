@@ -10,7 +10,7 @@ import type { ModoChat } from "@/shared/services/ChatService";
 interface Props {
   conversacionId: number | null;
   // Viene del backend. ChatPanel lo obedece; no lo calcula.
-  modo: ModoChat;
+  modo: ModoChat | null;
   usuarioId: number;
   titulo: string;
 }
@@ -29,8 +29,13 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
     finRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes.length]);
 
-  // Sin conversación no hay con quién hablar: no se muestra nada.
-  if (conversacionId == null) return null;
+  // El backend garantiza que conversacionId y chatModo viajan juntos o ninguno de los
+  // dos (ver ConversacionService): nunca hay conversación sin modo, ni modo sin
+  // conversación. Chequear los dos acá codifica ese invariante EN el componente, en vez
+  // de confiarlo a una aserción de no-nulo repetida en cada consumidor (MudanzaDetail,
+  // ProviderMudanzaDetail, etc.) — si el backend rompiera esa garantía algún día, esto
+  // se degrada a "no se muestra nada" en vez de a un crash de tipo en el consumidor.
+  if (conversacionId == null || modo == null) return null;
 
   const soloLectura = modo === "LECTURA";
 

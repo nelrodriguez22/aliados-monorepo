@@ -414,7 +414,7 @@ export function MudanzaDetail() {
           {/* Chat — modo lo decide el backend, nunca se deriva acá del estado */}
           <ChatPanel
             conversacionId={mudanza.conversacionId ?? null}
-            modo={mudanza.chatModo!}
+            modo={mudanza.chatModo}
             usuarioId={user.id}
             titulo="Chat con tu aliado"
           />
