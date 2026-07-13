@@ -7,8 +7,10 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
+import { ChatPanel } from "@/shared/components/chat/ChatPanel";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
+import { useStore } from "@/shared/store/useStore";
 import { Loader2, CheckCircle, Star } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
 import toast from "react-hot-toast";
@@ -17,6 +19,7 @@ export function JobCompleted() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate    = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useStore();
   const [rating, setRating]   = useState(0);
   const [hover, setHover]     = useState(0);
   const [review, setReview]   = useState("");
@@ -41,7 +44,7 @@ export function JobCompleted() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className={`flex h-screen items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
@@ -209,6 +212,14 @@ export function JobCompleted() {
               </>
             )}
           </Card>
+
+          {/* Chat — historial de lo acordado, la conversación ya quedó en modo lectura */}
+          <ChatPanel
+            conversacionId={trabajo.conversacionId ?? null}
+            modo={trabajo.chatModo}
+            usuarioId={user.id}
+            titulo="Historial de mensajes"
+          />
 
         </div>
       </div>

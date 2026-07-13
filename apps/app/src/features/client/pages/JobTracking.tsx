@@ -5,20 +5,22 @@ import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { CodigoProveedorChip } from "@/shared/components/CodigoProveedorChip";
+import { ChatPanel } from "@/shared/components/chat/ChatPanel";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
-import { Loader2, Clock, Users, CheckCircle, MapPin, FileText, Send } from "lucide-react";
+import { useStore } from "@/shared/store/useStore";
+import { Loader2, Clock, Users, CheckCircle, MapPin, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function JobTracking() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [message, setMessage] = useState("");
+  const { user } = useStore();
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
   const [showCancelar, setShowCancelar] = useState(false);
 
@@ -82,7 +84,7 @@ export function JobTracking() {
     );
   }
 
-  if (isLoading || !trabajo || trabajo.estado === 'COMPLETADO') return <Loading />;
+  if (isLoading || !trabajo || !user || trabajo.estado === 'COMPLETADO') return <Loading />;
 
   // PRESUPUESTADO: el proveedor terminó la visita y cargó un presupuesto
   // para el trabajo completo. El cliente decide si lo acepta (paga el
@@ -414,36 +416,12 @@ export function JobTracking() {
               </Card>
 
               {/* Chat */}
-              {enCurso && trabajo.proveedorNombre && (
-                <Card>
-                  <div className={`mb-4 flex items-center justify-between border-b pb-4 ${tw.divider}`}>
-                    <h3 className={`text-sm font-semibold ${tw.text.primary}`}>
-                      Chat con tu aliado
-                    </h3>
-                  </div>
-                  <div className="flex items-center justify-center py-8 text-center">
-                    <p className={`text-xs ${tw.text.muted}`}>Disponible próximamente</p>
-                  </div>
-                  <div className={`flex gap-2 border-t pt-4 ${tw.divider}`}>
-                    <input
-                      type="text"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Escribe un mensaje..."
-                      disabled
-                      className={tw.input + " flex-1 disabled:opacity-40 disabled:cursor-not-allowed text-sm"}
-                    />
-                    <button
-                      disabled
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl transition
-                        bg-brand-600 dark:bg-dark-brand text-white
-                        disabled:opacity-40 disabled:cursor-not-allowed`}
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                </Card>
-              )}
+              <ChatPanel
+                conversacionId={trabajo.conversacionId ?? null}
+                modo={trabajo.chatModo}
+                usuarioId={user.id}
+                titulo="Chat con tu aliado"
+              />
             </div>
           </div>
         </div>
