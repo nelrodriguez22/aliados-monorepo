@@ -32,7 +32,8 @@ construido para las notificaciones y el estado online.
 - **Cloudinary** — `CloudinaryService`, `UploadController`, `uploadToCloudinary.ts`. El
   upload de imágenes se reutiliza tal cual.
 
-Última migración Flyway aplicada: **`V9`**. La del chat será `V10`.
+Última migración Flyway aplicada: **`V10`** (`V10__presupuesto_trabajo.sql`). La del chat será
+**`V11`**.
 
 ## Decisiones tomadas
 
@@ -114,7 +115,7 @@ Se resuelve con una tabla **`conversacion` de primera clase**, que **confina el 
 a una sola tabla**: `mensaje` y `lectura_conversacion` nunca se enteran de que existen
 trabajos y mudanzas — sólo conocen `conversacion_id`.
 
-Migración **`V10__chat_conversaciones.sql`**:
+Migración **`V11__chat_conversaciones.sql`**:
 
 ```sql
 conversacion
@@ -367,7 +368,7 @@ negociación ya la cubre la feature de contrapropuesta.
 
 | Bloque | Tareas |
 |---|---|
-| Backend | 6 — migración `V10` (`conversacion` + `CHECK` + `mensaje` + `lectura_conversacion`); entities y enum `TipoMensaje`; `ConversacionResolver` (+ `getOrCreate` enganchado en ambos servicios); `ChatService`; `ChatController` + push por STOMP; presencia + debounce |
+| Backend | 6 — migración `V11` (`conversacion` + `CHECK` + `mensaje` + `lectura_conversacion`); entities y enum `TipoMensaje`; `ConversacionResolver` (+ `getOrCreate` enganchado en ambos servicios); `ChatService`; `ChatController` + push por STOMP; presencia + debounce |
 | Frontend | 7 — refactor `useWebSocket`; `chatApi` en `packages/api`; `ChatPanel`; montaje en trabajos (`JobTracking` + `ActiveJob`); montaje en mudanzas (`MudanzaDetail` + `ProviderMudanzaDetail`); vistas read-only; badge de no leídos |
 | Cierre | 2 — security review (autorización/IDOR, XSS en el render, validación del upload) y verificación end-to-end en la app viva |
 
