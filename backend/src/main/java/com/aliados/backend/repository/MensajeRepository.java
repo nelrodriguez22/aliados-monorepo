@@ -15,4 +15,8 @@ public interface MensajeRepository extends JpaRepository<Mensaje, Long> {
     long countByConversacionIdAndIdGreaterThan(Long conversacionId, Long ultimoLeidoId);
 
     long countByConversacionId(Long conversacionId);
+
+    // Guarda contra mover el puntero de lectura a un id de otra conversación: si eso pasara,
+    // contarNoLeidos quedaría en 0 para siempre (el puntero sólo avanza, nunca se corrige solo).
+    boolean existsByIdAndConversacionId(Long id, Long conversacionId);
 }

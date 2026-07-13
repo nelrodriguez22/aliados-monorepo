@@ -3,11 +3,12 @@ package com.aliados.backend.service;
 import com.aliados.backend.dto.EnviarMensajeDTO;
 import com.aliados.backend.dto.MensajeResponseDTO;
 import com.aliados.backend.entity.*;
+import com.aliados.backend.event.MensajeCreatedEvent;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +26,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final ConversacionService conversacionService;
     private final DetectorContacto detectorContacto;
-    private final PresenciaService presenciaService;
-    private final PushThrottle pushThrottle;
-    private final NotificacionService notificacionService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ChatService(ConversacionRepository conversacionRepository,
                        MensajeRepository mensajeRepository,
@@ -36,20 +34,14 @@ public class ChatService {
                        UserRepository userRepository,
                        ConversacionService conversacionService,
                        DetectorContacto detectorContacto,
-                       PresenciaService presenciaService,
-                       PushThrottle pushThrottle,
-                       NotificacionService notificacionService,
-                       SimpMessagingTemplate messagingTemplate) {
+                       ApplicationEventPublisher eventPublisher) {
         this.conversacionRepository = conversacionRepository;
         this.mensajeRepository = mensajeRepository;
         this.lecturaRepository = lecturaRepository;
         this.userRepository = userRepository;
         this.conversacionService = conversacionService;
         this.detectorContacto = detectorContacto;
-        this.presenciaService = presenciaService;
-        this.pushThrottle = pushThrottle;
-        this.notificacionService = notificacionService;
-        this.messagingTemplate = messagingTemplate;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -78,29 +70,21 @@ public class ChatService {
         // MARCA, no censura: el contenido se guarda intacto.
         mensaje.setContieneContacto(detectorContacto.contieneContacto(dto.getContenido()));
 
-        // PERSISTIR PRIMERO. Publicar antes de guardar mostraría un mensaje que no existe: en un
-        // log que es evidencia legal, un mensaje fantasma es peor que uno demorado.
+        // PERSISTIR PRIMERO, y publicar (evento) DESPUÉS. El evento se procesa recién en
+        // AFTER_COMMIT (ver MensajeEventListener): la garantía real es que nadie puede ver por
+        // el socket un mensaje que la base no terminó de confirmar. Antes de este fix el publish
+        // salía acá mismo, dentro de la transacción — y todo lo que corre después (incluido el
+        // commit en sí, que Neon puede fallar sin que medie ningún bug de código) podía hacer
+        // rollback dejando un mensaje fantasma del lado del destinatario. Con el evento
+        // AFTER_COMMIT el único modo de falla posible es "mensaje demorado" (si el listener
+        // falla, el mensaje ya está en la base y aparece al recargar), que es estrictamente
+        // mejor que un mensaje fantasma.
         Mensaje guardado = mensajeRepository.save(mensaje);
         MensajeResponseDTO response = aDTO(guardado);
 
         User destinatario = destinatarioDe(conversacion, emisor);
-        messagingTemplate.convertAndSendToUser(
-                destinatario.getFirebaseUid(), "/queue/chat", response);
-
-        // Push SÓLO si (a) no hay sesión WebSocket activa —si está conectado ya lo recibió arriba—
-        // y (b) no se le notificó hace poco por esta conversación. El throttle sólo silencia la
-        // VIBRACIÓN: el mensaje ya está persistido y ya salió por el socket.
-        boolean desconectado = !presenciaService.estaConectado(destinatario.getFirebaseUid());
-        if (desconectado && pushThrottle.deboNotificar(conversacion.getId(), destinatario.getId())) {
-            boolean destinatarioEsCliente = conversacion.getCliente().getId().equals(destinatario.getId());
-            notificacionService.enviarNotificacion(
-                    destinatario.getFirebaseUid(),
-                    TipoNotificacion.MENSAJE_CHAT,
-                    "Nuevo mensaje de " + emisor.getNombre(),
-                    resumen(guardado),
-                    conversacionService.entidadIdDe(conversacion),
-                    conversacionService.deepLinkChat(conversacion, destinatarioEsCliente));
-        }
+        eventPublisher.publishEvent(
+                new MensajeCreatedEvent(conversacion, emisor, destinatario, guardado, response));
 
         return response;
     }
@@ -133,8 +117,16 @@ public class ChatService {
                 });
 
         // El puntero sólo avanza. Un request fuera de orden no puede "des-leer" mensajes.
+        // hastaMensajeId == null es un no-op (no hay nada hasta dónde marcar), nunca un NPE.
         Long actual = lectura.getUltimoMensajeLeidoId();
-        if (actual == null || hastaMensajeId > actual) {
+        if (hastaMensajeId != null && (actual == null || hastaMensajeId > actual)) {
+            // El puntero sólo avanza y NUNCA se recupera solo: si se dejara mover a un id que no
+            // es de esta conversación (por bug o por payload manipulado), contarNoLeidos
+            // quedaría en 0 para siempre. Validamos antes de mover.
+            if (!mensajeRepository.existsByIdAndConversacionId(hastaMensajeId, conversacionId)) {
+                throw new IllegalArgumentException(
+                        "El mensaje indicado no pertenece a esta conversación");
+            }
             lectura.setUltimoMensajeLeidoId(hastaMensajeId);
             lecturaRepository.save(lectura);
         }
@@ -190,12 +182,6 @@ public class ChatService {
                 && (dto.getImagenUrl() == null || dto.getImagenUrl().isBlank())) {
             throw new IllegalArgumentException("Un mensaje de imagen necesita imagenUrl");
         }
-    }
-
-    private String resumen(Mensaje m) {
-        if (m.getTipo() == TipoMensaje.IMAGEN) return "📷 Foto";
-        String texto = m.getContenido();
-        return texto.length() > 80 ? texto.substring(0, 77) + "..." : texto;
     }
 
     private MensajeResponseDTO aDTO(Mensaje m) {

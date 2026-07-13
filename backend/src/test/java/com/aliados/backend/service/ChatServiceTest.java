@@ -2,22 +2,23 @@ package com.aliados.backend.service;
 
 import com.aliados.backend.dto.EnviarMensajeDTO;
 import com.aliados.backend.entity.*;
+import com.aliados.backend.event.MensajeCreatedEvent;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -30,10 +31,7 @@ class ChatServiceTest {
     @Mock UserRepository userRepository;
     @Mock ConversacionService conversacionService;
     @Mock DetectorContacto detectorContacto;
-    @Mock PresenciaService presenciaService;
-    @Mock PushThrottle pushThrottle;
-    @Mock NotificacionService notificacionService;
-    @Mock SimpMessagingTemplate messagingTemplate;
+    @Mock ApplicationEventPublisher eventPublisher;
 
     @InjectMocks ChatService chatService;
 
@@ -120,8 +118,14 @@ class ChatServiceTest {
         verify(mensajeRepository, never()).save(any());
     }
 
+    // Antes este test se llamaba "servicioCerrado_permiteLeer" pero nunca stubeaba resolverModo
+    // a LECTURA: en los hechos sólo probaba que listarMensajes llama al repo. La razón por la que
+    // no se stubeaba es la pista real: con Mockito en modo strict, stubear algo que no se usa
+    // rompe el test con UnnecessaryStubbingException. Eso demuestra POSITIVAMENTE que
+    // listarMensajes nunca consulta el modo del chat, que es la garantía correcta: un chat
+    // cerrado (sólo lectura) tiene que seguir siendo legible.
     @Test
-    void servicioCerrado_permiteLeer() {
+    void listarMensajes_nuncaConsultaModoChat_porEsoUnChatCerradoSigueSiendoLegible() {
         when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
         when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
         when(mensajeRepository.findByConversacionIdOrderByIdDesc(eq(10L), any()))
@@ -131,12 +135,13 @@ class ChatServiceTest {
                 org.springframework.data.domain.PageRequest.of(0, 20));
 
         verify(mensajeRepository).findByConversacionIdOrderByIdDesc(eq(10L), any());
+        verify(conversacionService, never()).resolverModo(any());
     }
 
-    // --- ENVÍO FELIZ ---
+    // --- ENVÍO FELIZ Y RUTEO DEL DESTINATARIO ---
 
     @Test
-    void clienteEnvia_persisteYPublicaAlProveedor() {
+    void clienteEnvia_persisteYPublicaEventoAlProveedor() {
         when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
         when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
         when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
@@ -146,87 +151,54 @@ class ChatServiceTest {
             m.setId(100L);
             return m;
         });
-        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(true);
 
         chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("el portón está abierto"));
 
-        // Persiste ANTES de publicar: un mensaje fantasma en un log que es evidencia es peor
-        // que un mensaje demorado.
-        var orden = inOrder(mensajeRepository, messagingTemplate);
+        // Persiste ANTES de publicar el evento: el socket y el push sólo se disparan AFTER_COMMIT
+        // (ver MensajeEventListener), así que ni siquiera acá hay garantía de entrega antes del
+        // commit real — pero el orden save-antes-que-publish sigue siendo la base de esa garantía.
+        var orden = inOrder(mensajeRepository, eventPublisher);
         orden.verify(mensajeRepository).save(any(Mensaje.class));
-        orden.verify(messagingTemplate)
-                .convertAndSendToUser(eq("uid-proveedor"), eq("/queue/chat"), any());
+        orden.verify(eventPublisher).publishEvent(any(MensajeCreatedEvent.class));
+
+        ArgumentCaptor<MensajeCreatedEvent> captor = ArgumentCaptor.forClass(MensajeCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        MensajeCreatedEvent evento = captor.getValue();
+
+        assertThat(evento.destinatario().getFirebaseUid()).isEqualTo("uid-proveedor");
+        assertThat(evento.emisor().getFirebaseUid()).isEqualTo("uid-cliente");
+        assertThat(evento.dto().getContenido()).isEqualTo("el portón está abierto");
     }
 
-    // --- REGLA DE PRESENCIA ---
-
+    // Un mutante que hace que destinatarioDe() siempre devuelva c.getProveedor() rompe el chat
+    // entero (el proveedor se haría eco a sí mismo y el cliente jamás recibiría nada) pero la
+    // suite anterior pasaba en verde porque los 12 tests originales sólo enviaban como cliente.
+    // Este test cierra ese hueco enviando como PROVEEDOR.
     @Test
-    void destinatarioConectado_noMandaPush() {
+    void proveedorEnvia_publicaEventoAlCliente() {
         when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
-        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(userRepository.findByFirebaseUid("uid-proveedor")).thenReturn(Optional.of(proveedor));
         when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(detectorContacto.contieneContacto("ya llego")).thenReturn(false);
         when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
             Mensaje m = inv.getArgument(0);
-            m.setId(100L);
+            m.setId(101L);
             return m;
         });
-        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(true);
 
-        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
+        chatService.enviarMensaje(10L, "uid-proveedor", dtoTexto("ya llego"));
 
-        verifyNoInteractions(notificacionService);
-    }
+        ArgumentCaptor<MensajeCreatedEvent> captor = ArgumentCaptor.forClass(MensajeCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        MensajeCreatedEvent evento = captor.getValue();
 
-    @Test
-    void destinatarioDesconectado_mandaPush() {
-        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
-        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
-        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
-        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
-            Mensaje m = inv.getArgument(0);
-            m.setId(100L);
-            return m;
-        });
-        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
-        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(true);
-        // El destinatario es el proveedor (no el cliente): destinatarioEsCliente = false.
-        when(conversacionService.entidadIdDe(conversacion)).thenReturn(123L);
-        when(conversacionService.deepLinkChat(conversacion, false))
-                .thenReturn("/proveedor/trabajo-activo/123");
-
-        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
-
-        verify(notificacionService).enviarNotificacion(
-                eq("uid-proveedor"),
-                eq(TipoNotificacion.MENSAJE_CHAT),
-                anyString(),
-                anyString(),
-                eq(123L),
-                eq("/proveedor/trabajo-activo/123"));
-    }
-
-    // Desconectado PERO ya se le notificó hace un minuto: no vibra de nuevo. Una ráfaga de
-    // mensajes no puede ser una ráfaga de vibraciones.
-    @Test
-    void destinatarioDesconectadoPeroThrottleado_noMandaPush() {
-        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
-        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
-        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
-        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
-            Mensaje m = inv.getArgument(0);
-            m.setId(100L);
-            return m;
-        });
-        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
-        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(false);
-
-        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
-
-        verifyNoInteractions(notificacionService);
-        // Pero el mensaje SÍ se guardó y SÍ se publicó por el socket: el throttle sólo silencia
-        // la vibración, nunca pierde el mensaje.
-        verify(mensajeRepository).save(any(Mensaje.class));
-        verify(messagingTemplate).convertAndSendToUser(eq("uid-proveedor"), eq("/queue/chat"), any());
+        // El mensaje del proveedor tiene que publicarse hacia el CLIENTE, no hacia sí mismo.
+        assertThat(evento.destinatario().getFirebaseUid()).isEqualTo("uid-cliente");
+        assertThat(evento.emisor().getFirebaseUid()).isEqualTo("uid-proveedor");
+        // Y todo lo que el listener necesita para evaluar presencia/throttle contra el
+        // destinatario correcto (el cliente, id 1) también viaja en el evento.
+        assertThat(evento.destinatario().getId()).isEqualTo(1L);
+        assertThat(evento.conversacion().getCliente().getId()).isEqualTo(1L);
     }
 
     // --- MARCADO DE CONTACTO ---
@@ -242,7 +214,6 @@ class ChatServiceTest {
             m.setId(100L);
             return m;
         });
-        when(presenciaService.estaConectado(anyString())).thenReturn(true);
 
         chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("llamame al 1155554444"));
 
@@ -255,7 +226,7 @@ class ChatServiceTest {
         assertThat(guardado.getContenido()).isEqualTo("llamame al 1155554444");
     }
 
-    // --- PUNTERO DE LECTURA ---
+    // --- PUNTERO DE LECTURA (contarNoLeidos) ---
 
     @Test
     void sinPuntero_todosLosMensajesSonNoLeidos() {
@@ -282,5 +253,120 @@ class ChatServiceTest {
         when(mensajeRepository.countByConversacionIdAndIdGreaterThan(10L, 5L)).thenReturn(2L);
 
         assertThat(chatService.contarNoLeidos(10L, "uid-cliente")).isEqualTo(2L);
+    }
+
+    @Test
+    void contarNoLeidos_tercero_lanzaSecurityException() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-tercero")).thenReturn(Optional.of(tercero));
+
+        assertThatThrownBy(() -> chatService.contarNoLeidos(10L, "uid-tercero"))
+                .isInstanceOf(SecurityException.class);
+
+        verifyNoInteractions(lecturaRepository);
+    }
+
+    // --- marcarLeido: nadie lo probaba. La regla de oro ("el puntero sólo avanza") no la
+    // protegía ningún test: alguien podía "simplificar" el if a un set incondicional y la suite
+    // seguía en verde. Tampoco estaban cubiertas ni la autorización ni la validación de
+    // pertenencia a la conversación. ---
+
+    @Test
+    void marcarLeido_tercero_lanzaSecurityException() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-tercero")).thenReturn(Optional.of(tercero));
+
+        assertThatThrownBy(() -> chatService.marcarLeido(10L, "uid-tercero", 5L))
+                .isInstanceOf(SecurityException.class);
+
+        verifyNoInteractions(lecturaRepository);
+    }
+
+    @Test
+    void marcarLeido_idMenorAlPuntero_noRetrocede() {
+        LecturaConversacion lectura = new LecturaConversacion();
+        lectura.setConversacionId(10L);
+        lectura.setUsuarioId(1L);
+        lectura.setUltimoMensajeLeidoId(20L);
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(lecturaRepository.findByConversacionIdAndUsuarioId(10L, 1L))
+                .thenReturn(Optional.of(lectura));
+
+        chatService.marcarLeido(10L, "uid-cliente", 5L);
+
+        assertThat(lectura.getUltimoMensajeLeidoId()).isEqualTo(20L);
+        verify(lecturaRepository, never()).save(any());
+        // Como no avanza, ni siquiera hace falta validar que el mensaje pertenezca a la
+        // conversación.
+        verifyNoInteractions(mensajeRepository);
+    }
+
+    @Test
+    void marcarLeido_idMayorAlPuntero_avanzaYGuarda() {
+        LecturaConversacion lectura = new LecturaConversacion();
+        lectura.setConversacionId(10L);
+        lectura.setUsuarioId(1L);
+        lectura.setUltimoMensajeLeidoId(5L);
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(lecturaRepository.findByConversacionIdAndUsuarioId(10L, 1L))
+                .thenReturn(Optional.of(lectura));
+        when(mensajeRepository.existsByIdAndConversacionId(20L, 10L)).thenReturn(true);
+
+        chatService.marcarLeido(10L, "uid-cliente", 20L);
+
+        assertThat(lectura.getUltimoMensajeLeidoId()).isEqualTo(20L);
+        verify(lecturaRepository).save(lectura);
+    }
+
+    @Test
+    void marcarLeido_sinPunteroPrevio_avanzaYGuarda() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(lecturaRepository.findByConversacionIdAndUsuarioId(10L, 1L))
+                .thenReturn(Optional.empty());
+        when(mensajeRepository.existsByIdAndConversacionId(3L, 10L)).thenReturn(true);
+
+        chatService.marcarLeido(10L, "uid-cliente", 3L);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(LecturaConversacion.class);
+        verify(lecturaRepository).save(captor.capture());
+        assertThat(captor.getValue().getUltimoMensajeLeidoId()).isEqualTo(3L);
+    }
+
+    // --- MINOR: marcarLeido con un mensaje que no es de esta conversación ---
+
+    @Test
+    void marcarLeido_mensajeDeOtraConversacion_lanzaIllegalArgumentException() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(lecturaRepository.findByConversacionIdAndUsuarioId(10L, 1L))
+                .thenReturn(Optional.empty());
+        // Long.MAX_VALUE es el ejemplo canónico: si esto no se validara, el puntero quedaría ahí
+        // para siempre (sólo avanza) y contarNoLeidos devolvería 0 de forma irrecuperable.
+        when(mensajeRepository.existsByIdAndConversacionId(Long.MAX_VALUE, 10L)).thenReturn(false);
+
+        assertThatThrownBy(() -> chatService.marcarLeido(10L, "uid-cliente", Long.MAX_VALUE))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(lecturaRepository, never()).save(any());
+    }
+
+    // --- MINOR: hastaMensajeId nulo no debe romper por NPE ---
+
+    @Test
+    void marcarLeido_hastaMensajeIdNulo_esNoOp() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(lecturaRepository.findByConversacionIdAndUsuarioId(10L, 1L))
+                .thenReturn(Optional.empty());
+
+        chatService.marcarLeido(10L, "uid-cliente", null);
+
+        verify(lecturaRepository, never()).save(any());
+        verifyNoInteractions(mensajeRepository);
     }
 }
