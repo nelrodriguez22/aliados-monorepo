@@ -1164,7 +1164,6 @@ public class PushThrottle {
 purga. Está acotado por la cantidad de servicios de la plataforma y cada entrada son ~50 bytes:
 irrelevante en pre-launch. Si algún día molesta, se limpia con un barrido periódico de las
 entradas más viejas que la ventana. **No agregar esa complejidad ahora** (YAGNI).
-```
 
 - [ ] **Step 8: Correr y verificar que pasan**
 
