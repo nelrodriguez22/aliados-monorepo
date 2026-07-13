@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
+import { StrictMode, createElement, type ReactNode } from 'react';
 import { useWebSocket } from '../useWebSocket';
 
 /**
@@ -91,8 +92,35 @@ const conectar = async (cliente: ClienteFalso) => {
   });
 };
 
-/** Simula una caída del socket (el cliente STOMP reconecta solo con el mismo objeto). */
+/**
+ * Simula una caída REAL del socket (wifi, restart del backend, laptop suspendida) —
+ * el cliente STOMP reconecta solo con el mismo objeto.
+ *
+ * OJO: a propósito NO dispara cliente.config.onDisconnect(). Según los typings de
+ * @stomp/stompjs@7.3.0, ese callback sólo se invoca al recibir el receipt del frame
+ * DISCONNECT ("the DISCONNECT receipt may not always be received. For handling such
+ * cases, use Client#onWebSocketClose"). Una caída real nunca manda ese receipt, así
+ * que en producción onDisconnect NO se dispara para este caso — sólo cambia
+ * `connected` y, más tarde, el cliente reconecta solo y llama a onConnect.
+ *
+ * Si este helper llamara a onDisconnect, estaría probando un camino que no ocurre en
+ * producción: el onDisconnect real del hook vacía stompSubsRef, así que para cuando
+ * corriera onConnect el mapa ya estaría vacío y CUALQUIER suscriptor parecería
+ * "pendiente" — ocultando una regresión donde onConnect dejara de reaplicar las
+ * suscripciones que ya estaban activas (ver "re-aplica TODAS..." más abajo).
+ */
 const desconectar = async (cliente: ClienteFalso) => {
+  await act(async () => {
+    cliente.connected = false;
+  });
+};
+
+/**
+ * Simula una desconexión LIMPIA, con receipt de DISCONNECT — el único camino donde
+ * @stomp/stompjs sí llama a onDisconnect. Se mantiene aparte de desconectar() de
+ * arriba para no mezclar ambos caminos en el mismo test.
+ */
+const desconectarLimpio = async (cliente: ClienteFalso) => {
   await act(async () => {
     cliente.connected = false;
     cliente.config.onDisconnect();
@@ -178,7 +206,7 @@ describe('useWebSocket — API de suscripción genérica', () => {
     expect(handler).toHaveBeenCalledWith({ id: 7 });
   });
 
-  it('re-aplica TODAS las suscripciones tras una reconexión', async () => {
+  it('re-aplica TODAS las suscripciones tras una reconexión (caída real, sin onDisconnect)', async () => {
     const { result } = renderHook(() => useWebSocket());
     const cliente = await esperarCliente();
     await conectar(cliente);
@@ -189,7 +217,11 @@ describe('useWebSocket — API de suscripción genérica', () => {
     });
     expect(suscripcionesA('/user/queue/chat')).toHaveLength(1);
 
-    // Se cae el socket y el cliente STOMP reconecta solo → onConnect de nuevo.
+    // Usamos desconectar() (caída real, NO dispara onDisconnect) y no
+    // desconectarLimpio(): es el camino que de verdad importa proteger acá. Si
+    // usáramos el disconnect limpio, onDisconnect ya habría vaciado stompSubsRef y
+    // este test no distinguiría "reaplicar todas" de "reaplicar sólo las
+    // pendientes" — las dos variantes se verían iguales con el mapa vacío.
     await desconectar(cliente);
     await conectar(cliente);
 
@@ -202,6 +234,25 @@ describe('useWebSocket — API de suscripción genérica', () => {
       ultimaSuscripcionA('/user/queue/chat')!.callback({ body: JSON.stringify({ id: 9 }) });
     });
     expect(handler).toHaveBeenCalledWith({ id: 9 });
+  });
+
+  it('re-aplica también tras una desconexión LIMPIA (con receipt de DISCONNECT)', async () => {
+    const { result } = renderHook(() => useWebSocket());
+    const cliente = await esperarCliente();
+    await conectar(cliente);
+
+    const handler = vi.fn();
+    act(() => {
+      result.current.subscribe('/user/queue/chat', handler);
+    });
+    expect(suscripcionesA('/user/queue/chat')).toHaveLength(1);
+
+    // Camino "prolijo": acá sí llega el receipt y onDisconnect se dispara.
+    await desconectarLimpio(cliente);
+    await conectar(cliente);
+
+    expect(suscripcionesA('/user/queue/chat')).toHaveLength(2);
+    expect(suscripcionesA('/user/queue/notifications')).toHaveLength(2);
   });
 
   it('no re-suscribe una suscripción ya desuscripta cuando reconecta', async () => {
@@ -219,6 +270,95 @@ describe('useWebSocket — API de suscripción genérica', () => {
     await conectar(cliente);
 
     expect(suscripcionesA('/user/queue/chat')).toHaveLength(1);
+  });
+
+  it('dos suscriptores al mismo destino reciben el mensaje cada uno; desuscribir uno no mata al otro', async () => {
+    const { result } = renderHook(() => useWebSocket());
+    const cliente = await esperarCliente();
+    await conectar(cliente);
+
+    const handlerA = vi.fn();
+    const handlerB = vi.fn();
+    let desuscribirA: () => void = () => {};
+    act(() => {
+      desuscribirA = result.current.subscribe('/user/queue/chat', handlerA);
+    });
+    act(() => {
+      result.current.subscribe('/user/queue/chat', handlerB);
+    });
+
+    // El diseño es un Map indexado por id de suscriptor, no por destino: dos
+    // suscriptores al mismo destino tienen que convivir como dos subs STOMP
+    // independientes, no pisarse.
+    const [subA, subB] = suscripcionesA('/user/queue/chat');
+    expect(subA).toBeDefined();
+    expect(subB).toBeDefined();
+
+    act(() => {
+      subA!.callback({ body: JSON.stringify({ id: 1 }) });
+      subB!.callback({ body: JSON.stringify({ id: 1 }) });
+    });
+    expect(handlerA).toHaveBeenCalledWith({ id: 1 });
+    expect(handlerB).toHaveBeenCalledWith({ id: 1 });
+
+    // Desuscribir A no puede tocar la suscripción STOMP de B.
+    act(() => desuscribirA());
+    expect(subB!.unsubscribe).not.toHaveBeenCalled();
+
+    act(() => {
+      subB!.callback({ body: JSON.stringify({ id: 2 }) });
+    });
+    expect(handlerB).toHaveBeenCalledWith({ id: 2 });
+    expect(handlerA).not.toHaveBeenCalledWith({ id: 2 });
+  });
+
+  it('desuscribirse ANTES de que el socket conecte evita que se aplique al conectar', async () => {
+    const { result } = renderHook(() => useWebSocket());
+    const cliente = await esperarCliente();
+    expect(cliente.connected).toBe(false);
+
+    const handler = vi.fn();
+    let desuscribir: () => void = () => {};
+    act(() => {
+      desuscribir = result.current.subscribe('/user/queue/chat', handler);
+    });
+    act(() => desuscribir());
+
+    await conectar(cliente);
+
+    // El suscriptor se borró de suscriptoresRef antes de que existiera onConnect:
+    // nunca se tiene que abrir una suscripción STOMP para este destino.
+    expect(suscripcionesA('/user/queue/chat')).toHaveLength(0);
+  });
+
+  it('un doble mount de React StrictMode no deja suscripciones ni suscriptores duplicados', async () => {
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(StrictMode, null, children);
+
+    const { result } = renderHook(() => useWebSocket(), { wrapper });
+
+    // StrictMode invoca en desarrollo (setup → cleanup → setup) los efectos del hook,
+    // incluido el que abre la conexión: puede llegar a crear más de un cliente STOMP
+    // en el camino. Nos importa el que el hook realmente conserva al asentarse la
+    // carrera, así que esperamos y tomamos el último.
+    const cliente = await esperarCliente();
+    await conectar(cliente);
+
+    // La suscripción "hardcodeada" a notificaciones no puede duplicarse por el doble
+    // efecto: en el cliente que el hook conserva tiene que quedar UNA sola.
+    const llamadasNotif = cliente.subscribe.mock.calls.filter(
+      ([destino]) => destino === '/user/queue/notifications',
+    );
+    expect(llamadasNotif).toHaveLength(1);
+
+    const handler = vi.fn();
+    act(() => {
+      result.current.subscribe('/user/queue/chat', handler);
+    });
+    const llamadasChat = cliente.subscribe.mock.calls.filter(
+      ([destino]) => destino === '/user/queue/chat',
+    );
+    expect(llamadasChat).toHaveLength(1);
   });
 });
 

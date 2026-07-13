@@ -16,7 +16,17 @@ interface WebSocketContextValue {
 const WebSocketContext = createContext<WebSocketContextValue>({
   isConnected: false,
   changeStatus: () => {},
-  subscribe: () => () => {},
+  // Default fuera de un WebSocketProvider real: NO lanza (rompería el render), pero
+  // tampoco puede fallar en silencio. Sin este warn, un componente que llame a
+  // subscribe() fuera del provider "funciona" (no hay error) pero jamás va a
+  // recibir un mensaje — el modo de falla más difícil de detectar que hay.
+  subscribe: (destino: string) => {
+    console.warn(
+      `useWebSocketContext: subscribe('${destino}') se llamó fuera de un WebSocketProvider. ` +
+        'No hay conexión real detrás del contexto default: este handler NUNCA va a recibir mensajes.',
+    );
+    return () => {};
+  },
 });
 
 interface WebSocketProviderProps {

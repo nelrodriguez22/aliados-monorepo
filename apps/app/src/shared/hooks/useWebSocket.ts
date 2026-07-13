@@ -55,8 +55,12 @@ export const useWebSocket = () => {
   // Registro de suscriptores. Es la fuente de verdad y NO depende de la conexión:
   // sobrevive a caídas y reconexiones del socket.
   const suscriptoresRef = useRef<Map<number, Suscriptor>>(new Map());
-  // Suscripciones STOMP vivas (id de suscriptor → sub). Se vacía en cada caída:
-  // una reconexión invalida todas las suscripciones anteriores.
+  // Suscripciones STOMP vivas (id de suscriptor → sub). OJO: esto NO se vacía de forma
+  // confiable en onDisconnect. @stomp/stompjs sólo invoca onDisconnect cuando llega el
+  // receipt de un DISCONNECT limpio; una caída real (wifi, restart del backend, laptop
+  // suspendida) NUNCA lo dispara. La invalidación que de verdad importa es el clear()
+  // incondicional de onConnect (más abajo) — por eso ese clear() no se puede sacar aunque
+  // "parezca" redundante con el de acá.
   const stompSubsRef = useRef<Map<number, StompSubscription>>(new Map());
   const proximoIdRef = useRef(0);
   // handleNotification se recrea en cada render; lo leemos por ref para que la
@@ -153,6 +157,12 @@ export const useWebSocket = () => {
             // (Re)aplicar TODOS los suscriptores registrados, no sólo los pendientes:
             // una reconexión invalida las suscripciones STOMP anteriores, así que las
             // que ya estaban activas también hay que volver a abrirlas.
+            //
+            // Este clear() es INCONDICIONAL a propósito y no se puede sacar ni
+            // condicionar a "si veníamos de un onDisconnect": en una caída real ese
+            // callback no corre (ver comentario en onDisconnect más abajo), así que este
+            // es el único lugar del código donde se garantiza que stompSubsRef no arrastre
+            // suscripciones muertas de la conexión anterior.
             stompSubsRef.current.clear();
             suscriptoresRef.current.forEach((suscriptor) => {
               aplicarSuscripcion(client, suscriptor, stompSubsRef.current);
@@ -164,8 +174,12 @@ export const useWebSocket = () => {
           onDisconnect: () => {
             setIsConnected(false);
             clearHeartbeat();
-            // El socket se cayó: las suscripciones viejas ya no sirven. Los suscriptores
-            // quedan registrados y se re-aplican cuando el cliente reconecte.
+            // OJO: este callback SOLO corre en una desconexión limpia (con receipt de
+            // DISCONNECT). En una caída real (wifi, restart del backend, laptop
+            // suspendida) @stomp/stompjs NUNCA llama a onDisconnect, así que este clear()
+            // es apenas un extra para el caso prolijo. La limpieza que de verdad protege
+            // contra suscripciones muertas es el clear() incondicional de onConnect: NO
+            // depende de que este callback llegue a dispararse.
             stompSubsRef.current.clear();
           },
 
