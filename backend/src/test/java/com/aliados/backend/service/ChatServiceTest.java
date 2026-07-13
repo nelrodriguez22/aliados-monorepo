@@ -19,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -32,6 +33,9 @@ class ChatServiceTest {
     @Mock ConversacionService conversacionService;
     @Mock DetectorContacto detectorContacto;
     @Mock ApplicationEventPublisher eventPublisher;
+    @Mock PresenciaService presenciaService;
+    @Mock PushThrottle pushThrottle;
+    @Mock NotificacionService notificacionService;
 
     @InjectMocks ChatService chatService;
 
@@ -199,6 +203,177 @@ class ChatServiceTest {
         // destinatario correcto (el cliente, id 1) también viaja en el evento.
         assertThat(evento.destinatario().getId()).isEqualTo(1L);
         assertThat(evento.conversacion().getCliente().getId()).isEqualTo(1L);
+    }
+
+    // --- PUSH (presencia + throttle + notificacionService) ---
+    //
+    // Vive acá y no en MensajeEventListenerTest porque el bloque de push corre DENTRO de
+    // ChatService#enviarMensaje (ver el comentario largo ahí sobre por qué NO puede vivir en el
+    // listener AFTER_COMMIT: enviarNotificacion() es @Transactional(REQUIRED) y desde ese
+    // callback participaría en una transacción ya commiteada, sin persistir nunca la fila).
+
+    @Test
+    void destinatarioConectado_noMandaPush() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(true);
+
+        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
+
+        verifyNoInteractions(notificacionService);
+        // MINOR: si el destinatario está conectado, el throttle NI SIQUIERA se consulta. Esto lo
+        // garantiza el corto-circuito de "desconectado && deboNotificar(...)" en ese orden: si
+        // alguien invirtiera el && (o cambiara el orden de los operandos), este assert es el
+        // único que lo detecta — sin él, la ventana de 5 minutos se quemaría con el usuario
+        // todavía conectado y su primera push genuina, al desconectarse, quedaría suprimida.
+        verifyNoInteractions(pushThrottle);
+    }
+
+    @Test
+    void destinatarioDesconectado_mandaPush() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
+        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(true);
+        when(conversacionService.entidadIdDe(conversacion)).thenReturn(123L);
+        when(conversacionService.deepLinkChat(conversacion, false))
+                .thenReturn("/proveedor/trabajo-activo/123");
+
+        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
+
+        verify(notificacionService).enviarNotificacion(
+                eq("uid-proveedor"),
+                eq(TipoNotificacion.MENSAJE_CHAT),
+                anyString(),
+                anyString(),
+                eq(123L),
+                eq("/proveedor/trabajo-activo/123"));
+    }
+
+    // Desconectado PERO ya se le notificó hace un minuto: no vibra de nuevo. Una ráfaga de
+    // mensajes no puede ser una ráfaga de vibraciones. El mensaje en sí SIEMPRE se persiste y se
+    // publica por socket (eso lo prueba MensajeEventListenerTest); el throttle sólo silencia la
+    // vibración.
+    @Test
+    void destinatarioDesconectadoPeroThrottleado_noMandaPush() {
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
+        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(false);
+
+        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto("hola"));
+
+        verifyNoInteractions(notificacionService);
+        verify(mensajeRepository).save(any(Mensaje.class));
+    }
+
+    @Test
+    void destinatarioEsCliente_presenciaYThrottleSeEvaluanContraElCliente() {
+        // Mensaje del proveedor: el destinatario ahora es el cliente (id 1), no el proveedor.
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-proveedor")).thenReturn(Optional.of(proveedor));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(101L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-cliente")).thenReturn(false);
+        when(pushThrottle.deboNotificar(10L, 1L)).thenReturn(true);
+        when(conversacionService.entidadIdDe(conversacion)).thenReturn(456L);
+        when(conversacionService.deepLinkChat(conversacion, true))
+                .thenReturn("/cliente/trabajo-activo/456");
+
+        chatService.enviarMensaje(10L, "uid-proveedor", dtoTexto("ya llego"));
+
+        verify(pushThrottle).deboNotificar(10L, 1L);
+        verify(notificacionService).enviarNotificacion(
+                eq("uid-cliente"),
+                eq(TipoNotificacion.MENSAJE_CHAT),
+                anyString(),
+                anyString(),
+                eq(456L),
+                eq("/cliente/trabajo-activo/456"));
+    }
+
+    // --- MINOR: resumen() del push (mensajes.mensaje es VARCHAR(255); el truncado a 80 es lo
+    // único que evita un desborde, y antes de este test no tenía NINGUNA aserción — título y
+    // mensaje se verificaban con anyString()). ---
+
+    @Test
+    void mensajeImagen_resumenDelPushEsIconoFoto() {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl("https://ejemplo.com/foto.jpg");
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
+        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(true);
+        when(conversacionService.entidadIdDe(conversacion)).thenReturn(123L);
+        when(conversacionService.deepLinkChat(conversacion, false)).thenReturn("/x");
+
+        chatService.enviarMensaje(10L, "uid-cliente", dto);
+
+        ArgumentCaptor<String> resumenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacionService).enviarNotificacion(
+                eq("uid-proveedor"), eq(TipoNotificacion.MENSAJE_CHAT), anyString(),
+                resumenCaptor.capture(), eq(123L), anyString());
+
+        assertThat(resumenCaptor.getValue()).isEqualTo("📷 Foto");
+    }
+
+    @Test
+    void mensajeTextoLargo_resumenDelPushSeTruncaA80ConSufijo() {
+        String textoLargo = "a".repeat(120);
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+        when(presenciaService.estaConectado("uid-proveedor")).thenReturn(false);
+        when(pushThrottle.deboNotificar(10L, 2L)).thenReturn(true);
+        when(conversacionService.entidadIdDe(conversacion)).thenReturn(123L);
+        when(conversacionService.deepLinkChat(conversacion, false)).thenReturn("/x");
+
+        chatService.enviarMensaje(10L, "uid-cliente", dtoTexto(textoLargo));
+
+        ArgumentCaptor<String> resumenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacionService).enviarNotificacion(
+                eq("uid-proveedor"), eq(TipoNotificacion.MENSAJE_CHAT), anyString(),
+                resumenCaptor.capture(), eq(123L), anyString());
+
+        String resumen = resumenCaptor.getValue();
+        assertThat(resumen).hasSize(80);
+        assertThat(resumen).endsWith("...");
     }
 
     // --- MARCADO DE CONTACTO ---

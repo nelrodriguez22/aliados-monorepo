@@ -27,6 +27,9 @@ public class ChatService {
     private final ConversacionService conversacionService;
     private final DetectorContacto detectorContacto;
     private final ApplicationEventPublisher eventPublisher;
+    private final PresenciaService presenciaService;
+    private final PushThrottle pushThrottle;
+    private final NotificacionService notificacionService;
 
     public ChatService(ConversacionRepository conversacionRepository,
                        MensajeRepository mensajeRepository,
@@ -34,7 +37,10 @@ public class ChatService {
                        UserRepository userRepository,
                        ConversacionService conversacionService,
                        DetectorContacto detectorContacto,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher,
+                       PresenciaService presenciaService,
+                       PushThrottle pushThrottle,
+                       NotificacionService notificacionService) {
         this.conversacionRepository = conversacionRepository;
         this.mensajeRepository = mensajeRepository;
         this.lecturaRepository = lecturaRepository;
@@ -42,6 +48,9 @@ public class ChatService {
         this.conversacionService = conversacionService;
         this.detectorContacto = detectorContacto;
         this.eventPublisher = eventPublisher;
+        this.presenciaService = presenciaService;
+        this.pushThrottle = pushThrottle;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -85,6 +94,50 @@ public class ChatService {
         User destinatario = destinatarioDe(conversacion, emisor);
         eventPublisher.publishEvent(
                 new MensajeCreatedEvent(conversacion, emisor, destinatario, guardado, response));
+
+        // PUSH: a diferencia del socket (que se movió al listener AFTER_COMMIT, ver
+        // MensajeEventListener), esto se evalúa y se dispara ACÁ ADENTRO, dentro de la
+        // transacción. No es una inconsistencia: es la asimetría correcta.
+        //
+        // El socket entrega de forma INMEDIATA e IRREVOCABLE — si se publicara antes del commit
+        // y después hubiera rollback, el destinatario ya vio un mensaje que la base nunca guardó
+        // (mensaje fantasma). La notificación no tiene ese riesgo: notificacionService
+        // .enviarNotificacion(...) YA publica su propio push (WS + FCM) AFTER_COMMIT, a través de
+        // su propio NotificacionCreatedEvent. Llamarla acá adentro sólo hace que su fila en
+        // `notificaciones` commitee atómicamente con el mensaje — que es exactamente lo que
+        // queremos — sin perder la garantía post-commit del push real.
+        //
+        // ADVERTENCIA EXPLÍCITA — no mover este bloque al listener AFTER_COMMIT. Ya se hizo una
+        // vez (commit 67bfc25) y fue un error grave: enviarNotificacion() es
+        // @Transactional(REQUIRED) y hace su propio notificacionRepository.save(...). Un listener
+        // AFTER_COMMIT corre en afterCompletion(STATUS_COMMITTED), DESPUÉS del commit pero ANTES
+        // de que Spring haga doCleanupAfterCompletion(): en esa ventana el EntityManagerHolder
+        // sigue bindeado al hilo, así que isExistingTransaction() da true y el
+        // @Transactional(REQUIRED) anidado "participa" de la transacción YA COMMITEADA en lugar
+        // de abrir una nueva — sin BEGIN ni COMMIT, el save de la Notificacion NUNCA persiste.
+        // Encadenado: el NotificacionCreatedEvent que dispara ese save queda registrado como
+        // synchronization en vez de ejecutarse, y cuando se invoca lo hace con STATUS_UNKNOWN (no
+        // STATUS_COMMITTED), así que NotificacionEventListener tampoco corre. Todo esto pasa EN
+        // SILENCIO porque Spring traga las excepciones de los listeners AFTER_COMMIT: ni fila en
+        // `notificaciones`, ni WS, ni FCM, para un destinatario desconectado. Es una trampa que ya
+        // nos comimos una vez.
+        //
+        // Costo aceptado: la ventana del throttle (5 min) se consume acá adentro, en una
+        // transacción que todavía puede hacer rollback. Si eso pasa, un reintento del mismo
+        // mensaje se queda sin push hasta que venza esa ventana. Es un costo mucho menor que un
+        // push muerto.
+        boolean desconectado = !presenciaService.estaConectado(destinatario.getFirebaseUid());
+        if (desconectado && pushThrottle.deboNotificar(conversacion.getId(), destinatario.getId())) {
+            boolean destinatarioEsCliente =
+                    conversacion.getCliente().getId().equals(destinatario.getId());
+            notificacionService.enviarNotificacion(
+                    destinatario.getFirebaseUid(),
+                    TipoNotificacion.MENSAJE_CHAT,
+                    "Nuevo mensaje de " + emisor.getNombre(),
+                    resumen(guardado),
+                    conversacionService.entidadIdDe(conversacion),
+                    conversacionService.deepLinkChat(conversacion, destinatarioEsCliente));
+        }
 
         return response;
     }
@@ -182,6 +235,12 @@ public class ChatService {
                 && (dto.getImagenUrl() == null || dto.getImagenUrl().isBlank())) {
             throw new IllegalArgumentException("Un mensaje de imagen necesita imagenUrl");
         }
+    }
+
+    private String resumen(Mensaje m) {
+        if (m.getTipo() == TipoMensaje.IMAGEN) return "📷 Foto";
+        String texto = m.getContenido();
+        return texto.length() > 80 ? texto.substring(0, 77) + "..." : texto;
     }
 
     private MensajeResponseDTO aDTO(Mensaje m) {
