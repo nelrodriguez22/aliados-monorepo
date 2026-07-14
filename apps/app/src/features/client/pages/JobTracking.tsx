@@ -252,10 +252,14 @@ export function JobTracking() {
     </Card>
   );
 
+  // Sin proveedor asignado todavía (PENDIENTE) no hay conversación: el sidebar quedaría
+  // vacío, así que en ese caso la columna principal se queda con todo el ancho.
+  const hayChat = trabajo.conversacionId != null && trabajo.chatModo != null;
+
   return (
     <div className={tw.pageBg}>
-      <div className={tw.container}>
-        <div className="mx-auto max-w-5xl">
+      <div className={tw.containerWide}>
+        <div>
 
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-3">
@@ -275,8 +279,38 @@ export function JobTracking() {
             </Button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
+          {/* Progreso — franja horizontal a todo el ancho. Un stepper de 3 pasos se lee
+              mejor en fila; en mobile no hay ancho para eso y cae a columna. */}
+          <Card className="mb-4">
+            <ol className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0">
+              {steps.map((step, i) => (
+                <li key={step.id} className="flex items-center gap-2 sm:flex-1 sm:last:flex-none">
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors
+                    ${step.completed
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                      : 'bg-slate-100 dark:bg-dark-elevated text-slate-400 dark:text-dark-text-secondary'
+                    }`}
+                  >
+                    {step.completed
+                      ? <CheckCircle className="h-4 w-4" />
+                      : <span className="text-xs font-semibold">{step.id}</span>
+                    }
+                  </div>
+                  <p className={`text-sm sm:text-xs lg:text-sm ${step.completed ? tw.text.primary : tw.text.faint}`}>
+                    {step.label}
+                  </p>
+                  {i < steps.length - 1 && (
+                    <div className={`mx-2 hidden h-px flex-1 sm:block
+                      ${step.completed ? 'bg-green-200 dark:bg-green-900/50' : 'bg-slate-100 dark:bg-dark-border'}`}
+                    />
+                  )}
+                </li>
+              ))}
+            </ol>
+          </Card>
+
+          <div className={`grid gap-4 ${hayChat ? 'lg:grid-cols-3' : ''}`}>
+            <div className={`space-y-4 ${hayChat ? 'lg:col-span-2' : ''}`}>
 
               {/* PENDIENTE */}
               {isPendiente && (
@@ -380,49 +414,22 @@ export function JobTracking() {
               )}
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-4 lg:col-span-1">
-
-              {/* Progreso */}
-              <Card>
-                <h3 className={`mb-4 text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                  Progreso
-                </h3>
-                <div className="space-y-3">
-                  {steps.map((step, i) => (
-                    <div key={step.id}>
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors
-                          ${step.completed
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                            : 'bg-slate-100 dark:bg-dark-elevated text-slate-400 dark:text-dark-text-secondary'
-                          }`}
-                        >
-                          {step.completed
-                            ? <CheckCircle className="h-4 w-4" />
-                            : <span className="text-xs font-semibold">{step.id}</span>
-                          }
-                        </div>
-                        <p className={`text-sm ${step.completed ? tw.text.primary : tw.text.faint}`}>
-                          {step.label}
-                        </p>
-                      </div>
-                      {i < steps.length - 1 && (
-                        <div className={`ml-3.5 mt-1 mb-1 h-4 w-px ${step.completed ? 'bg-green-200 dark:bg-green-900/50' : 'bg-slate-100 dark:bg-dark-border'}`} />
-                      )}
-                    </div>
-                  ))}
+            {/* Sidebar: solo el chat, exactamente del alto de la columna izquierda. El
+                `absolute inset-0` en lg evita que el chat aporte altura a la fila del grid:
+                si no, una conversación larga la estira y el chat se pasa de largo. */}
+            {hayChat && (
+              <div className="relative flex flex-col lg:col-span-1">
+                <div className="flex-1 min-h-0 lg:absolute lg:inset-0">
+                  <ChatPanel
+                    conversacionId={trabajo.conversacionId ?? null}
+                    modo={trabajo.chatModo}
+                    usuarioId={user.id}
+                    titulo="Chat con tu aliado"
+                    expandido
+                  />
                 </div>
-              </Card>
-
-              {/* Chat */}
-              <ChatPanel
-                conversacionId={trabajo.conversacionId ?? null}
-                modo={trabajo.chatModo}
-                usuarioId={user.id}
-                titulo="Chat con tu aliado"
-              />
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

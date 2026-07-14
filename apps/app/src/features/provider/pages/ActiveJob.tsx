@@ -7,17 +7,17 @@ import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
 import { ChatPanel } from "@/shared/components/chat/ChatPanel";
+import { ImageLightbox } from "@/shared/components/ui/ImageLightbox";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
-import { MapPin, Clock, User, X, Loader2, FileText, Navigation } from "lucide-react";
+import { MapPin, Clock, User, Loader2, FileText, Navigation } from "lucide-react";
 import { formatTime } from "@/shared/lib/dayjs";
 
 export function ActiveJob() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useStore();
-  const [notes, setNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: trabajo, isLoading, isError, error, refetch } = useTrabajo(id, {
@@ -55,26 +55,14 @@ export function ActiveJob() {
 
   return (
     <div className={tw.pageBg}>
-      <div className={tw.container}>
+      <div className={tw.containerWide}>
 
-        {/* Lightbox */}
         {selectedImage && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-            onClick={() => setSelectedImage(null)}
-          >
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
-            >
-              <X className="h-5 w-5 text-white" />
-            </button>
-            <img
-              src={selectedImage} alt="Foto ampliada"
-              className="max-w-full max-h-[90vh] object-contain rounded-xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+          <ImageLightbox
+            src={selectedImage}
+            alt="Foto del problema"
+            onClose={() => setSelectedImage(null)}
+          />
         )}
 
         {/* Header */}
@@ -131,6 +119,39 @@ export function ActiveJob() {
                   </div>
                 </div>
 
+                {/* Los dos tiempos son opcionales: sin ninguno, el separador tampoco va. */}
+                {(trabajo.acceptedAt || trabajo.tiempoEstimadoMinutos) && (
+                  <div className={`space-y-4 border-t pt-4 ${tw.divider}`}>
+
+                    {trabajo.acceptedAt && (
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                          <Clock className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className={`text-xs ${tw.text.muted}`}>Aceptado a las</p>
+                          <p className={`text-sm font-semibold ${tw.text.primary}`}>{formatTime(trabajo.acceptedAt)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {trabajo.tiempoEstimadoMinutos && (
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
+                          <MapPin className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className={`text-xs ${tw.text.muted}`}>Tiempo estimado de arribo</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                            ~{trabajo.tiempoEstimadoMinutos} min
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
               </div>
             </Card>
 
@@ -185,55 +206,6 @@ export function ActiveJob() {
               </div>
             </Card>
 
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-
-            {/* Tiempo */}
-            <Card>
-              <h3 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                Tiempo del servicio
-              </h3>
-              <div className="space-y-3">
-                {trabajo.acceptedAt && (
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className={`text-xs ${tw.text.muted}`}>Aceptado a las</p>
-                      <p className={`text-sm font-semibold ${tw.text.primary}`}>{formatTime(trabajo.acceptedAt)}</p>
-                    </div>
-                  </div>
-                )}
-                {trabajo.tiempoEstimadoMinutos && (
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
-                      <MapPin className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className={`text-xs ${tw.text.muted}`}>Tiempo estimado de arribo</p>
-                      <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                        ~{trabajo.tiempoEstimadoMinutos} min
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Notas */}
-            <Card>
-              <label className={tw.label}>Notas del trabajo</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className={tw.textarea + " min-h-24 text-sm mt-1.5"}
-                placeholder="Anotá detalles sobre el trabajo realizado..."
-              />
-            </Card>
-
             {/* Presupuesto */}
             <Card>
               <p className={`text-xs mb-3 ${tw.text.secondary}`}>
@@ -247,14 +219,22 @@ export function ActiveJob() {
               </Button>
             </Card>
 
-            {/* Chat */}
-            <ChatPanel
-              conversacionId={trabajo.conversacionId ?? null}
-              modo={trabajo.chatModo}
-              usuarioId={user.id}
-              titulo="Chat con el cliente"
-            />
+          </div>
 
+          {/* Sidebar: solo el chat, exactamente del alto de la columna izquierda.
+              En lg el chat va `absolute inset-0`: así NO aporta altura a la fila del grid
+              (si no, muchos mensajes la estiran y el chat se pasa de largo del presupuesto).
+              La fila la define la columna izquierda y el chat se ajusta a esa caja. */}
+          <div className="relative flex flex-col">
+            <div className="flex-1 min-h-0 lg:absolute lg:inset-0">
+              <ChatPanel
+                conversacionId={trabajo.conversacionId ?? null}
+                modo={trabajo.chatModo}
+                usuarioId={user.id}
+                titulo="Chat con el cliente"
+                expandido
+              />
+            </div>
           </div>
         </div>
       </div>

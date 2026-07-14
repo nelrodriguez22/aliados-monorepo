@@ -124,6 +124,10 @@ cardHover: d(
     'text-dark-text-secondary hover:text-dark-text'
   ),
   container: 'mx-auto w-full max-w-[min(92%,800px)] sm:max-w-[min(80%,800px)] lg:max-w-[min(55%,800px)] py-6 lg:py-8',
+  // Para las pantallas de detalle con chat al costado (trabajo activo del proveedor,
+  // seguimiento del cliente): en 800px la columna del chat queda en ~250px. Mismo
+  // comportamiento que `container` hasta lg; ahí es donde recién aparece el sidebar.
+  containerWide: 'mx-auto w-full max-w-[min(92%,800px)] sm:max-w-[min(80%,800px)] lg:max-w-[min(90%,1200px)] py-6 lg:py-8',
   section:   d('bg-white',          'bg-dark-bg'),
   pageBg:    d('flex-1 bg-slate-50', 'bg-dark-bg'),
 
