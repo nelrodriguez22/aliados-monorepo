@@ -102,7 +102,7 @@ export function ServiceDetail() {
 
   return (
     <div className={tw.pageBg}>
-      <div className={tw.container}>
+      <div className={tw.containerWide}>
 
         {/* Lightbox */}
         {selectedImage && (

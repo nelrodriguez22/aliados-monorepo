@@ -195,10 +195,13 @@ export function ProviderMudanzaDetail() {
     try { return JSON.parse(mudanza.fotos); } catch { return []; }
   })();
 
+  // Sin conversación no hay sidebar que mostrar: la columna principal se lleva todo el ancho.
+  const hayChat = mudanza.conversacionId != null && mudanza.chatModo != null;
+
   return (
     <div className={tw.pageBg}>
-      <div className={tw.container}>
-        <div className="mx-auto max-w-3xl">
+      <div className={tw.containerWide}>
+        <div>
 
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-3">
@@ -220,6 +223,9 @@ export function ProviderMudanzaDetail() {
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
           </div>
+
+          <div className={`grid gap-4 ${hayChat ? "lg:grid-cols-3" : ""}`}>
+            <div className={hayChat ? "lg:col-span-2" : ""}>
 
           {/* ═══ Cronómetro EN_CURSO ═══ */}
           {mudanza.estado === "EN_CURSO" && (
@@ -462,13 +468,25 @@ export function ProviderMudanzaDetail() {
             </Card>
           )}
 
-          {/* Chat — modo lo decide el backend, nunca se deriva acá del estado */}
-          <ChatPanel
-            conversacionId={mudanza.conversacionId ?? null}
-            modo={mudanza.chatModo}
-            usuarioId={user.id}
-            titulo="Chat con el cliente"
-          />
+            </div>
+
+            {/* Chat — modo lo decide el backend, nunca se deriva acá del estado.
+                El `absolute inset-0` en lg evita que el chat aporte altura a la fila del
+                grid: si no, una conversación larga la estira y se pasa de largo. */}
+            {hayChat && (
+              <div className="relative flex flex-col lg:col-span-1">
+                <div className="flex-1 min-h-0 lg:absolute lg:inset-0">
+                  <ChatPanel
+                    conversacionId={mudanza.conversacionId ?? null}
+                    modo={mudanza.chatModo}
+                    usuarioId={user.id}
+                    titulo="Chat con el cliente"
+                    expandido
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

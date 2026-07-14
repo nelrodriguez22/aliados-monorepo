@@ -278,7 +278,7 @@ export function ProviderDashboard() {
         steps={PROVIDER_TOUR_STEPS}
         ready={!loadingActivo && !loadingCompletados}
       />
-      <div className={tw.container}>
+      <div className={tw.containerWide}>
 
         {/* Notif banner */}
         {showNotifBanner && (
@@ -376,11 +376,11 @@ export function ProviderDashboard() {
                 />
               ) : (isOnline || isBusy) ? (
                 loadingPendientes ? (
-                  <div className="space-y-2 min-[375px]:space-y-3"><SkeletonCard /><SkeletonCard /></div>
+                  <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2"><SkeletonCard /><SkeletonCard /></div>
                 ) : pendientesError ? (
                   <ErrorState compact message="No pudimos cargar los trabajos disponibles." onRetry={() => refetchPendientes()} />
                 ) : trabajosPendientes.length > 0 ? (
-                  <div className="space-y-2 min-[375px]:space-y-3">
+                  <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                     {trabajosPendientes.map((trabajo: any) => (
                       <TrabajoCard
                         key={trabajo.id}
@@ -425,7 +425,7 @@ export function ProviderDashboard() {
                   </h2>
                   <Badge variant="queue">{trabajosEnCola.length} en espera</Badge>
                 </div>
-                <div className="space-y-2 min-[375px]:space-y-3">
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {trabajosEnCola.map((trabajo: any, index: number) => (
                     <TrabajoCard
                       key={trabajo.id}
@@ -480,7 +480,7 @@ export function ProviderDashboard() {
                   </h2>
                   <Badge variant="info">{mudanzasPendientes.length} nueva{mudanzasPendientes.length > 1 ? 's' : ''}</Badge>
                 </div>
-                <div className="space-y-2 min-[375px]:space-y-3">
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {mudanzasPendientes.map((m: any) => (
                     <Card key={m.id} hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}>
                       <div className="flex items-center gap-2 min-[375px]:gap-3">
@@ -532,7 +532,7 @@ export function ProviderDashboard() {
                     <Badge variant="queue">{mudanzasConfirmadas.length} agendada{mudanzasConfirmadas.length > 1 ? 's' : ''}</Badge>
                   </div>
                 </div>
-                <div className="space-y-2 min-[375px]:space-y-3">
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {mudanzasConfirmadas.map((m: any) => (
                     <Card key={m.id} hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(m.id))}>
                       <div className="flex items-center gap-2 min-[375px]:gap-3">
@@ -614,7 +614,7 @@ export function ProviderDashboard() {
               </div>
 
               {loadingCompletados ? (
-                <div className="space-y-2 min-[375px]:space-y-3"><SkeletonCard /><SkeletonCard /></div>
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2"><SkeletonCard /><SkeletonCard /></div>
               ) : completadosError ? (
                 <ErrorState compact message="No pudimos cargar tu historial." onRetry={() => refetchCompletados()} />
               ) : trabajosCompletados.length === 0 ? (
@@ -624,7 +624,7 @@ export function ProviderDashboard() {
                   desc="Tu historial aparecerá acá"
                 />
               ) : (
-                <div className="space-y-2 min-[375px]:space-y-3">
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {trabajosCompletados.map((trabajo: any) => (
                     <TrabajoCard
                       key={trabajo.id}
