@@ -11,6 +11,8 @@ public class MensajeResponseDTO {
     private Long conversacionId;
     private Long emisorId;
     private String emisorNombre;
+    // Puede ser null: subir foto de perfil es opcional. El frontend cae a las iniciales.
+    private String emisorFotoPerfil;
     private TipoMensaje tipo;
     private String contenido;
     private String imagenUrl;

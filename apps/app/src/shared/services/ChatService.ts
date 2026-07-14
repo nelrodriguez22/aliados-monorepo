@@ -11,6 +11,8 @@ export interface Mensaje {
   conversacionId: number;
   emisorId: number;
   emisorNombre: string;
+  // null si el usuario nunca subió foto: la burbuja cae a las iniciales del nombre.
+  emisorFotoPerfil: string | null;
   tipo: TipoMensaje;
   contenido: string | null;
   imagenUrl: string | null;

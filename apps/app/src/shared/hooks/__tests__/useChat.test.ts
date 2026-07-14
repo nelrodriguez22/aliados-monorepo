@@ -31,8 +31,8 @@ vi.mock('@/shared/providers/WebSocketProvider', () => ({
 
 const mensajeServidor = {
   id: 1, conversacionId: 10, emisorId: 2, emisorNombre: 'Beto',
-  tipo: 'TEXTO' as const, contenido: 'ya salgo', imagenUrl: null,
-  creadoAt: '2026-07-12T10:00:00',
+  emisorFotoPerfil: null, tipo: 'TEXTO' as const, contenido: 'ya salgo',
+  imagenUrl: null, creadoAt: '2026-07-12T10:00:00',
 };
 
 describe('useChat', () => {

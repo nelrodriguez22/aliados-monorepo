@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Send, ImagePlus, Loader2, AlertTriangle } from "lucide-react";
 import { Card } from "@/shared/components/ui/Card";
 import { tw } from "@/shared/styles/design-system";
+import { ROUTES } from "@/shared/constants/routes";
 import { useChat } from "@/shared/hooks/useChat";
 import { MensajeBubble } from "./MensajeBubble";
 import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
+import { esMismoDia, formatDiaRelativo } from "@/shared/lib/dayjs";
 import type { ModoChat } from "@/shared/services/ChatService";
 
 interface Props {
@@ -13,9 +16,12 @@ interface Props {
   modo: ModoChat | null;
   usuarioId: number;
   titulo: string;
+  // Opt-in: el chat estira hasta llenar el alto de su contenedor (que tiene que ser
+  // flex column). Default false para que las pantallas que ya lo usan no cambien.
+  expandido?: boolean;
 }
 
-export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
+export function ChatPanel({ conversacionId, modo, usuarioId, titulo, expandido = false }: Props) {
   const {
     mensajes,
     cargando,
@@ -72,15 +78,42 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
   };
 
   return (
-    <Card>
-      <div className={`mb-4 flex items-center justify-between border-b pb-4 ${tw.divider}`}>
+    <Card className={expandido ? "flex h-full flex-col" : ""}>
+      <div className={`mb-4 flex shrink-0 items-center justify-between border-b pb-4 ${tw.divider}`}>
         <h3 className={`text-sm font-semibold ${tw.text.primary}`}>{titulo}</h3>
         {soloLectura && (
           <span className={`text-xs ${tw.text.muted}`}>Conversación cerrada</span>
         )}
       </div>
 
-      <div className="flex max-h-96 flex-col gap-2 overflow-y-auto pb-2">
+      {/* Aviso de conducta. Sólo con el chat abierto: advertir sobre lo que enviás en una
+          conversación que ya no admite mensajes no le sirve a nadie. */}
+      {!soloLectura && (
+        <p className={`mb-3 shrink-0 text-center text-[11px] leading-relaxed ${tw.text.muted}`}>
+          Por favor, abstenerse de enviar contenido ilegal, ofensivo o no relevante. Cualquier uso
+          inadecuado será reportado, investigado y podrá dar inicio a las acciones establecidas en
+          nuestros{" "}
+          <Link
+            to={ROUTES.TERMS}
+            target="_blank"
+            className="font-medium underline hover:text-brand-600 dark:hover:text-dark-brand"
+          >
+            Términos y Condiciones de Uso
+          </Link>
+          .
+        </p>
+      )}
+
+      {/* min-h-0 es obligatorio: un flex item trae min-height:auto, que le impide encogerse
+          por debajo de su contenido y anula el overflow-y-auto (el chat crecería sin fin en
+          vez de scrollear adentro). En mobile la grilla es de una sola columna: no hay alto
+          sobrante que llenar, así que ahí sigue mandando el max-h-96 de siempre. */}
+      <div
+        className={
+          "flex flex-col gap-2 overflow-y-auto pb-2 " +
+          (expandido ? "max-h-96 lg:max-h-none lg:min-h-0 lg:flex-1" : "max-h-96")
+        }
+      >
         {hayMas && (
           <button
             onClick={cargarMas}
@@ -121,25 +154,44 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
           </p>
         )}
 
-        {mensajes.map((m) => (
-          <MensajeBubble
-            key={m.claveLocal ?? m.id}
-            mensaje={m}
-            esPropio={m.emisorId === usuarioId}
-            onReintentar={reintentar}
-          />
-        ))}
+        {mensajes.map((m, i) => {
+          // Separador cuando cambia el día respecto del mensaje anterior. El primero de la
+          // lista siempre lo lleva: sin él, la conversación empezaría sin fecha alguna.
+          const anterior = mensajes[i - 1];
+          const abreDia = !anterior || !esMismoDia(anterior.creadoAt, m.creadoAt);
+
+          return (
+            <Fragment key={m.claveLocal ?? m.id}>
+              {abreDia && (
+                <div className="my-2 flex items-center gap-3">
+                  <div className={`h-px flex-1 ${tw.dividerLight} border-t`} />
+                  <span className={`text-[11px] font-medium ${tw.text.muted}`}>
+                    {formatDiaRelativo(m.creadoAt)}
+                  </span>
+                  <div className={`h-px flex-1 ${tw.dividerLight} border-t`} />
+                </div>
+              )}
+              <MensajeBubble
+                mensaje={m}
+                esPropio={m.emisorId === usuarioId}
+                onReintentar={reintentar}
+              />
+            </Fragment>
+          );
+        })}
         <div ref={finRef} />
       </div>
 
       {soloLectura ? (
-        <div className={`border-t pt-4 ${tw.divider}`}>
-          <p className={`text-center text-xs ${tw.text.muted}`}>
-            El servicio se cerró. La conversación queda como registro y no admite mensajes nuevos.
+        <div className={`shrink-0 border-t pt-4 ${tw.divider}`}>
+          <p className={`text-center text-xs leading-relaxed ${tw.text.muted}`}>
+            El servicio terminó. No podés enviar ni recibir mensajes.
+            <br />
+            La conversación queda guardada como registro.
           </p>
         </div>
       ) : (
-        <div className={`border-t pt-4 ${tw.divider}`}>
+        <div className={`shrink-0 border-t pt-4 ${tw.divider}`}>
           {errorUpload && <p className="mb-2 text-xs text-red-600">{errorUpload}</p>}
 
           <div className="flex gap-2">
