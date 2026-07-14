@@ -72,7 +72,9 @@ export function JobCompleted() {
   return (
     <div className={tw.pageBg}>
       <div className={tw.container}>
-        <div className="mx-auto max-w-lg">
+        {/* El espaciado lo pone el contenedor, no cada hijo: con `mb-*` sueltos alcanzaba con
+            que uno se olvidara (la card de calificación) para que el chat quedara pegado. */}
+        <div className="mx-auto max-w-lg space-y-4">
 
           {/* Header */}
           <div className="mb-6 flex justify-end">
@@ -82,7 +84,7 @@ export function JobCompleted() {
           </div>
 
           {/* Banner éxito */}
-          <div className={`mb-4 flex items-center gap-4 rounded-2xl border p-5
+          <div className={`flex items-center gap-4 rounded-2xl border p-5
             bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30`}>
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
               <CheckCircle className="h-6 w-6" />
@@ -101,7 +103,7 @@ export function JobCompleted() {
           </div>
 
           {/* Resumen */}
-          <Card className="mb-4">
+          <Card>
             <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
               Resumen del servicio
             </h2>
@@ -117,12 +119,12 @@ export function JobCompleted() {
 
           {/* Mensaje contextual según cómo terminó el presupuesto post-visita */}
           {trabajo.presupuestoAceptado === false && (
-            <p className={`mb-4 text-sm ${tw.text.muted}`}>
+            <p className={`text-sm ${tw.text.muted}`}>
               Rechazaste el presupuesto: se cobró solo la visita de ${Number(trabajo.tarifaVisita ?? 15000).toLocaleString('es-AR')}. Igual podés calificar al profesional.
             </p>
           )}
           {trabajo.presupuestoAceptado === true && trabajo.montoPagado != null && (
-            <p className={`mb-4 text-sm ${tw.text.muted}`}>
+            <p className={`text-sm ${tw.text.muted}`}>
               Pagaste ${Number(trabajo.montoPagado).toLocaleString('es-AR')} por el trabajo.
             </p>
           )}
