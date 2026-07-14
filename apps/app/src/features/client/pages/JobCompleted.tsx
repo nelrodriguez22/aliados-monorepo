@@ -62,11 +62,26 @@ export function JobCompleted() {
   const STAR_LABELS = ['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'];
   const activeRating = hover || rating;
 
+  // Lo que se cobró: el trabajo completo si aceptaste el presupuesto, sólo la visita si lo
+  // rechazaste. Va como una fila más del resumen y no como un párrafo suelto entre cards:
+  // "cuánto pagué" es un dato del servicio, igual que la dirección o la fecha.
+  const filaPago = (): { label: string; value: string }[] => {
+    if (trabajo.presupuestoAceptado === true && trabajo.montoPagado != null) {
+      return [{ label: 'Pagado', value: `$${Number(trabajo.montoPagado).toLocaleString('es-AR')}` }];
+    }
+    if (trabajo.presupuestoAceptado === false) {
+      const visita = Number(trabajo.tarifaVisita ?? 15000).toLocaleString('es-AR');
+      return [{ label: 'Pagado', value: `$${visita} (solo la visita)` }];
+    }
+    return [];
+  };
+
   const rows = [
     { label: 'Servicio',     value: trabajo.oficio.nombre },
     { label: 'Profesional',  value: trabajo.proveedorNombre },
     { label: 'Dirección',    value: trabajo.direccion },
     { label: 'Completado',   value: trabajo.completedAt ? formatDateTime(trabajo.completedAt) : '—' },
+    ...filaPago(),
   ];
 
   return (
@@ -74,7 +89,7 @@ export function JobCompleted() {
       <div className={tw.container}>
         {/* El espaciado lo pone el contenedor, no cada hijo: con `mb-*` sueltos alcanzaba con
             que uno se olvidara (la card de calificación) para que el chat quedara pegado. */}
-        <div className="mx-auto max-w-lg space-y-4">
+        <div className="mx-auto max-w-2xl space-y-4">
 
           {/* Header */}
           <div className="mb-6 flex justify-end">
@@ -117,18 +132,6 @@ export function JobCompleted() {
             </div>
           </Card>
 
-          {/* Mensaje contextual según cómo terminó el presupuesto post-visita */}
-          {trabajo.presupuestoAceptado === false && (
-            <p className={`text-sm ${tw.text.muted}`}>
-              Rechazaste el presupuesto: se cobró solo la visita de ${Number(trabajo.tarifaVisita ?? 15000).toLocaleString('es-AR')}. Igual podés calificar al profesional.
-            </p>
-          )}
-          {trabajo.presupuestoAceptado === true && trabajo.montoPagado != null && (
-            <p className={`text-sm ${tw.text.muted}`}>
-              Pagaste ${Number(trabajo.montoPagado).toLocaleString('es-AR')} por el trabajo.
-            </p>
-          )}
-
           {/* Calificación — disponible tanto si se aceptó como si se rechazó el presupuesto */}
           <Card>
             {trabajo.calificado ? (
@@ -146,6 +149,14 @@ export function JobCompleted() {
                 <h3 className={`mb-5 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                   Calificá al profesional
                 </h3>
+
+                {/* Haber rechazado el presupuesto no te deja afuera de calificar: el profesional
+                    igual vino. El aviso vive acá, junto a las estrellas, y no suelto entre cards. */}
+                {trabajo.presupuestoAceptado === false && (
+                  <p className={`mb-5 text-xs ${tw.text.secondary}`}>
+                    Rechazaste el presupuesto, pero el profesional igual hizo la visita: podés calificarlo.
+                  </p>
+                )}
 
                 {/* Proveedor */}
                 <div className="mb-5 flex items-center gap-3">
