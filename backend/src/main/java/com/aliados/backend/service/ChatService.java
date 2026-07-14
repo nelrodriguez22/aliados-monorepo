@@ -1,0 +1,291 @@
+package com.aliados.backend.service;
+
+import com.aliados.backend.dto.EnviarMensajeDTO;
+import com.aliados.backend.dto.MensajeResponseDTO;
+import com.aliados.backend.entity.*;
+import com.aliados.backend.event.MensajeCreatedEvent;
+import com.aliados.backend.exception.ChatCerradoException;
+import com.aliados.backend.exception.NotFoundException;
+import com.aliados.backend.repository.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * El corazón del módulo de chat. NO sabe que existen trabajos y mudanzas: todo lo que necesita
+ * saber sobre el vertical (estado de escritura/lectura, id de la entidad padre, deep link) se lo
+ * pide a {@link ConversacionService}, el único punto autorizado a conocer ambos verticales.
+ */
+@Service
+public class ChatService {
+
+    private final ConversacionRepository conversacionRepository;
+    private final MensajeRepository mensajeRepository;
+    private final LecturaConversacionRepository lecturaRepository;
+    private final UserRepository userRepository;
+    private final ConversacionService conversacionService;
+    private final DetectorContacto detectorContacto;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PresenciaService presenciaService;
+    private final PushThrottle pushThrottle;
+    private final NotificacionService notificacionService;
+    // Prefijo completo (host + cloud name + "/"), no un fragmento: un chequeo con contains()
+    // o un startsWith() sin la barra final admitiría hosts como
+    // "https://res.cloudinary.com.evil.tld/..." o carpetas ajenas dentro del mismo cloud.
+    // Ver validarContenido().
+    private final String prefijoImagenPermitido;
+
+    public ChatService(ConversacionRepository conversacionRepository,
+                       MensajeRepository mensajeRepository,
+                       LecturaConversacionRepository lecturaRepository,
+                       UserRepository userRepository,
+                       ConversacionService conversacionService,
+                       DetectorContacto detectorContacto,
+                       ApplicationEventPublisher eventPublisher,
+                       PresenciaService presenciaService,
+                       PushThrottle pushThrottle,
+                       NotificacionService notificacionService,
+                       @Value("${cloudinary.cloud-name}") String cloudinaryCloudName) {
+        this.conversacionRepository = conversacionRepository;
+        this.mensajeRepository = mensajeRepository;
+        this.lecturaRepository = lecturaRepository;
+        this.userRepository = userRepository;
+        this.conversacionService = conversacionService;
+        this.detectorContacto = detectorContacto;
+        this.eventPublisher = eventPublisher;
+        this.presenciaService = presenciaService;
+        this.pushThrottle = pushThrottle;
+        this.notificacionService = notificacionService;
+        this.prefijoImagenPermitido = "https://res.cloudinary.com/" + cloudinaryCloudName + "/";
+    }
+
+    @Transactional
+    public MensajeResponseDTO enviarMensaje(Long conversacionId, String firebaseUid,
+                                            EnviarMensajeDTO dto) {
+        Conversacion conversacion = buscarConversacion(conversacionId);
+        User emisor = buscarUsuario(firebaseUid);
+
+        // 1. Autorización: una sola fila, sin joins al padre. Sin ramas por vertical → sin IDOR.
+        autorizar(conversacion, emisor);
+
+        // 2. Log congelado. Excepción propia (no IllegalStateException): ver ChatCerradoException.
+        if (conversacionService.resolverModo(conversacion) != ModoChat.ESCRITURA) {
+            throw new ChatCerradoException("El servicio está cerrado: el chat es sólo lectura");
+        }
+
+        // 3. Coherencia contenido/tipo.
+        validarContenido(dto);
+
+        Mensaje mensaje = new Mensaje();
+        mensaje.setConversacion(conversacion);
+        mensaje.setEmisor(emisor);
+        mensaje.setTipo(dto.getTipo());
+        // El campo que no corresponde al tipo se descarta acá, no sólo se ignora: si un TEXTO
+        // trajera imagenUrl (o una IMAGEN trajera contenido) y lo persistiéramos igual, quedaría
+        // guardado un dato que hoy nadie muestra — pero que el día que la UI agregue, por
+        // ejemplo, un caption bajo la imagen, sería munición gratis para el mismo ataque que
+        // cierra la validación de abajo (una URL ajena colándose en un campo que se renderiza).
+        if (dto.getTipo() == TipoMensaje.TEXTO) {
+            mensaje.setContenido(dto.getContenido());
+            mensaje.setImagenUrl(null);
+        } else {
+            mensaje.setContenido(null);
+            mensaje.setImagenUrl(dto.getImagenUrl());
+        }
+        // MARCA, no censura: el contenido se guarda intacto.
+        mensaje.setContieneContacto(detectorContacto.contieneContacto(dto.getContenido()));
+
+        // PERSISTIR PRIMERO, y publicar (evento) DESPUÉS. El evento se procesa recién en
+        // AFTER_COMMIT (ver MensajeEventListener): la garantía real es que nadie puede ver por
+        // el socket un mensaje que la base no terminó de confirmar. Antes de este fix el publish
+        // salía acá mismo, dentro de la transacción — y todo lo que corre después (incluido el
+        // commit en sí, que Neon puede fallar sin que medie ningún bug de código) podía hacer
+        // rollback dejando un mensaje fantasma del lado del destinatario. Con el evento
+        // AFTER_COMMIT el único modo de falla posible es "mensaje demorado" (si el listener
+        // falla, el mensaje ya está en la base y aparece al recargar), que es estrictamente
+        // mejor que un mensaje fantasma.
+        Mensaje guardado = mensajeRepository.save(mensaje);
+        MensajeResponseDTO response = aDTO(guardado);
+
+        User destinatario = destinatarioDe(conversacion, emisor);
+        eventPublisher.publishEvent(
+                new MensajeCreatedEvent(conversacion, emisor, destinatario, guardado, response));
+
+        // PUSH: a diferencia del socket (que se movió al listener AFTER_COMMIT, ver
+        // MensajeEventListener), esto se evalúa y se dispara ACÁ ADENTRO, dentro de la
+        // transacción. No es una inconsistencia: es la asimetría correcta.
+        //
+        // El socket entrega de forma INMEDIATA e IRREVOCABLE — si se publicara antes del commit
+        // y después hubiera rollback, el destinatario ya vio un mensaje que la base nunca guardó
+        // (mensaje fantasma). La notificación no tiene ese riesgo: notificacionService
+        // .enviarNotificacion(...) YA publica su propio push (WS + FCM) AFTER_COMMIT, a través de
+        // su propio NotificacionCreatedEvent. Llamarla acá adentro sólo hace que su fila en
+        // `notificaciones` commitee atómicamente con el mensaje — que es exactamente lo que
+        // queremos — sin perder la garantía post-commit del push real.
+        //
+        // ADVERTENCIA EXPLÍCITA — no mover este bloque al listener AFTER_COMMIT. Ya se hizo una
+        // vez (commit 67bfc25) y fue un error grave: enviarNotificacion() es
+        // @Transactional(REQUIRED) y hace su propio notificacionRepository.save(...). Un listener
+        // AFTER_COMMIT corre en afterCompletion(STATUS_COMMITTED), DESPUÉS del commit pero ANTES
+        // de que Spring haga doCleanupAfterCompletion(): en esa ventana el EntityManagerHolder
+        // sigue bindeado al hilo, así que isExistingTransaction() da true y el
+        // @Transactional(REQUIRED) anidado "participa" de la transacción YA COMMITEADA en lugar
+        // de abrir una nueva — sin BEGIN ni COMMIT, el save de la Notificacion NUNCA persiste.
+        // Encadenado: el NotificacionCreatedEvent que dispara ese save queda registrado como
+        // synchronization en vez de ejecutarse, y cuando se invoca lo hace con STATUS_UNKNOWN (no
+        // STATUS_COMMITTED), así que NotificacionEventListener tampoco corre. Todo esto pasa EN
+        // SILENCIO porque Spring traga las excepciones de los listeners AFTER_COMMIT: ni fila en
+        // `notificaciones`, ni WS, ni FCM, para un destinatario desconectado. Es una trampa que ya
+        // nos comimos una vez.
+        //
+        // Costo aceptado: la ventana del throttle (5 min) se consume acá adentro, en una
+        // transacción que todavía puede hacer rollback. Si eso pasa, un reintento del mismo
+        // mensaje se queda sin push hasta que venza esa ventana. Es un costo mucho menor que un
+        // push muerto.
+        boolean desconectado = !presenciaService.estaConectado(destinatario.getFirebaseUid());
+        if (desconectado && pushThrottle.deboNotificar(conversacion.getId(), destinatario.getId())) {
+            boolean destinatarioEsCliente =
+                    conversacion.getCliente().getId().equals(destinatario.getId());
+            notificacionService.enviarNotificacion(
+                    destinatario.getFirebaseUid(),
+                    TipoNotificacion.MENSAJE_CHAT,
+                    "Nuevo mensaje de " + emisor.getNombre(),
+                    resumen(guardado),
+                    conversacionService.entidadIdDe(conversacion),
+                    conversacionService.deepLinkChat(conversacion, destinatarioEsCliente));
+        }
+
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MensajeResponseDTO> listarMensajes(Long conversacionId, String firebaseUid,
+                                                   Pageable pageable) {
+        Conversacion conversacion = buscarConversacion(conversacionId);
+        User usuario = buscarUsuario(firebaseUid);
+        autorizar(conversacion, usuario);
+
+        return mensajeRepository
+                .findByConversacionIdOrderByIdDesc(conversacionId, pageable)
+                .map(this::aDTO);
+    }
+
+    @Transactional
+    public void marcarLeido(Long conversacionId, String firebaseUid, Long hastaMensajeId) {
+        Conversacion conversacion = buscarConversacion(conversacionId);
+        User usuario = buscarUsuario(firebaseUid);
+        autorizar(conversacion, usuario);
+
+        LecturaConversacion lectura = lecturaRepository
+                .findByConversacionIdAndUsuarioId(conversacionId, usuario.getId())
+                .orElseGet(() -> {
+                    LecturaConversacion nueva = new LecturaConversacion();
+                    nueva.setConversacionId(conversacionId);
+                    nueva.setUsuarioId(usuario.getId());
+                    return nueva;
+                });
+
+        // El puntero sólo avanza. Un request fuera de orden no puede "des-leer" mensajes.
+        // hastaMensajeId == null es un no-op (no hay nada hasta dónde marcar), nunca un NPE.
+        Long actual = lectura.getUltimoMensajeLeidoId();
+        if (hastaMensajeId != null && (actual == null || hastaMensajeId > actual)) {
+            // El puntero sólo avanza y NUNCA se recupera solo: si se dejara mover a un id que no
+            // es de esta conversación (por bug o por payload manipulado), contarNoLeidos
+            // quedaría en 0 para siempre. Validamos antes de mover.
+            if (!mensajeRepository.existsByIdAndConversacionId(hastaMensajeId, conversacionId)) {
+                throw new IllegalArgumentException(
+                        "El mensaje indicado no pertenece a esta conversación");
+            }
+            lectura.setUltimoMensajeLeidoId(hastaMensajeId);
+            lecturaRepository.save(lectura);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public long contarNoLeidos(Long conversacionId, String firebaseUid) {
+        Conversacion conversacion = buscarConversacion(conversacionId);
+        User usuario = buscarUsuario(firebaseUid);
+        autorizar(conversacion, usuario);
+
+        return lecturaRepository
+                .findByConversacionIdAndUsuarioId(conversacionId, usuario.getId())
+                .map(l -> l.getUltimoMensajeLeidoId() == null
+                        ? mensajeRepository.countByConversacionId(conversacionId)
+                        : mensajeRepository.countByConversacionIdAndIdGreaterThan(
+                                conversacionId, l.getUltimoMensajeLeidoId()))
+                .orElseGet(() -> mensajeRepository.countByConversacionId(conversacionId));
+    }
+
+    // --- privados ---
+
+    private Conversacion buscarConversacion(Long id) {
+        return conversacionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Conversación no encontrada"));
+    }
+
+    private User buscarUsuario(String firebaseUid) {
+        return userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+    }
+
+    private void autorizar(Conversacion c, User u) {
+        boolean participa = c.getCliente().getId().equals(u.getId())
+                || c.getProveedor().getId().equals(u.getId());
+        if (!participa) {
+            throw new SecurityException("No participás de esta conversación");
+        }
+    }
+
+    private User destinatarioDe(Conversacion c, User emisor) {
+        return c.getCliente().getId().equals(emisor.getId())
+                ? c.getProveedor()
+                : c.getCliente();
+    }
+
+    private void validarContenido(EnviarMensajeDTO dto) {
+        if (dto.getTipo() == TipoMensaje.TEXTO
+                && (dto.getContenido() == null || dto.getContenido().isBlank())) {
+            throw new IllegalArgumentException("Un mensaje de texto necesita contenido");
+        }
+        if (dto.getTipo() == TipoMensaje.IMAGEN) {
+            if (dto.getImagenUrl() == null || dto.getImagenUrl().isBlank()) {
+                throw new IllegalArgumentException("Un mensaje de imagen necesita imagenUrl");
+            }
+            // El chat es un log inmutable que sirve como evidencia legal. Un mensaje IMAGEN
+            // sólo es un puntero: si aceptáramos cualquier URL, un participante podría
+            // (a) cambiar o borrar esa imagen después de que arranca una disputa, destruyendo
+            // la evidencia, y (b) hacer que el navegador de la contraparte pegue un GET directo
+            // a un host propio, deanonimizándola (IP, user-agent, momento exacto de lectura) —
+            // exactamente lo que DetectorContacto existe para impedir. Por eso sólo se acepta
+            // una URL que empiece con el prefijo COMPLETO de nuestro Cloudinary: un contains()
+            // o un startsWith() sin la barra final dejaría pasar
+            // "https://res.cloudinary.com.evil.tld/..." o carpetas ajenas al cloud.
+            if (!dto.getImagenUrl().startsWith(prefijoImagenPermitido)) {
+                throw new IllegalArgumentException(
+                        "La imagen debe subirse a través de nuestro Cloudinary");
+            }
+        }
+    }
+
+    private String resumen(Mensaje m) {
+        if (m.getTipo() == TipoMensaje.IMAGEN) return "📷 Foto";
+        String texto = m.getContenido();
+        return texto.length() > 80 ? texto.substring(0, 77) + "..." : texto;
+    }
+
+    private MensajeResponseDTO aDTO(Mensaje m) {
+        MensajeResponseDTO dto = new MensajeResponseDTO();
+        dto.setId(m.getId());
+        dto.setConversacionId(m.getConversacion().getId());
+        dto.setEmisorId(m.getEmisor().getId());
+        dto.setEmisorNombre(m.getEmisor().getNombre());
+        dto.setTipo(m.getTipo());
+        dto.setContenido(m.getContenido());
+        dto.setImagenUrl(m.getImagenUrl());
+        dto.setCreadoAt(m.getCreadoAt());
+        return dto;
+    }
+}

@@ -7,6 +7,7 @@ import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.TrabajoOferta;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.repository.CalificacionRepository;
+import com.aliados.backend.repository.ConversacionRepository;
 import com.aliados.backend.repository.OficioRepository;
 import com.aliados.backend.repository.TrabajoOfertaRepository;
 import com.aliados.backend.repository.TrabajoRepository;
@@ -44,6 +45,8 @@ class TrabajoOfertaGrupoTest {
     @Mock CloudinaryService cloudinaryService;
     @Mock com.aliados.backend.service.FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
+    @Mock ConversacionService conversacionService;
+    @Mock ConversacionRepository conversacionRepository;
 
     @InjectMocks TrabajoService trabajoService;
 

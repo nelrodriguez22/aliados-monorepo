@@ -8,6 +8,13 @@ group = 'com.aliados'
 version = '0.0.1-SNAPSHOT'
 description = 'Demo project for Spring Boot'
 
+// Sobrescribe la versión que pinea el BOM de Spring Boot 3.4.2 (Testcontainers 1.20.4).
+// Esa versión trae docker-java 3.4.0, que negocia la API de Docker en 1.32; Docker Engine 29
+// exige un mínimo de 1.40 y rechaza la conexión con
+// "client version 1.32 is too old". Sin esto, NINGÚN test de integración puede levantar un
+// contenedor en una máquina con Docker moderno.
+ext['testcontainers.version'] = '1.21.3'
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)

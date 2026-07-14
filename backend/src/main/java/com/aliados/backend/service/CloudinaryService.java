@@ -31,6 +31,7 @@ public class CloudinaryService {
             case TRABAJO -> "aliados/trabajos";
             case MUDANZA -> "aliados/mudanzas";
             case AVATAR -> "aliados/avatars";
+            case CHAT -> "aliados/chat";
         };
         Map<String, Object> paramsToSign = ObjectUtils.asMap("timestamp", timestamp, "folder", folder);
         String signature = cloudinary.apiSignRequest(paramsToSign, cloudinary.config.apiSecret, cloudinary.config.signatureVersion);

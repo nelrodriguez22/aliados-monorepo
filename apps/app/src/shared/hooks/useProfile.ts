@@ -43,6 +43,7 @@ export function useProfile(firebaseUser: FirebaseUser | null) {
 
       const user: User = {
         uid: firebaseUser.uid,
+        id: data.id,
         name: data.nombre,
         email: data.email,
         role: data.role,

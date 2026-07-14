@@ -3,17 +3,20 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { ChatPanel } from "@/shared/components/chat/ChatPanel";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery } from "@tanstack/react-query";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { apiClient } from "@/shared/lib/apiClient";
+import { useStore } from "@/shared/store/useStore";
 import { Loader2, CheckCircle, Clock, Star } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
 
 export function ProviderCompletedJob() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate  = useNavigate();
+  const { user } = useStore();
 
   const { data: trabajo, isLoading: loadingTrabajo, isError: trabajoError, error: trabajoErrObj, refetch: refetchTrabajo } = useTrabajo(jobId);
 
@@ -26,7 +29,7 @@ export function ProviderCompletedJob() {
     enabled: !!trabajo && trabajo.calificado,
   });
 
-  if (loadingTrabajo || (trabajo?.calificado && loadingCal)) {
+  if (loadingTrabajo || !user || (trabajo?.calificado && loadingCal)) {
     return (
       <div className={`flex h-screen items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
@@ -144,6 +147,14 @@ export function ProviderCompletedJob() {
               </div>
             )}
           </Card>
+
+          {/* Chat — historial de lo acordado, la conversación ya quedó en modo lectura */}
+          <ChatPanel
+            conversacionId={trabajo.conversacionId ?? null}
+            modo={trabajo.chatModo}
+            usuarioId={user.id}
+            titulo="Historial de mensajes"
+          />
 
         </div>
       </div>

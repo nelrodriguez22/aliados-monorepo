@@ -6,14 +6,17 @@ import { Button } from "@/shared/components/ui/Button";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { Badge } from "@/shared/components/ui/Badge";
 import { ServicioIdBadge } from "@/shared/components/ServicioIdBadge";
+import { ChatPanel } from "@/shared/components/chat/ChatPanel";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
+import { useStore } from "@/shared/store/useStore";
 import { MapPin, Clock, User, X, Loader2, FileText, Navigation } from "lucide-react";
 import { formatTime } from "@/shared/lib/dayjs";
 
 export function ActiveJob() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useStore();
   const [notes, setNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -22,7 +25,7 @@ export function ActiveJob() {
     refetchOnWindowFocus: false,
   });
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className={`flex h-64 items-center justify-center ${tw.pageBg}`}>
         <Loader2 className="h-7 w-7 animate-spin text-brand-600 dark:text-dark-brand" />
@@ -243,6 +246,14 @@ export function ActiveJob() {
                 Enviar presupuesto
               </Button>
             </Card>
+
+            {/* Chat */}
+            <ChatPanel
+              conversacionId={trabajo.conversacionId ?? null}
+              modo={trabajo.chatModo}
+              usuarioId={user.id}
+              titulo="Chat con el cliente"
+            />
 
           </div>
         </div>

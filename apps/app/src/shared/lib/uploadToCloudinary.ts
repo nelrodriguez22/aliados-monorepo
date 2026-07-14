@@ -1,6 +1,6 @@
 import { apiClient } from '@/shared/lib/apiClient';
 
-type UploadTipo = 'TRABAJO' | 'MUDANZA' | 'AVATAR';
+type UploadTipo = 'TRABAJO' | 'MUDANZA' | 'AVATAR' | 'CHAT';
 
 interface SignatureResponse {
   signature: string;
@@ -22,6 +22,9 @@ const COMPRESSION: Record<UploadTipo, { maxDim: number; quality: number }> = {
   TRABAJO: { maxDim: 1600, quality: 0.8 },
   MUDANZA: { maxDim: 1600, quality: 0.8 },
   AVATAR:  { maxDim: 512,  quality: 0.8 },
+  // Las fotos del chat se ven dentro de una burbuja (max-h-64) pero se abren para ver
+  // detalle: mismo tratamiento que trabajo/mudanza.
+  CHAT:    { maxDim: 1600, quality: 0.8 },
 };
 
 /**

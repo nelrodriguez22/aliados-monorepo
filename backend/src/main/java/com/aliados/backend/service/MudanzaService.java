@@ -5,6 +5,7 @@ import com.aliados.backend.entity.*;
 import com.aliados.backend.exception.ConflictException;
 import com.aliados.backend.exception.ForbiddenException;
 import com.aliados.backend.exception.NotFoundException;
+import com.aliados.backend.repository.ConversacionRepository;
 import com.aliados.backend.repository.MudanzaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.aliados.backend.repository.MudanzaTierRepository;
@@ -22,6 +23,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +49,12 @@ public class MudanzaService {
 
     @Autowired
     private FeatureFlagService featureFlagService;
+
+    @Autowired
+    private ConversacionService conversacionService;
+
+    @Autowired
+    private ConversacionRepository conversacionRepository;
 
     private static final int MAX_MUDANZAS_POR_DIA = 2;
 
@@ -191,6 +199,10 @@ public class MudanzaService {
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya está ocupado.");
         }
 
+        // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
+        // que un reintento no duplica.
+        conversacionService.crearParaMudanza(mudanza);
+
         String turnoLabel = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
         notificacionService.enviarNotificacion(
                 mudanza.getCliente().getFirebaseUid(),
@@ -329,6 +341,10 @@ public class MudanzaService {
             String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya no está disponible.");
         }
+
+        // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
+        // que un reintento no duplica.
+        conversacionService.crearParaMudanza(mudanza);
 
         // Notificar proveedor
         notificacionService.enviarNotificacion(
@@ -631,9 +647,10 @@ public class MudanzaService {
     }
 
     public List<MudanzaResponseDTO> getMudanzasByCliente(String clienteFirebaseUid) {
-        return mudanzaRepository.findByClienteFirebaseUidOrderByCreatedAtDesc(clienteFirebaseUid)
-                .stream()
-                .map(this::mapToDTO)
+        List<Mudanza> mudanzas = mudanzaRepository.findByClienteFirebaseUidOrderByCreatedAtDesc(clienteFirebaseUid);
+        Map<Long, Conversacion> conversacionPorMudanza = conversacionesPorMudanza(mudanzas);
+        return mudanzas.stream()
+                .map(m -> mapToDTO(m, conversacionPorMudanza))
                 .collect(Collectors.toList());
     }
 
@@ -649,9 +666,10 @@ public class MudanzaService {
 
         // Modelo actual: broadcast de todas las RESERVADO (hay un solo proveedor de fletes).
         // La distribución entre múltiples proveedores queda pendiente de diseño (#18).
-        return mudanzaRepository.findByEstadoOrderByCreatedAtAsc(MudanzaEstado.RESERVADO)
-                .stream()
-                .map(this::mapToDTO)
+        List<Mudanza> mudanzas = mudanzaRepository.findByEstadoOrderByCreatedAtAsc(MudanzaEstado.RESERVADO);
+        Map<Long, Conversacion> conversacionPorMudanza = conversacionesPorMudanza(mudanzas);
+        return mudanzas.stream()
+                .map(m -> mapToDTO(m, conversacionPorMudanza))
                 .collect(Collectors.toList());
     }
 
@@ -678,17 +696,19 @@ public class MudanzaService {
                 proveedor.getId(),
                 List.of(MudanzaEstado.ACEPTADO, MudanzaEstado.FINALIZADO, MudanzaEstado.PENDIENTE_PAGO_EXTRA)
         );
-        return confirmadas.stream().map(this::mapToDTO).collect(Collectors.toList());
+        Map<Long, Conversacion> conversacionPorMudanza = conversacionesPorMudanza(confirmadas);
+        return confirmadas.stream().map(m -> mapToDTO(m, conversacionPorMudanza)).collect(Collectors.toList());
     }
 
     public List<MudanzaResponseDTO> getMudanzasCompletadasProveedor(String proveedorFirebaseUid) {
         User proveedor = userRepository.findByFirebaseUid(proveedorFirebaseUid)
                 .orElseThrow(() -> new NotFoundException("Proveedor no encontrado"));
 
-        return mudanzaRepository.findByProveedorIdAndEstadoOrderByCompletedAtDesc(
-                        proveedor.getId(), MudanzaEstado.COMPLETADO)
-                .stream()
-                .map(this::mapToDTO)
+        List<Mudanza> mudanzas = mudanzaRepository.findByProveedorIdAndEstadoOrderByCompletedAtDesc(
+                proveedor.getId(), MudanzaEstado.COMPLETADO);
+        Map<Long, Conversacion> conversacionPorMudanza = conversacionesPorMudanza(mudanzas);
+        return mudanzas.stream()
+                .map(m -> mapToDTO(m, conversacionPorMudanza))
                 .collect(Collectors.toList());
     }
 
@@ -720,7 +740,14 @@ public class MudanzaService {
         }
     }
 
+    // Un solo item: no hay riesgo de N+1, se resuelve con un findByMudanzaId directo.
     private MudanzaResponseDTO mapToDTO(Mudanza m) {
+        return mapToDTO(m, null);
+    }
+
+    // Batch: para mapear DTO de LISTAS de mudanzas sin una query por fila (N+1). Si
+    // conversacionPorMudanza es null (mapeo de un solo elemento), cae a una query directa.
+    private MudanzaResponseDTO mapToDTO(Mudanza m, Map<Long, Conversacion> conversacionPorMudanza) {
         MudanzaResponseDTO dto = new MudanzaResponseDTO();
         dto.setId(m.getId());
 
@@ -801,7 +828,46 @@ public class MudanzaService {
         dto.setCancelledAt(m.getCancelledAt());
         dto.setMotivoCancelacion(m.getMotivoCancelacion());
 
+        Conversacion conv = conversacionPorMudanza != null
+                ? conversacionPorMudanza.get(m.getId())
+                : conversacionRepository.findByMudanzaId(m.getId()).orElse(null);
+        if (conv != null) {
+            aplicarChat(dto, conv);
+        }
+
         return dto;
+    }
+
+    /**
+     * Setea conversacionId + chatModo en el DTO, resolviendo el modo vía ConversacionService.
+     * MINOR 1: resolverModo() lanza IllegalStateException si el estado del padre (trabajo o
+     * mudanza) no está contemplado en los sets ESCRITURA/LECTURA de ConversacionService (p.ej.
+     * alguien agrega un MudanzaEstado nuevo y se olvida de sumarlo ahí). El chat es una feature
+     * secundaria: eso NUNCA puede tirar abajo el armado del dashboard completo (que es lo que
+     * pasaba antes: la excepción se propagaba y los listados de mudanzas devolvían 400 enteros).
+     * Por eso degradamos acá, logueando el id de la conversación para poder investigarlo.
+     * Degradamos conversacionId Y chatModo juntos (no solo el modo): si dejáramos conversacionId
+     * seteado con chatModo null, el frontend (que solo muestra el chat cuando hay
+     * conversacionId) quedaría en un estado raro. Dejando los dos en null, el frontend
+     * simplemente no muestra el chat para esta mudanza.
+     */
+    private void aplicarChat(MudanzaResponseDTO dto, Conversacion conv) {
+        try {
+            ModoChat modo = conversacionService.resolverModo(conv);
+            dto.setConversacionId(conv.getId());
+            dto.setChatModo(modo);
+        } catch (IllegalStateException e) {
+            logger.warn("No se pudo resolver el modo de chat de la conversación {}: {}", conv.getId(), e.getMessage());
+        }
+    }
+
+    // Batch helper: una sola query para TODAS las conversaciones de la lista, en vez de un
+    // findByMudanzaId por fila (N+1 que degradaría el dashboard).
+    private Map<Long, Conversacion> conversacionesPorMudanza(List<Mudanza> mudanzas) {
+        List<Long> mudanzaIds = mudanzas.stream().map(Mudanza::getId).collect(Collectors.toList());
+        if (mudanzaIds.isEmpty()) return Map.of();
+        return conversacionRepository.findByMudanzaIdIn(mudanzaIds).stream()
+                .collect(Collectors.toMap(c -> c.getMudanza().getId(), c -> c, (a, b) -> a));
     }
 
     private MudanzaTierResponseDTO mapTierToDTO(MudanzaTier tier) {

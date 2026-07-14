@@ -8,6 +8,6 @@ export default defineConfig({
   test: {
     environment: "node",
     env: { VITE_API_URL: "http://test.local" },
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });

@@ -14,6 +14,8 @@ import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { useOficios } from "@/shared/hooks/useOficios";
+import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
+import { UnreadBadge } from "@/shared/components/chat/UnreadBadge";
 import { OnboardingTour } from "@/shared/components/OnboardingTour";
 import { ONBOARDING_KEYS, CLIENT_TOUR_STEPS } from "@/shared/lib/onboarding";
 
@@ -177,6 +179,17 @@ export function ClientDashboard() {
   const trabajosActivos = todosTrabajos.filter((t: any) =>
     ['PENDIENTE', 'EN_CURSO', 'PROPUESTO', 'EN_COLA'].includes(t.estado)
   );
+
+  // Badges de no leídos (#26): un único efecto junta los conversacionId de TODAS las
+  // tarjetas activas y pide los conteos en paralelo — ver useUnreadCounts. Pasar acá un
+  // array armado con .filter()/.map() en cada render es seguro: el hook deriva una clave
+  // estable del conjunto de ids y sólo vuelve a pedir cuando ese conjunto cambia de verdad.
+  const conversacionIdsActivos = [
+    ...presupuestosPendientes.map((t: any) => t.conversacionId),
+    ...trabajosActivos.map((t: any) => t.conversacionId),
+    ...mudanzasActivas.map((m: any) => m.conversacionId),
+  ].filter((id: number | null | undefined): id is number => id != null);
+  const noLeidosPorConversacion = useUnreadCounts(conversacionIdsActivos);
 
   // Historial completado: paginado vía "Cargar más" (#20-B). /cliente ya solo trae activos.
   const {
@@ -412,9 +425,14 @@ export function ClientDashboard() {
                             {trabajo.oficio.nombre} · ${Number(trabajo.montoPresupuesto ?? 0).toLocaleString('es-AR')}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white">
-                          Responder
-                        </span>
+                        <div className="shrink-0 flex flex-col items-end gap-1">
+                          <span className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white">
+                            Responder
+                          </span>
+                          {trabajo.conversacionId != null && (
+                            <UnreadBadge count={noLeidosPorConversacion[trabajo.conversacionId] ?? 0} />
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -458,9 +476,14 @@ export function ClientDashboard() {
                           </div>
                           {/* Badge + tiempo */}
                           <div className="shrink-0 flex flex-col items-end gap-1">
-                            <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
-                              {estadoBadge.label}
-                            </Badge>
+                            <div className="flex items-center">
+                              <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
+                                {estadoBadge.label}
+                              </Badge>
+                              {trabajo.conversacionId != null && (
+                                <UnreadBadge count={noLeidosPorConversacion[trabajo.conversacionId] ?? 0} />
+                              )}
+                            </div>
                             {trabajo.tiempoEstimadoMinutos && (
                               <span className={`flex items-center gap-1 text-xs ${tw.text.secondary}`}>
                                 <Clock className={`h-3 w-3 ${tw.text.faint}`} />
@@ -516,9 +539,14 @@ export function ClientDashboard() {
                             </p>
                           </div>
                           <div className="shrink-0 flex flex-col items-end gap-1">
-                            <Badge variant={badge.variant} showPulse={badge.pulse}>
-                              {badge.label}
-                            </Badge>
+                            <div className="flex items-center">
+                              <Badge variant={badge.variant} showPulse={badge.pulse}>
+                                {badge.label}
+                              </Badge>
+                              {m.conversacionId != null && (
+                                <UnreadBadge count={noLeidosPorConversacion[m.conversacionId] ?? 0} />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </Card>
