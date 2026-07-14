@@ -13,111 +13,18 @@ import { apiClient } from "@/shared/lib/apiClient";
 import toast from "react-hot-toast";
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/shared/constants/routes";
-import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
+import { TrabajoCard } from "@/shared/components/ui/TrabajoCard";
+import { Initials } from "@/shared/components/ui/Initials";
+import { EmptyState } from "@/shared/components/ui/EmptyState";
+import { SkeletonCard } from "@/shared/components/ui/SkeletonCard";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
 import { UnreadBadge } from "@/shared/components/chat/UnreadBadge";
 import {
-  Bell, MapPin, Clock, CheckCircle,
+  Bell, Clock, CheckCircle,
   Star, ClipboardList, ZapOff, Users, Truck, X, Calendar, ChevronDown,
 } from "lucide-react";
-
-// ── Skeletons ──
-function SkeletonCard() {
-  return (
-    <Card>
-      <div className="flex items-center gap-2 min-[375px]:gap-3">
-        <Skeleton className="h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 rounded-xl!" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-3.5 w-28" />
-          <Skeleton className="h-3 w-20" />
-        </div>
-        <div className="shrink-0 space-y-1.5 flex flex-col items-end">
-          <Skeleton className="h-6 w-20 rounded-full!" />
-          <Skeleton className="h-3 w-12" />
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// ── Avatar iniciales ──
-function Initials({ name, bg, color }: {
-  name: string; bg: string; color: string;
-}) {
-  const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl font-semibold text-xs min-[375px]:text-sm ${bg} ${color}`}>
-      {initials}
-    </div>
-  );
-}
-
-// ── Trabajo card ──
-// 3 columnas: icono | nombre+oficio | badge+tiempo (derecha)
-// Dirección en fila propia debajo, separada visualmente
-function TrabajoCard({
-  trabajo,
-  left,
-  badgeContent,
-  actionContent,
-  onClick,
-  unreadCount,
-}: {
-  trabajo: any;
-  left?: React.ReactNode;
-  badgeContent: React.ReactNode;   // badge (estado) arriba derecha
-  actionContent?: React.ReactNode; // botón acción — si existe reemplaza al tiempo
-  onClick?: () => void;
-  unreadCount?: number;            // mensajes sin leer de la conversación del trabajo
-}) {
-  return (
-    <Card hover={!!onClick} onClick={onClick}>
-      {/* Fila principal: icono | nombre+oficio | badge+tiempo */}
-      <div className="flex items-center gap-2 min-[375px]:gap-3">
-        {left}
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
-            {trabajo.clienteNombre}
-          </p>
-          <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
-            {trabajo.oficio.nombre}
-          </p>
-        </div>
-        {/* Derecha: badge arriba, tiempo abajo */}
-        <div className="shrink-0 flex flex-col items-end gap-1">
-          <div className="flex items-center">
-            {badgeContent}
-            <UnreadBadge count={unreadCount ?? 0} />
-          </div>
-          {!actionContent && trabajo.tiempoEstimadoMinutos && (
-            <span className={`flex items-center gap-1 text-xs ${tw.text.secondary}`}>
-              <Clock className={`h-3 w-3 ${tw.text.faint}`} />
-              {trabajo.tiempoEstimadoMinutos} min
-            </span>
-          )}
-          {actionContent}
-        </div>
-      </div>
-
-      {/* Dirección — fila propia debajo, separada */}
-      {trabajo.direccion && (
-        <div className={`mt-2.5 flex items-center gap-1.5 pt-2.5 border-t text-xs ${tw.text.faint} ${tw.dividerLight}`}>
-          <MapPin className="h-3 w-3 shrink-0" />
-          <span className="truncate">{trabajo.direccion}</span>
-          {actionContent && trabajo.tiempoEstimadoMinutos && (
-            <>
-              <span className="shrink-0">·</span>
-              <Clock className="h-3 w-3 shrink-0" />
-              <span className="shrink-0">{trabajo.tiempoEstimadoMinutos} min</span>
-            </>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
 
 export function ProviderDashboard() {
   const navigate = useNavigate();
@@ -384,7 +291,10 @@ export function ProviderDashboard() {
                     {trabajosPendientes.map((trabajo: any) => (
                       <TrabajoCard
                         key={trabajo.id}
-                        trabajo={trabajo}
+                        titulo={trabajo.clienteNombre}
+                        subtitulo={trabajo.oficio.nombre}
+                        direccion={trabajo.direccion}
+                        tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
                         onClick={() => navigate(ROUTES.PROVIDER.JOB(trabajo.id))}
                         left={<Initials name={trabajo.clienteNombre} bg={tw.iconBg.slate} color={tw.text.secondary} />}
                         badgeContent={
@@ -429,7 +339,10 @@ export function ProviderDashboard() {
                   {trabajosEnCola.map((trabajo: any, index: number) => (
                     <TrabajoCard
                       key={trabajo.id}
-                      trabajo={trabajo}
+                      titulo={trabajo.clienteNombre}
+                      subtitulo={trabajo.oficio.nombre}
+                      direccion={trabajo.direccion}
+                      tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
                       left={
                         <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
                           #{index + 1}
@@ -453,7 +366,10 @@ export function ProviderDashboard() {
                   <Badge variant="info" showPulse>En curso</Badge>
                 </div>
                 <TrabajoCard
-                  trabajo={trabajoActivo}
+                  titulo={trabajoActivo.clienteNombre}
+                  subtitulo={trabajoActivo.oficio.nombre}
+                  direccion={trabajoActivo.direccion}
+                  tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
                   onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
                   left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
                   badgeContent={""}
@@ -628,7 +544,10 @@ export function ProviderDashboard() {
                   {trabajosCompletados.map((trabajo: any) => (
                     <TrabajoCard
                       key={trabajo.id}
-                      trabajo={trabajo}
+                      titulo={trabajo.clienteNombre}
+                      subtitulo={trabajo.oficio.nombre}
+                      direccion={trabajo.direccion}
+                      tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
                       onClick={() => navigate(ROUTES.PROVIDER.COMPLETED_JOB(trabajo.id))}
                       left={<Initials name={trabajo.clienteNombre} bg={tw.iconBg.green} color="text-green-600 dark:text-green-400" />}
                       badgeContent={
@@ -777,19 +696,6 @@ export function ProviderDashboard() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function EmptyState({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
-  return (
-    <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed py-8 text-center
-      border-slate-200 dark:border-dark-border`}>
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${tw.iconBg.slate}`}>
-        <Icon className={`h-5 w-5 ${tw.text.faint}`} />
-      </div>
-      <p className={`text-sm font-medium ${tw.text.secondary}`}>{title}</p>
-      <p className={`text-xs ${tw.text.muted}`}>{desc}</p>
     </div>
   );
 }
