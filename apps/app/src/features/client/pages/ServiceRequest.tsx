@@ -144,7 +144,7 @@ export function ServiceRequest() {
 
   return (
     <div className={tw.pageBg}>
-      <div className={tw.container}>
+      <div className={tw.containerWide}>
         <div className="mx-auto max-w-5xl">
 
           {/* Header */}
