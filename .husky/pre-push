@@ -15,7 +15,9 @@ for file in $CHANGED_FILES; do
   esac
 done
 
-# Backend: compilar con Gradle si hubo cambios
+# Backend: compilar y correr los tests unitarios si hubo cambios.
+# Los de integración (Testcontainers) NO van acá: necesitan Docker levantado, y bloquear el
+# push de alguien que no lo tiene prendido sería peor que el problema. De esos se ocupa el CI.
 if [ "$RUN_BACKEND" = true ]; then
   echo "🔨 Cambios detectados en backend/"
   echo "🚀 Compilando backend..."
@@ -25,6 +27,14 @@ if [ "$RUN_BACKEND" = true ]; then
     exit 1
   fi
   echo "✅ Backend compila correctamente"
+
+  echo "🧪 Tests unitarios del backend..."
+  ./gradlew test --no-daemon -q
+  if [ $? -ne 0 ]; then
+    echo "❌ Tests del backend fallaron — push cancelado"
+    exit 1
+  fi
+  echo "✅ Tests del backend en verde"
   cd ..
 fi
 
@@ -57,3 +67,15 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Build exitoso"
+
+# El build (tsc -b + vite build) NO corre los tests: el CI del front se cayó dos veces por
+# tests rotos que este hook dejó pasar. Tardan ~3s, así que no hay excusa para no correrlos.
+if [ "$RUN_APP" = true ]; then
+  echo "🧪 Tests del front..."
+  pnpm --filter aliados-app test
+  if [ $? -ne 0 ]; then
+    echo "❌ Tests del front fallaron — push cancelado"
+    exit 1
+  fi
+  echo "✅ Tests del front en verde"
+fi
