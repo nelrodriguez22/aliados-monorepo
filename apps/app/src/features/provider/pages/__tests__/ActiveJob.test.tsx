@@ -6,6 +6,16 @@ import { ActiveJob } from "../ActiveJob";
 import { useTrabajo } from "@/shared/hooks/useTrabajo";
 import { useStore } from "@/shared/store/useStore";
 
+// El automock de useTrabajo carga el módulo real para inferir su forma, y con él viaja
+// apiClient → firebase.ts → getAuth(). En CI no hay VITE_FIREBASE_API_KEY: sin este mock,
+// el import tira auth/invalid-api-key y tumba la suite entera (mismo motivo que en
+// ChatPanel.test.tsx). Local pasa igual porque el .env tiene la key: engaña.
+vi.mock("@/shared/lib/firebase", () => ({
+  auth: { currentUser: { getIdToken: vi.fn().mockResolvedValue("token-falso") } },
+  getMessagingInstance: vi.fn().mockResolvedValue(null),
+  default: {},
+}));
+
 const navigate = vi.fn();
 vi.mock("react-router-dom", async (original) => ({
   ...(await original<typeof import("react-router-dom")>()),
