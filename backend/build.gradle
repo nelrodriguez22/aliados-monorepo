@@ -13,7 +13,16 @@ description = 'Demo project for Spring Boot'
 // exige un mínimo de 1.40 y rechaza la conexión con
 // "client version 1.32 is too old". Sin esto, NINGÚN test de integración puede levantar un
 // contenedor en una máquina con Docker moderno.
-ext['testcontainers.version'] = '1.21.3'
+//
+// 1.21.3 → 1.21.4: Docker Engine siguió endureciendo el chequeo de versión de API, y contra
+// Docker 29.6 el daemon pasó a responder HTTP 400 al /info. Testcontainers lo traduce a
+// "Could not find a valid Docker environment", que despista: el socket está bien, lo que no
+// se aceptan son clientes viejos. La 1.21.4 es la release que realinea la línea 1.21.x.
+//
+// Esto sólo se rompe LOCALMENTE contra Docker nuevo: los runners de GitHub traen uno más
+// viejo, así que el CI seguía en verde mientras la máquina de desarrollo no podía correr
+// un solo test de integración.
+ext['testcontainers.version'] = '1.21.4'
 
 java {
 	toolchain {
