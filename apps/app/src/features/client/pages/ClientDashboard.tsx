@@ -7,11 +7,13 @@ import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { Search, Bell, CheckCircle, Clock, ClipboardList, Truck, FileText, ChevronDown } from "lucide-react";
+import { Search, Bell, CheckCircle, ClipboardList, Truck, FileText, ChevronDown } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import { ErrorState } from "@/shared/components/ui/ErrorState";
+import { TrabajoCard } from "@/shared/components/ui/TrabajoCard";
+import { EmptyState } from "@/shared/components/ui/EmptyState";
 import { useWebSocketContext } from "@/shared/providers/WebSocketProvider";
 import { useOficios } from "@/shared/hooks/useOficios";
 import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
@@ -68,6 +70,21 @@ const ICON_BG_CLASSES = [
   "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
   "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
 ];
+
+// El avatar de la card del cliente: donde el proveedor pone las iniciales de la persona, el
+// cliente pone el ícono del oficio. Mismo tamaño y forma que <Initials/>, para que las dos
+// cards se lean igual aunque muestren cosas distintas.
+function IconoOficio({ oficioId }: { oficioId: number | string }) {
+  return (
+    <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+      {OFICIO_ICONS[oficioId] ?? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+        </svg>
+      )}
+    </div>
+  );
+}
 
 // ── Skeletons ──
 function SkeletonServicios() {
@@ -453,65 +470,39 @@ export function ClientDashboard() {
                   {trabajosActivos.map((trabajo: any) => {
                     const estadoBadge = getEstadoBadge(trabajo.estado);
                     return (
-                      <Card key={trabajo.id} hover onClick={() =>
-                        navigate(trabajo.estado === 'PROPUESTO'
-                          ? ROUTES.CLIENT.PROPOSAL(trabajo.id)
-                          : ROUTES.CLIENT.TRACKING(trabajo.id))
-                      }>
-                        <div className="flex items-center gap-2 min-[375px]:gap-3">
-                          {/* Icono */}
-                          <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
-                            {OFICIO_ICONS[trabajo.oficio.id] ?? (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-                              </svg>
-                            )}
-                          </div>
-                          {/* Nombre + oficio */}
-                          <div className="flex-1 min-w-0">
-                            <p className={`font-semibold text-sm truncate ${tw.text.primary}`}>
-                              {trabajo.proveedorNombre || 'Buscando proveedor...'}
-                            </p>
-                            <p className={`mt-0.5 text-xs ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
-                          </div>
-                          {/* Badge + tiempo */}
-                          <div className="shrink-0 flex flex-col items-end gap-1">
-                            <div className="flex items-center">
-                              <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
-                                {estadoBadge.label}
-                              </Badge>
-                              {trabajo.conversacionId != null && (
-                                <UnreadBadge count={noLeidosPorConversacion[trabajo.conversacionId] ?? 0} />
-                              )}
-                            </div>
-                            {trabajo.tiempoEstimadoMinutos && (
-                              <span className={`flex items-center gap-1 text-xs ${tw.text.secondary}`}>
-                                <Clock className={`h-3 w-3 ${tw.text.faint}`} />
-                                {trabajo.tiempoEstimadoMinutos} min
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
+                      <TrabajoCard
+                        key={trabajo.id}
+                        // El cliente ve al PROVEEDOR; el proveedor, al cliente. Mismo esqueleto,
+                        // distinto protagonista: por eso TrabajoCard recibe `titulo` y no `trabajo`.
+                        titulo={trabajo.proveedorNombre || 'Buscando proveedor...'}
+                        subtitulo={trabajo.oficio.nombre}
+                        tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
+                        left={<IconoOficio oficioId={trabajo.oficio.id} />}
+                        badgeContent={
+                          <Badge variant={estadoBadge.variant} showPulse={estadoBadge.pulse}>
+                            {estadoBadge.label}
+                          </Badge>
+                        }
+                        unreadCount={
+                          trabajo.conversacionId != null
+                            ? noLeidosPorConversacion[trabajo.conversacionId] ?? 0
+                            : 0
+                        }
+                        onClick={() =>
+                          navigate(trabajo.estado === 'PROPUESTO'
+                            ? ROUTES.CLIENT.PROPOSAL(trabajo.id)
+                            : ROUTES.CLIENT.TRACKING(trabajo.id))
+                        }
+                      />
                     );
                   })}
                 </div>
               ) : (
-                <Card>
-                  <div className="flex flex-col items-center gap-3 py-8 text-center">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
-                      <Search className={`h-5 w-5 ${tw.text.faint}`} />
-                    </div>
-                    <div>
-                      <h3 className={`mb-1 text-sm font-semibold ${tw.text.primary}`}>
-                        No tenés trabajos activos
-                      </h3>
-                      <p className={`text-xs ${tw.text.secondary}`}>
-                        Solicitá un servicio para comenzar
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                <EmptyState
+                  icon={Search}
+                  title="No tenés trabajos activos"
+                  desc="Solicitá un servicio para comenzar"
+                />
               )}
             </div>
 
@@ -578,38 +569,37 @@ export function ClientDashboard() {
               ) : trabajosCompletados.length > 0 ? (
                 <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {trabajosCompletados.map((trabajo: any) => (
-                    <Card key={trabajo.id} hover onClick={() => navigate(ROUTES.CLIENT.COMPLETED(trabajo.id))}>
-                      <div className="flex items-center gap-2 min-[375px]:gap-3">
-                        {/* Icono */}
+                    <TrabajoCard
+                      key={trabajo.id}
+                      titulo={trabajo.proveedorNombre}
+                      subtitulo={trabajo.oficio.nombre}
+                      left={
                         <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.green} text-green-600 dark:text-green-400`}>
                           <CheckCircle className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
                         </div>
-                        {/* Nombre + oficio + estrellas */}
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`mb-0.5 font-semibold text-sm truncate ${tw.text.primary}`}>
-                            {trabajo.proveedorNombre}
-                          </h3>
-                          <p className={`text-xs truncate ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
-                          {trabajo.calificacionEstrellas && (
-                            <div className="mt-1 flex items-center gap-0.5">
+                      }
+                      // Las estrellas van a la derecha, junto al badge, igual que en el historial
+                      // del proveedor. Antes colgaban debajo del oficio: la misma información en
+                      // dos lugares distintos según de qué lado de la app estuvieras parado.
+                      badgeContent={
+                        <div className="flex flex-col items-end gap-1">
+                          {trabajo.calificado
+                            ? <Badge variant="success">Completado</Badge>
+                            : <Badge variant="neutral">Sin calificar</Badge>}
+                          {trabajo.calificacionEstrellas ? (
+                            <div className="flex gap-0.5">
                               {[1,2,3,4,5].map((s) => (
                                 <span key={s} className={`text-xs ${s <= trabajo.calificacionEstrellas ? 'text-amber-400' : 'text-slate-200 dark:text-dark-border'}`}>★</span>
                               ))}
                             </div>
-                          )}
-                        </div>
-                        {/* Badge + fecha */}
-                        <div className="shrink-0 flex flex-col items-end gap-1">
-                          {trabajo.calificado
-                            ? <Badge variant="success">Completado</Badge>
-                            : <Badge variant="neutral">Sin calificar</Badge>
-                          }
+                          ) : null}
                           <span className={`text-xs ${tw.text.secondary}`}>
                             {new Date(trabajo.completedAt).toLocaleDateString('es-AR')}
                           </span>
                         </div>
-                      </div>
-                    </Card>
+                      }
+                      onClick={() => navigate(ROUTES.CLIENT.COMPLETED(trabajo.id))}
+                    />
                   ))}
                   {hasNextPage && (
                     <div className="flex items-center gap-3 pt-2">
@@ -629,21 +619,11 @@ export function ClientDashboard() {
                   )}
                 </div>
               ) : (
-                <Card>
-                  <div className="flex flex-col items-center gap-3 py-8 text-center">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tw.iconBg.slate}`}>
-                      <ClipboardList className={`h-5 w-5 ${tw.text.faint}`} />
-                    </div>
-                    <div>
-                      <h3 className={`mb-1 text-sm font-semibold ${tw.text.primary}`}>
-                        Aún no tenés trabajos completados
-                      </h3>
-                      <p className={`text-xs ${tw.text.secondary}`}>
-                        Tus servicios finalizados aparecerán aquí
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="Aún no tenés trabajos completados"
+                  desc="Tus servicios finalizados aparecerán aquí"
+                />
               )}
             </div>
           </>
