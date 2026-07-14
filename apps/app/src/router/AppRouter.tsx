@@ -128,7 +128,6 @@ export function AppRouter() {
                 <Route path="resenas"            element={<ProviderReviews />} />
                 <Route path="credencial"         element={<ProviderCredencial />} />
                 <Route path="mudanza/:id"        element={<ProviderMudanzaDetail />} />
-                <Route path="mudanzas"            element={<ProviderMudanzaDetail />} />
               </Route>
             </Route>
 
