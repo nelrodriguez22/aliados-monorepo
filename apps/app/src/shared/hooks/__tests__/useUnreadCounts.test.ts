@@ -4,6 +4,14 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useUnreadCounts } from "../useUnreadCounts";
 import { ChatService } from "@/shared/services/ChatService";
 
+// Firebase se inicializa al importar la cadena de ChatService. En CI no hay VITE_FIREBASE_API_KEY,
+// así que sin este mock el import real tira `auth/invalid-api-key` y tumba la suite entera.
+vi.mock("@/shared/lib/firebase", () => ({
+  auth: { currentUser: { getIdToken: vi.fn().mockResolvedValue("token-falso") } },
+  getMessagingInstance: vi.fn().mockResolvedValue(null),
+  default: {},
+}));
+
 vi.mock("@/shared/services/ChatService");
 
 // Mismo patrón que useChat.test.ts: useUnreadCounts consume subscribe() del
