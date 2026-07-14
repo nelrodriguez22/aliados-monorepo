@@ -14,6 +14,10 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
   const [cargando, setCargando] = useState(false);
   const [hayMas, setHayMas] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Se incrementa desde `reintentarCarga` para forzar que el efecto de historial (que sólo
+  // depende de `conversacionId`) vuelva a correr sin cambiar de conversación. Sin esto no hay
+  // forma de reintentar un fetch fallido salvo cerrar y reabrir el chat.
+  const [intentoCarga, setIntentoCarga] = useState(0);
   const paginaRef = useRef(0);
   // Espejo de `mensajes` accesible sin volver inestable la identidad de los callbacks que lo
   // necesitan (ver `reintentar`): un useCallback que dependiera de `mensajes` cambiaría de
@@ -39,6 +43,7 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
 
     let cancelado = false;
     setCargando(true);
+    setError(null);
     // Limpiar acá (y no sólo cuando resuelve el fetch) evita que, al saltar de la
     // conversación A a la B, se vean las burbujas de A bajo el header de B mientras carga.
     setMensajes([]);
@@ -54,7 +59,14 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
       .finally(() => { if (!cancelado) setCargando(false); });
 
     return () => { cancelado = true; };
-  }, [conversacionId]);
+  }, [conversacionId, intentoCarga]);
+
+  // Reintentar el historial inicial tras un fetch fallido. NO alcanza con "el usuario cierra y
+  // reabre el chat": en modo LECTURA (disputa) la pantalla que existe justamente para mostrar
+  // evidencia no puede depender de eso para volver a intentar.
+  const reintentarCarga = useCallback(() => {
+    setIntentoCarga((n) => n + 1);
+  }, []);
 
   // Tiempo real. El backend publica a /user/{firebaseUid}/queue/chat; el cliente STOMP resuelve
   // el prefijo /user, así que acá el destino es el relativo.
@@ -192,5 +204,6 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
     enviarTexto,
     enviarImagen,
     reintentar,
+    reintentarCarga,
   };
 }

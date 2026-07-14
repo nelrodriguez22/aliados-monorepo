@@ -24,6 +24,7 @@ function mockUseChat(overrides: Partial<ReturnType<typeof useChat>> = {}) {
     enviarTexto: vi.fn(),
     enviarImagen: vi.fn(),
     reintentar: vi.fn(),
+    reintentarCarga: vi.fn(),
     ...overrides,
   });
 }
@@ -133,6 +134,61 @@ describe("ChatPanel", () => {
 
     expect(screen.getByText("genial, te espero")).not.toBeNull();
     expect(screen.getByRole("button", { name: /reintentar/i })).not.toBeNull();
+  });
+
+  // IMPORTANTE: antes de este fix, useChat exponía `error` pero ChatPanel nunca lo
+  // consumía, así que un fetch fallido del historial (500, timeout, red caída) se veía
+  // IDÉNTICO a una conversación vacía: "No hubo mensajes." / "Escribí el primero." — en
+  // modo LECTURA eso es la pantalla de evidencia de una disputa afirmando que no hay
+  // evidencia. El estado de error tiene que ser explícito y distinto del vacío.
+  it("si falla el fetch del historial, muestra un error explícito (no 'No hubo mensajes') en modo LECTURA", () => {
+    mockUseChat({ mensajes: [], error: "No pudimos cargar los mensajes" });
+
+    render(
+      <ChatPanel
+        conversacionId={10}
+        modo="LECTURA"
+        usuarioId={1}
+        titulo="Chat"
+      />
+    );
+
+    expect(screen.queryByText("No hubo mensajes.")).toBeNull();
+    expect(screen.getByText(/no pudimos cargar la conversación/i)).not.toBeNull();
+    expect(screen.getByRole("button", { name: /reintentar/i })).not.toBeNull();
+  });
+
+  it("si falla el fetch del historial, tampoco invita a 'escribir el primero' en modo ESCRITURA", () => {
+    mockUseChat({ mensajes: [], error: "No pudimos cargar los mensajes" });
+
+    render(
+      <ChatPanel
+        conversacionId={10}
+        modo="ESCRITURA"
+        usuarioId={1}
+        titulo="Chat"
+      />
+    );
+
+    expect(screen.queryByText(/todavía no hay mensajes/i)).toBeNull();
+    expect(screen.getByText(/no pudimos cargar la conversación/i)).not.toBeNull();
+  });
+
+  it("el botón de reintentar del historial llama a reintentarCarga", () => {
+    const reintentarCarga = vi.fn();
+    mockUseChat({ mensajes: [], error: "No pudimos cargar los mensajes", reintentarCarga });
+
+    render(
+      <ChatPanel
+        conversacionId={10}
+        modo="LECTURA"
+        usuarioId={1}
+        titulo="Chat"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /reintentar/i }));
+    expect(reintentarCarga).toHaveBeenCalledTimes(1);
   });
 
   it("modo LECTURA no muestra input ni botón de enviar, pero los mensajes sí se ven", () => {

@@ -283,6 +283,39 @@ describe('useChat', () => {
     });
   });
 
+  // IMPORTANTE: ChatPanel no consumía este `error` (ver ChatPanel.test.tsx). Acá se cubre el
+  // lado del hook: que el fetch fallido efectivamente se refleje en el estado, y que exista
+  // una forma de reintentarlo sin depender de desmontar/remontar el componente.
+  it('si el fetch del historial falla, expone error y termina de cargar', async () => {
+    vi.mocked(ChatService.listarMensajes).mockRejectedValueOnce(new Error('500'));
+
+    const { result } = renderHook(() => useChat(10, 1));
+
+    await waitFor(() => expect(result.current.cargando).toBe(false));
+    expect(result.current.error).toBe('No pudimos cargar los mensajes');
+    expect(result.current.mensajes).toEqual([]);
+  });
+
+  it('reintentarCarga vuelve a pedir el historial y limpia el error si el segundo intento sale bien', async () => {
+    vi.mocked(ChatService.listarMensajes).mockRejectedValueOnce(new Error('500'));
+
+    const { result } = renderHook(() => useChat(10, 1));
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+
+    vi.mocked(ChatService.listarMensajes).mockResolvedValueOnce({
+      content: [{ ...mensajeServidor, id: 1 }],
+      number: 0, totalPages: 1, last: true,
+    });
+
+    await act(async () => { result.current.reintentarCarga(); });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+      expect(result.current.mensajes).toHaveLength(1);
+    });
+    expect(ChatService.listarMensajes).toHaveBeenCalledTimes(2);
+  });
+
   it('conversacionId null no rompe ni llama a la API', () => {
     const { result } = renderHook(() => useChat(null, 1));
     expect(result.current.mensajes).toEqual([]);

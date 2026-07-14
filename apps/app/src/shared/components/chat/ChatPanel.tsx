@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, ImagePlus, Loader2 } from "lucide-react";
+import { Send, ImagePlus, Loader2, AlertTriangle } from "lucide-react";
 import { Card } from "@/shared/components/ui/Card";
 import { tw } from "@/shared/styles/design-system";
 import { useChat } from "@/shared/hooks/useChat";
@@ -16,8 +16,17 @@ interface Props {
 }
 
 export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
-  const { mensajes, cargando, hayMas, cargarMas, enviarTexto, enviarImagen, reintentar } =
-    useChat(conversacionId, usuarioId);
+  const {
+    mensajes,
+    cargando,
+    hayMas,
+    error,
+    cargarMas,
+    enviarTexto,
+    enviarImagen,
+    reintentar,
+    reintentarCarga,
+  } = useChat(conversacionId, usuarioId);
 
   const [borrador, setBorrador] = useState("");
   const [subiendo, setSubiendo] = useState(false);
@@ -87,7 +96,26 @@ export function ChatPanel({ conversacionId, modo, usuarioId, titulo }: Props) {
           </div>
         )}
 
-        {!cargando && mensajes.length === 0 && (
+        {/* Error del historial ANTES que el vacío: un fetch fallido no es lo mismo que una
+            conversación sin mensajes. En modo LECTURA (chat de un trabajo cerrado, revisado
+            durante una disputa) confundirlos hace que la pantalla que existe para mostrar
+            evidencia afirme positivamente que no hay evidencia. */}
+        {!cargando && error && (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <p className={`text-xs ${tw.text.muted}`}>
+              No pudimos cargar la conversación. Puede que falte algún mensaje.
+            </p>
+            <button
+              onClick={reintentarCarga}
+              className="text-xs font-medium text-brand-600 hover:underline dark:text-dark-brand"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {!cargando && !error && mensajes.length === 0 && (
           <p className={`py-8 text-center text-xs ${tw.text.muted}`}>
             {soloLectura ? "No hubo mensajes." : "Todavía no hay mensajes. Escribí el primero."}
           </p>
