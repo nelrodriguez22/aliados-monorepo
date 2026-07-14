@@ -166,7 +166,7 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
   const enviarTexto = useCallback(
     (contenido: string, claveLocalExistente?: string) =>
       enviarOptimista(
-        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: usuarioId, emisorNombre: "" },
+        { tipo: "TEXTO", contenido, imagenUrl: null, emisorId: usuarioId, emisorNombre: "", emisorFotoPerfil: null },
         () => ChatService.enviarTexto(conversacionId!, contenido),
         claveLocalExistente
       ),
@@ -176,7 +176,7 @@ export function useChat(conversacionId: number | null, usuarioId: number) {
   const enviarImagen = useCallback(
     (imagenUrl: string, claveLocalExistente?: string) =>
       enviarOptimista(
-        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: usuarioId, emisorNombre: "" },
+        { tipo: "IMAGEN", contenido: null, imagenUrl, emisorId: usuarioId, emisorNombre: "", emisorFotoPerfil: null },
         () => ChatService.enviarImagen(conversacionId!, imagenUrl),
         claveLocalExistente
       ),

@@ -282,6 +282,7 @@ public class ChatService {
         dto.setConversacionId(m.getConversacion().getId());
         dto.setEmisorId(m.getEmisor().getId());
         dto.setEmisorNombre(m.getEmisor().getNombre());
+        dto.setEmisorFotoPerfil(m.getEmisor().getFotoPerfil());
         dto.setTipo(m.getTipo());
         dto.setContenido(m.getContenido());
         dto.setImagenUrl(m.getImagenUrl());

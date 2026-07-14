@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render as renderRTL, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { ChatPanel } from "../ChatPanel";
 import { useChat } from "@/shared/hooks/useChat";
 import type { MensajeUI } from "@/shared/hooks/useChat";
@@ -22,6 +24,10 @@ vi.mock("@/shared/lib/uploadToCloudinary");
 const useChatMock = vi.mocked(useChat);
 const uploadToCloudinaryMock = vi.mocked(uploadToCloudinary);
 
+// El aviso de conducta del chat linkea a los Términos con <Link>, que sin un Router arriba
+// tira "Cannot destructure property 'basename'". Todos los tests montan por acá.
+const render = (ui: ReactElement) => renderRTL(<MemoryRouter>{ui}</MemoryRouter>);
+
 function mockUseChat(overrides: Partial<ReturnType<typeof useChat>> = {}) {
   useChatMock.mockReturnValue({
     mensajes: [],
@@ -42,6 +48,7 @@ const mensajeAjeno: MensajeUI = {
   conversacionId: 10,
   emisorId: 2,
   emisorNombre: "Beto",
+  emisorFotoPerfil: null,
   tipo: "TEXTO",
   contenido: "hola, ya salgo",
   imagenUrl: null,
@@ -215,7 +222,7 @@ describe("ChatPanel", () => {
     expect(screen.queryByLabelText("Enviar mensaje")).toBeNull();
     expect(screen.getByText("hola, ya salgo")).not.toBeNull();
     expect(screen.getByText("genial, te espero")).not.toBeNull();
-    expect(screen.getByText(/se cerró/i)).not.toBeNull();
+    expect(screen.getByText(/no podés enviar ni recibir mensajes/i)).not.toBeNull();
   });
 
   it("distingue mensajes propios de ajenos por emisorId vs usuarioId", () => {
@@ -286,5 +293,73 @@ describe("ChatPanel", () => {
     expect(enviarImagen).not.toHaveBeenCalled();
     // El estado de "subiendo" se limpió: el input vuelve a estar habilitado (se puede reintentar).
     expect(input.disabled).toBe(false);
+  });
+
+  it("muestra el aviso de conducta con el chat abierto, y no cuando ya está cerrado", () => {
+    mockUseChat({ mensajes: [mensajeAjeno] });
+
+    const { unmount } = render(
+      <ChatPanel conversacionId={10} modo="ESCRITURA" usuarioId={1} titulo="Chat" />
+    );
+    expect(screen.getByText(/contenido ilegal, ofensivo o no relevante/i)).not.toBeNull();
+    // El aviso deja leer el contrato que amenaza con hacer cumplir.
+    expect(screen.getByRole("link", { name: /términos y condiciones/i })).not.toBeNull();
+    unmount();
+
+    // Cerrado no se puede enviar nada: advertir sobre lo que enviás sería ruido.
+    mockUseChat({ mensajes: [mensajeAjeno] });
+    render(<ChatPanel conversacionId={10} modo="LECTURA" usuarioId={1} titulo="Chat" />);
+    expect(screen.queryByText(/contenido ilegal, ofensivo o no relevante/i)).toBeNull();
+  });
+
+  it("cada mensaje muestra su hora", () => {
+    mockUseChat({ mensajes: [mensajeAjeno, mensajePropio] });
+
+    render(<ChatPanel conversacionId={10} modo="ESCRITURA" usuarioId={1} titulo="Chat" />);
+
+    // La hora exacta depende del huso del runner (CI corre en UTC, acá es Buenos Aires),
+    // así que se afirma el formato y la cantidad, no un valor puntual.
+    expect(screen.getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(2);
+  });
+
+  it("separa los mensajes por día: un encabezado por jornada, no uno por mensaje", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));
+
+    const lunes12a: MensajeUI = { ...mensajeAjeno, id: 1, creadoAt: "2026-07-12T12:00:00" };
+    const lunes12b: MensajeUI = { ...mensajeAjeno, id: 2, creadoAt: "2026-07-12T15:30:00" };
+    const martes13: MensajeUI = { ...mensajeAjeno, id: 3, creadoAt: "2026-07-13T09:00:00" };
+    mockUseChat({ mensajes: [lunes12a, lunes12b, martes13] });
+
+    render(<ChatPanel conversacionId={10} modo="ESCRITURA" usuarioId={1} titulo="Chat" />);
+
+    // Dos mensajes del 12 comparten un solo encabezado; el del 13 abre el suyo.
+    expect(screen.getAllByText("12 de julio")).toHaveLength(1);
+    expect(screen.getAllByText("13 de julio")).toHaveLength(1);
+
+    vi.useRealTimers();
+  });
+
+  it("el avatar acompaña sólo a los mensajes del otro, y cae a las iniciales sin foto", () => {
+    const conFoto: MensajeUI = {
+      ...mensajeAjeno,
+      emisorNombre: "Beto Alonso",
+      emisorFotoPerfil: "https://res.cloudinary.com/demo/beto.jpg",
+    };
+    mockUseChat({ mensajes: [conFoto, mensajePropio] });
+
+    const { container, unmount } = render(
+      <ChatPanel conversacionId={10} modo="ESCRITURA" usuarioId={1} titulo="Chat" />
+    );
+
+    // Un solo avatar: el del ajeno. El propio (emisorId === usuarioId) no lleva.
+    const avatares = container.querySelectorAll('img[src="https://res.cloudinary.com/demo/beto.jpg"]');
+    expect(avatares).toHaveLength(1);
+    unmount();
+
+    // Sin foto de perfil, las iniciales del emisor hacen de avatar.
+    mockUseChat({ mensajes: [{ ...mensajeAjeno, emisorNombre: "Beto Alonso" }] });
+    render(<ChatPanel conversacionId={10} modo="ESCRITURA" usuarioId={1} titulo="Chat" />);
+    expect(screen.getByText("BA")).not.toBeNull();
   });
 });
