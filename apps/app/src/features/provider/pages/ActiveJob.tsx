@@ -53,6 +53,11 @@ export function ActiveJob() {
     catch { fotos = Array.isArray(trabajo.fotos) ? trabajo.fotos : [trabajo.fotos]; }
   }
 
+  // Misma regla que el backend (PATCH /presupuestar rechaza lo que no esté EN_CURSO) y que
+  // PresupuestoTrabajo. Acá se aplica ANTES: si el presupuesto ya salió, el botón no lleva a
+  // un formulario que sólo va a rebotar con un toast.
+  const puedePresupuestar = trabajo.estado === "EN_CURSO";
+
   return (
     <div className={tw.pageBg}>
       <div className={tw.containerWide}>
@@ -69,11 +74,15 @@ export function ActiveJob() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <div className="flex flex-wrap items-baseline gap-2">
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Trabajo en curso</h1>
+              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>
+                {puedePresupuestar ? "Trabajo en curso" : "Presupuesto enviado"}
+              </h1>
               <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
             </div>
             <div className="mt-1.5">
-              <Badge variant="info" showPulse>En curso</Badge>
+              {puedePresupuestar
+                ? <Badge variant="info" showPulse>En curso</Badge>
+                : <Badge variant="success">Esperando al cliente</Badge>}
             </div>
           </div>
           <Button variant="outline" onClick={() => navigate(ROUTES.PROVIDER.DASHBOARD)}>← Volver</Button>
@@ -208,15 +217,34 @@ export function ActiveJob() {
 
             {/* Presupuesto */}
             <Card>
-              <p className={`text-xs mb-3 ${tw.text.secondary}`}>
-                Cuando termines de revisar, enviá el presupuesto al cliente.
-              </p>
-              <Button
-                onClick={() => navigate(ROUTES.PROVIDER.PRESUPUESTO(id!))}
-                className="w-full"
-              >
-                Enviar presupuesto
-              </Button>
+              {puedePresupuestar ? (
+                <>
+                  <p className={`text-xs mb-3 ${tw.text.secondary}`}>
+                    Cuando termines de revisar, enviá el presupuesto al cliente.
+                  </p>
+                  <Button
+                    onClick={() => navigate(ROUTES.PROVIDER.PRESUPUESTO(id!))}
+                    className="w-full"
+                  >
+                    Enviar presupuesto
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className={`text-xs ${tw.text.muted}`}>Presupuesto enviado</p>
+                  {trabajo.montoPresupuesto != null && (
+                    <p className={`mt-0.5 text-2xl font-bold ${tw.text.primary}`}>
+                      ${Number(trabajo.montoPresupuesto).toLocaleString("es-AR")}
+                    </p>
+                  )}
+                  <p className={`mt-2 mb-3 text-xs ${tw.text.secondary}`}>
+                    Esperando la respuesta del cliente.
+                  </p>
+                  <Button disabled className="w-full">
+                    Presupuesto enviado
+                  </Button>
+                </>
+              )}
             </Card>
 
           </div>
