@@ -14,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -141,6 +142,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "error", "Bad Request",
                 "message", "El cuerpo de la petición no es válido",
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    // Un {id} no numérico en la URL (/api/mudanzas/undefined, o alguien escribiendo a mano
+    // /api/trabajos/pepe) es entrada inválida del CLIENTE, no un bug del servidor.
+    //
+    // MethodArgumentTypeMismatchException extiende RuntimeException, así que sin este handler
+    // cae en handleRuntimeException, y como no es la clase exacta RuntimeException, esa
+    // heurística la trata como bug y la manda a Sentry: cualquiera puede generar alertas
+    // tipeando una URL. Encima devolvía e.getMessage() crudo, que filtra internals ("Failed to
+    // convert value of type 'java.lang.String' to required type 'java.lang.Long'") — el mismo
+    // leak que ya se había cortado en handleMessageNotReadable para el body, sólo que los path
+    // params tenían el mismo agujero.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Bad Request",
+                "message", "El parámetro '" + e.getName() + "' no es válido",
                 "timestamp", LocalDateTime.now().toString()
         ));
     }

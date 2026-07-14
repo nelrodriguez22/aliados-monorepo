@@ -38,7 +38,6 @@ export const ROUTES = {
     COMPLETED_JOB: (jobId: string | number = ':jobId') => `/proveedor/completado/${jobId}`,
     REVIEWS: '/proveedor/resenas',
     MUDANZA_DETAIL: (id: string | number = ':id') => `/proveedor/mudanza/${id}`,
-    MUDANZA_PENDIENTES: '/proveedor/mudanzas',
     NOTIFICATIONS: '/proveedor/notificaciones',
     PROFILE: '/proveedor/perfil',
     SETTINGS: '/proveedor/configuracion',
