@@ -6,6 +6,14 @@ import { useChat } from "@/shared/hooks/useChat";
 import type { MensajeUI } from "@/shared/hooks/useChat";
 import { uploadToCloudinary } from "@/shared/lib/uploadToCloudinary";
 
+// Firebase se inicializa al importar la cadena de ChatPanel. En CI no hay VITE_FIREBASE_API_KEY,
+// así que sin este mock el import real tira `auth/invalid-api-key` y tumba la suite entera.
+vi.mock("@/shared/lib/firebase", () => ({
+  auth: { currentUser: { getIdToken: vi.fn().mockResolvedValue("token-falso") } },
+  getMessagingInstance: vi.fn().mockResolvedValue(null),
+  default: {},
+}));
+
 vi.mock("@/shared/hooks/useChat");
 vi.mock("@/shared/lib/uploadToCloudinary");
 

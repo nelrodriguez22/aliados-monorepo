@@ -61,7 +61,11 @@ import static org.mockito.Mockito.when;
  * suite unitaria por defecto (ver {@code SchemaMigrationIT} para el mismo patrón).
  */
 @Tag("integration")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+// webEnvironment = MOCK (default), NO NONE: SecurityConfig hace `.cors(cors -> cors.configure(http))`,
+// que necesita el CorsConfigurationSource que Spring MVC arma desde el WebMvcConfigurer de CorsConfig.
+// Con NONE no hay contexto MVC → ese bean no existe → NoSuchBeanDefinitionException al arrancar.
+// El test llama a ChatService directo (no hace requests HTTP), así que el contexto web mock alcanza.
+@SpringBootTest
 @Testcontainers
 @TestPropertySource(properties = {
         "spring.flyway.enabled=true",
