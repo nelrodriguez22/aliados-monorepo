@@ -134,6 +134,25 @@ class ChatControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // La columna mensaje.imagen_url es VARCHAR(500): sin este @Size, una URL más larga no
+    // fallaba acá (400 limpio de Bean Validation) sino recién en el INSERT
+    // (DataIntegrityViolationException -> 400 con ruido en Sentry). Este test corta ANTES de
+    // llegar a ChatService (por eso no se stubea chatService.enviarMensaje: si el validador
+    // no cortara, el mock devolvería null y el test fallaría igual, pero por NPE en vez de
+    // por el motivo real).
+    @Test
+    void enviar_imagenUrlMasDe500Caracteres_da400PorValidacion() throws Exception {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl("https://res.cloudinary.com/demo/image/upload/" + "a".repeat(500) + ".jpg");
+
+        mockMvc.perform(post("/api/conversaciones/10/mensajes")
+                        .principal(authentication)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void marcarLeido_devuelve204() throws Exception {
         MarcarLeidoDTO dto = new MarcarLeidoDTO();

@@ -7,6 +7,7 @@ import com.aliados.backend.event.MensajeCreatedEvent;
 import com.aliados.backend.exception.ChatCerradoException;
 import com.aliados.backend.exception.NotFoundException;
 import com.aliados.backend.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,11 @@ public class ChatService {
     private final PresenciaService presenciaService;
     private final PushThrottle pushThrottle;
     private final NotificacionService notificacionService;
+    // Prefijo completo (host + cloud name + "/"), no un fragmento: un chequeo con contains()
+    // o un startsWith() sin la barra final admitiría hosts como
+    // "https://res.cloudinary.com.evil.tld/..." o carpetas ajenas dentro del mismo cloud.
+    // Ver validarContenido().
+    private final String prefijoImagenPermitido;
 
     public ChatService(ConversacionRepository conversacionRepository,
                        MensajeRepository mensajeRepository,
@@ -41,7 +47,8 @@ public class ChatService {
                        ApplicationEventPublisher eventPublisher,
                        PresenciaService presenciaService,
                        PushThrottle pushThrottle,
-                       NotificacionService notificacionService) {
+                       NotificacionService notificacionService,
+                       @Value("${cloudinary.cloud-name}") String cloudinaryCloudName) {
         this.conversacionRepository = conversacionRepository;
         this.mensajeRepository = mensajeRepository;
         this.lecturaRepository = lecturaRepository;
@@ -52,6 +59,7 @@ public class ChatService {
         this.presenciaService = presenciaService;
         this.pushThrottle = pushThrottle;
         this.notificacionService = notificacionService;
+        this.prefijoImagenPermitido = "https://res.cloudinary.com/" + cloudinaryCloudName + "/";
     }
 
     @Transactional
@@ -75,8 +83,18 @@ public class ChatService {
         mensaje.setConversacion(conversacion);
         mensaje.setEmisor(emisor);
         mensaje.setTipo(dto.getTipo());
-        mensaje.setContenido(dto.getContenido());
-        mensaje.setImagenUrl(dto.getImagenUrl());
+        // El campo que no corresponde al tipo se descarta acá, no sólo se ignora: si un TEXTO
+        // trajera imagenUrl (o una IMAGEN trajera contenido) y lo persistiéramos igual, quedaría
+        // guardado un dato que hoy nadie muestra — pero que el día que la UI agregue, por
+        // ejemplo, un caption bajo la imagen, sería munición gratis para el mismo ataque que
+        // cierra la validación de abajo (una URL ajena colándose en un campo que se renderiza).
+        if (dto.getTipo() == TipoMensaje.TEXTO) {
+            mensaje.setContenido(dto.getContenido());
+            mensaje.setImagenUrl(null);
+        } else {
+            mensaje.setContenido(null);
+            mensaje.setImagenUrl(dto.getImagenUrl());
+        }
         // MARCA, no censura: el contenido se guarda intacto.
         mensaje.setContieneContacto(detectorContacto.contieneContacto(dto.getContenido()));
 
@@ -232,9 +250,23 @@ public class ChatService {
                 && (dto.getContenido() == null || dto.getContenido().isBlank())) {
             throw new IllegalArgumentException("Un mensaje de texto necesita contenido");
         }
-        if (dto.getTipo() == TipoMensaje.IMAGEN
-                && (dto.getImagenUrl() == null || dto.getImagenUrl().isBlank())) {
-            throw new IllegalArgumentException("Un mensaje de imagen necesita imagenUrl");
+        if (dto.getTipo() == TipoMensaje.IMAGEN) {
+            if (dto.getImagenUrl() == null || dto.getImagenUrl().isBlank()) {
+                throw new IllegalArgumentException("Un mensaje de imagen necesita imagenUrl");
+            }
+            // El chat es un log inmutable que sirve como evidencia legal. Un mensaje IMAGEN
+            // sólo es un puntero: si aceptáramos cualquier URL, un participante podría
+            // (a) cambiar o borrar esa imagen después de que arranca una disputa, destruyendo
+            // la evidencia, y (b) hacer que el navegador de la contraparte pegue un GET directo
+            // a un host propio, deanonimizándola (IP, user-agent, momento exacto de lectura) —
+            // exactamente lo que DetectorContacto existe para impedir. Por eso sólo se acepta
+            // una URL que empiece con el prefijo COMPLETO de nuestro Cloudinary: un contains()
+            // o un startsWith() sin la barra final dejaría pasar
+            // "https://res.cloudinary.com.evil.tld/..." o carpetas ajenas al cloud.
+            if (!dto.getImagenUrl().startsWith(prefijoImagenPermitido)) {
+                throw new IllegalArgumentException(
+                        "La imagen debe subirse a través de nuestro Cloudinary");
+            }
         }
     }
 

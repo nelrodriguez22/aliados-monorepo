@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,7 +37,16 @@ class ChatServiceTest {
     @Mock PushThrottle pushThrottle;
     @Mock NotificacionService notificacionService;
 
-    @InjectMocks ChatService chatService;
+    // Se construye a mano en setUp() (no con @InjectMocks) porque el constructor recibe un
+    // String (@Value del cloud name de Cloudinary), no un colaborador mockeable: @InjectMocks
+    // lo dejaría en null y el prefijo esperado en validarContenido() quedaría
+    // "https://res.cloudinary.com/null/", que además de confuso no es lo que corre en prod.
+    ChatService chatService;
+
+    private static final String CLOUD_NAME = "aliados-cloud";
+    // URL con forma real de upload de Cloudinary, para los tests de imagen válida.
+    private static final String IMAGEN_CLOUDINARY_VALIDA =
+            "https://res.cloudinary.com/" + CLOUD_NAME + "/image/upload/v1700000000/aliados/chat/foto.jpg";
 
     private User cliente;
     private User proveedor;
@@ -66,6 +74,10 @@ class ChatServiceTest {
         conversacion.setId(10L);
         conversacion.setCliente(cliente);
         conversacion.setProveedor(proveedor);
+
+        chatService = new ChatService(conversacionRepository, mensajeRepository, lecturaRepository,
+                userRepository, conversacionService, detectorContacto, eventPublisher,
+                presenciaService, pushThrottle, notificacionService, CLOUD_NAME);
     }
 
     private EnviarMensajeDTO dtoTexto(String texto) {
@@ -323,7 +335,7 @@ class ChatServiceTest {
     void mensajeImagen_resumenDelPushEsIconoFoto() {
         EnviarMensajeDTO dto = new EnviarMensajeDTO();
         dto.setTipo(TipoMensaje.IMAGEN);
-        dto.setImagenUrl("https://ejemplo.com/foto.jpg");
+        dto.setImagenUrl(IMAGEN_CLOUDINARY_VALIDA);
 
         when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
         when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
@@ -375,6 +387,116 @@ class ChatServiceTest {
         String resumen = resumenCaptor.getValue();
         assertThat(resumen).hasSize(80);
         assertThat(resumen).endsWith("...");
+    }
+
+    // --- VALIDACIÓN DE imagenUrl (el chat es evidencia legal: una IMAGEN es sólo un puntero,
+    // así que sólo se acepta si apunta a NUESTRO Cloudinary; ver el comentario largo en
+    // ChatService#validarContenido) ---
+
+    @Test
+    void imagenDeHostAjeno_esRechazada() {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl("https://storage.googleapis.com/bucket-del-atacante/pixel.png");
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+
+        assertThatThrownBy(() -> chatService.enviarMensaje(10L, "uid-cliente", dto))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(mensajeRepository, never()).save(any());
+    }
+
+    // El chequeo tiene que ser sobre el PREFIJO COMPLETO ("https://res.cloudinary.com/{cloud}/"),
+    // no un contains(): un dominio como este, que arranca igual pero cuelga de otro TLD, tiene
+    // que seguir siendo rechazado.
+    @Test
+    void imagenConDominioEvasivo_esRechazada() {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl("https://res.cloudinary.com.evil.tld/" + CLOUD_NAME + "/image/upload/foto.jpg");
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+
+        assertThatThrownBy(() -> chatService.enviarMensaje(10L, "uid-cliente", dto))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(mensajeRepository, never()).save(any());
+    }
+
+    @Test
+    void imagenDeCloudinary_esAceptada() {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl(IMAGEN_CLOUDINARY_VALIDA);
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+
+        chatService.enviarMensaje(10L, "uid-cliente", dto);
+
+        var captor = ArgumentCaptor.forClass(Mensaje.class);
+        verify(mensajeRepository).save(captor.capture());
+        assertThat(captor.getValue().getImagenUrl()).isEqualTo(IMAGEN_CLOUDINARY_VALIDA);
+    }
+
+    // MINOR relacionado: si hoy un TEXTO trae imagenUrl (o una IMAGEN trae contenido) ambos se
+    // persistían — munición gratis para este mismo ataque el día que la UI muestre un caption
+    // bajo la imagen. El campo que no corresponde al tipo se descarta al guardar.
+    @Test
+    void textoConImagenUrl_sePersisteConImagenUrlNulo() {
+        EnviarMensajeDTO dto = dtoTexto("hola");
+        dto.setImagenUrl("https://storage.googleapis.com/bucket-del-atacante/pixel.png");
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+
+        chatService.enviarMensaje(10L, "uid-cliente", dto);
+
+        var captor = ArgumentCaptor.forClass(Mensaje.class);
+        verify(mensajeRepository).save(captor.capture());
+        assertThat(captor.getValue().getImagenUrl()).isNull();
+        assertThat(captor.getValue().getContenido()).isEqualTo("hola");
+    }
+
+    @Test
+    void imagenConContenido_sePersisteConContenidoNulo() {
+        EnviarMensajeDTO dto = new EnviarMensajeDTO();
+        dto.setTipo(TipoMensaje.IMAGEN);
+        dto.setImagenUrl(IMAGEN_CLOUDINARY_VALIDA);
+        dto.setContenido("esto no debería guardarse");
+
+        when(conversacionRepository.findById(10L)).thenReturn(Optional.of(conversacion));
+        when(userRepository.findByFirebaseUid("uid-cliente")).thenReturn(Optional.of(cliente));
+        when(conversacionService.resolverModo(conversacion)).thenReturn(ModoChat.ESCRITURA);
+        when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(inv -> {
+            Mensaje m = inv.getArgument(0);
+            m.setId(100L);
+            return m;
+        });
+
+        chatService.enviarMensaje(10L, "uid-cliente", dto);
+
+        var captor = ArgumentCaptor.forClass(Mensaje.class);
+        verify(mensajeRepository).save(captor.capture());
+        assertThat(captor.getValue().getContenido()).isNull();
+        assertThat(captor.getValue().getImagenUrl()).isEqualTo(IMAGEN_CLOUDINARY_VALIDA);
     }
 
     // --- MARCADO DE CONTACTO ---
