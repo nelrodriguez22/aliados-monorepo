@@ -64,7 +64,9 @@ export function ProviderCompletedJob() {
   return (
     <div className={tw.pageBg}>
       <div className={tw.container}>
-        <div className="mx-auto max-w-2xl">
+        {/* El espaciado lo pone el contenedor, no cada hijo: con `mb-*` sueltos alcanzaba con
+            que uno se olvidara (la card de calificación) para que el chat quedara pegado. */}
+        <div className="mx-auto max-w-2xl space-y-4">
 
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -82,7 +84,7 @@ export function ProviderCompletedJob() {
           </div>
 
           {/* Banner éxito */}
-          <div className={`mb-4 flex items-center gap-4 rounded-2xl border p-5
+          <div className={`flex items-center gap-4 rounded-2xl border p-5
             bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30`}>
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
               <CheckCircle className="h-6 w-6" />
@@ -94,7 +96,7 @@ export function ProviderCompletedJob() {
           </div>
 
           {/* Resumen */}
-          <Card className="mb-4">
+          <Card>
             <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
               Resumen del servicio
             </h2>
