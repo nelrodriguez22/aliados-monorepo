@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type TouchList } from "react";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 
 interface Props {
