@@ -87,6 +87,10 @@ export function UserMenu({ variant }: UserMenuProps) {
     </button>
   );
 
+  // Sin usuario resuelto no hay menú que mostrar. Evita el avatar "?" durante la ventana de
+  // resolución de auth (isAuthenticated persistido pero user todavía null) o un logout en curso.
+  if (!user) return null;
+
   return (
     <div className="relative" ref={ref}>
       <button

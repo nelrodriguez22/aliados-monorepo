@@ -27,18 +27,37 @@ export function useProfile(firebaseUser: FirebaseUser | null) {
     queryFn: async (): Promise<User> => {
       if (!firebaseUser) throw new Error('No firebase user');
 
-      const token = await firebaseUser.getIdToken();
+      // El refresh del token puede fallar (red, refresh-token en tránsito). No es motivo
+      // para desloguear: lo tratamos como recuperable (server) → AuthErrorScreen con reintento.
+      const getToken = async (forceRefresh = false): Promise<string> => {
+        try {
+          return await firebaseUser.getIdToken(forceRefresh);
+        } catch {
+          throw new ProfileError('server', 'No se pudo refrescar el token');
+        }
+      };
 
       let data: any;
       try {
-        data = await fetchProfile(API_URL, token, PROFILE_TIMEOUT_MS);
+        data = await fetchProfile(API_URL, await getToken(), PROFILE_TIMEOUT_MS);
       } catch (err) {
-        // 401/403 → la sesión ya no vale: cerramos en Firebase y en el store.
+        // Un 401 puede ser un token cacheado viejo o un rechazo transitorio del backend
+        // (ej. cold start). Antes de dar la sesión por inválida, forzamos un token fresco y
+        // reintentamos UNA vez. Solo si el token fresco TAMBIÉN es rechazado, cerramos sesión.
         if (err instanceof ProfileError && err.kind === 'unauthorized') {
-          await signOut(auth);
-          logout();
+          try {
+            data = await fetchProfile(API_URL, await getToken(true), PROFILE_TIMEOUT_MS);
+          } catch (retryErr) {
+            if (retryErr instanceof ProfileError && retryErr.kind === 'unauthorized') {
+              // Token fresco también rechazado → la sesión ya no vale: cerramos en Firebase y store.
+              await signOut(auth);
+              logout();
+            }
+            throw retryErr;
+          }
+        } else {
+          throw err;
         }
-        throw err;
       }
 
       const user: User = {
