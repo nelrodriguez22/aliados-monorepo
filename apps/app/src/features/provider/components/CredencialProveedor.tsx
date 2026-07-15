@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { X } from 'lucide-react';
+import logoConTexto from '@/assets/logocontexto.png';
 
 interface Props {
   open: boolean;
@@ -31,6 +32,14 @@ export function CredencialProveedor({ open, onClose, nombre, oficio, fotoPerfil,
       >
         <X className="h-6 w-6" />
       </button>
+
+      {/* Marca arriba: es una credencial a pantalla completa, el logo la identifica. */}
+      <div className="flex items-center gap-1.5">
+        <img src={logoConTexto} alt="Aliados" className="h-9 w-auto" width={160} height={40} />
+        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-dark-brand/15 dark:text-dark-brand">
+          Pro
+        </span>
+      </div>
 
       {fotoPerfil ? (
         <img
