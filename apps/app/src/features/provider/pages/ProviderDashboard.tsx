@@ -366,7 +366,8 @@ export function ProviderDashboard() {
                   </h2>
                   <Badge variant="info" showPulse>En curso</Badge>
                 </div>
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                {/* Card única: centrada y capada en pantallas anchas (las listas van a 2 columnas). */}
+                <div className="mx-auto w-full max-w-xl">
                   <TrabajoCard
                     titulo={trabajoActivo.clienteNombre}
                     subtitulo={trabajoActivo.oficio.nombre}
@@ -494,7 +495,8 @@ export function ProviderDashboard() {
                   </h2>
                   <Badge variant="info" showPulse>En curso</Badge>
                 </div>
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                {/* Card única: centrada y capada en pantallas anchas (las listas van a 2 columnas). */}
+                <div className="mx-auto w-full max-w-xl">
                   <Card hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}>
                     <div className="flex items-center gap-2 min-[375px]:gap-3">
                       <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
