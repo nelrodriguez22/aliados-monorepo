@@ -326,67 +326,80 @@ export function ProviderDashboard() {
               )}
             </section>
 
-            {/* Trabajo pendiente (cola) */}
-            {trabajosEnCola.length > 0 && (
-              <section>
-                <div className="mb-3 flex items-center gap-2.5">
-                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                    Trabajos pendientes
-                  </h2>
-                  <Badge variant="queue">{trabajosEnCola.length} en espera</Badge>
-                </div>
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
-                  {trabajosEnCola.map((trabajo: any, index: number) => (
-                    <TrabajoCard
-                      key={trabajo.id}
-                      titulo={trabajo.clienteNombre}
-                      subtitulo={trabajo.oficio.nombre}
-                      direccion={trabajo.direccion}
-                      tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
-                      onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajo.id))}
-                      left={
-                        <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
-                          #{index + 1}
-                        </div>
-                      }
-                      badgeContent={""}
-                      unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Trabajo activo */}
+            {/* Trabajo activo + cola, lado a lado: lo que estás haciendo ahora y lo que sigue.
+                Ambos sólo existen en estado OCUPADO, así que se muestran juntos. En <lg se apilan. */}
             {trabajoActivo && (
               <section>
-                <div className="mb-3 flex items-center gap-2.5">
-                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                    Trabajo activo
-                  </h2>
-                  <Badge variant="info" showPulse>En curso</Badge>
-                </div>
-                {/* Card única: centrada y capada en pantallas anchas (las listas van a 2 columnas). */}
-                <div className="mx-auto w-full max-w-xl">
-                  <TrabajoCard
-                    titulo={trabajoActivo.clienteNombre}
-                    subtitulo={trabajoActivo.oficio.nombre}
-                    direccion={trabajoActivo.direccion}
-                    tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
-                    onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
-                    left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
-                    badgeContent={""}
-                    unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
-                    actionContent={
-                      <Button
-                        variant="primary"
-                        onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
-                        className="text-xs px-2.5 py-1.5"
-                      >
-                        Ver trabajo
-                      </Button>
-                    }
-                  />
+                <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+
+                  {/* Columna izquierda: trabajo activo */}
+                  <div>
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                        Trabajo activo
+                      </h2>
+                      <Badge variant="info" showPulse>En curso</Badge>
+                    </div>
+                    <TrabajoCard
+                      titulo={trabajoActivo.clienteNombre}
+                      subtitulo={trabajoActivo.oficio.nombre}
+                      direccion={trabajoActivo.direccion}
+                      tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
+                      onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
+                      left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
+                      badgeContent={""}
+                      unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
+                      actionContent={
+                        <Button
+                          variant="primary"
+                          onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
+                          className="text-xs px-2.5 py-1.5"
+                        >
+                          Ver trabajo
+                        </Button>
+                      }
+                    />
+                  </div>
+
+                  {/* Columna derecha: cola, apilada verticalmente. Placeholder si está vacía. */}
+                  <div>
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                        Trabajos pendientes
+                      </h2>
+                      {trabajosEnCola.length > 0 && (
+                        <Badge variant="queue">{trabajosEnCola.length} en espera</Badge>
+                      )}
+                    </div>
+                    {trabajosEnCola.length > 0 ? (
+                      <div className="space-y-2 min-[375px]:space-y-3">
+                        {trabajosEnCola.map((trabajo: any, index: number) => (
+                          <TrabajoCard
+                            key={trabajo.id}
+                            titulo={trabajo.clienteNombre}
+                            subtitulo={trabajo.oficio.nombre}
+                            direccion={trabajo.direccion}
+                            tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
+                            onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajo.id))}
+                            left={
+                              <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
+                                #{index + 1}
+                              </div>
+                            }
+                            badgeContent={""}
+                            unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={ClipboardList}
+                        title="Sin trabajos en cola"
+                        desc="Los próximos trabajos que aceptes aparecerán acá"
+                      />
+                    )}
+                  </div>
+
                 </div>
               </section>
             )}
