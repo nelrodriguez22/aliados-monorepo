@@ -29,14 +29,26 @@ export function useUnreadCounts(conversacionIds: number[]): Record<number, numbe
   // re-render que no agregue ni quite conversaciones.
   const clave = Array.from(new Set(conversacionIds)).sort((a, b) => a - b).join(",");
 
+  // Las queries fuente del dashboard (pendientes, en-cola, activo, mudanzas) resuelven en
+  // momentos distintos, así que el conjunto de ids crece de a pasos durante la carga. Sin
+  // esto, cada paso volvía a pedir el conjunto ENTERO (re-pidiendo conversaciones que ya se
+  // habían consultado). Debounce corto: esperamos a que el set se estabilice y disparamos
+  // una sola tanda. No cambia nada del comportamiento; los badges siguen actualizándose en
+  // vivo por socket, y un cambio real de conversaciones más tarde igual re-dispara.
+  const [claveEstable, setClaveEstable] = useState(clave);
   useEffect(() => {
-    if (!clave) {
+    const t = setTimeout(() => setClaveEstable(clave), 250);
+    return () => clearTimeout(t);
+  }, [clave]);
+
+  useEffect(() => {
+    if (!claveEstable) {
       setConteos({});
       return;
     }
 
     let cancelado = false;
-    const ids = clave.split(",").map(Number);
+    const ids = claveEstable.split(",").map(Number);
 
     Promise.all(
       ids.map((id) => ChatService.contarNoLeidos(id).then((r) => [id, r.count] as const))
@@ -62,7 +74,7 @@ export function useUnreadCounts(conversacionIds: number[]): Record<number, numbe
     return () => {
       cancelado = true;
     };
-  }, [clave]);
+  }, [claveEstable]);
 
   useEffect(() => {
     return subscribe("/user/queue/chat", (m: { conversacionId: number }) => {
