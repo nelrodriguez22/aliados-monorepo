@@ -329,7 +329,7 @@ export function ProviderDashboard() {
             {/* Trabajo pendiente (cola) */}
             {trabajosEnCola.length > 0 && (
               <section>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center gap-2.5">
                   <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                     Trabajos pendientes
                   </h2>
@@ -343,6 +343,7 @@ export function ProviderDashboard() {
                       subtitulo={trabajo.oficio.nombre}
                       direccion={trabajo.direccion}
                       tiempoEstimadoMinutos={trabajo.tiempoEstimadoMinutos}
+                      onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajo.id))}
                       left={
                         <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.amber} text-amber-600 dark:text-amber-400 text-xs font-bold`}>
                           #{index + 1}
@@ -359,38 +360,40 @@ export function ProviderDashboard() {
             {/* Trabajo activo */}
             {trabajoActivo && (
               <section>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center gap-2.5">
                   <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                     Trabajo activo
                   </h2>
                   <Badge variant="info" showPulse>En curso</Badge>
                 </div>
-                <TrabajoCard
-                  titulo={trabajoActivo.clienteNombre}
-                  subtitulo={trabajoActivo.oficio.nombre}
-                  direccion={trabajoActivo.direccion}
-                  tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
-                  onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
-                  left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
-                  badgeContent={""}
-                  unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
-                  actionContent={
-                    <Button
-                      variant="primary"
-                      onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
-                      className="text-xs px-2.5 py-1.5"
-                    >
-                      Ver trabajo
-                    </Button>
-                  }
-                />
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                  <TrabajoCard
+                    titulo={trabajoActivo.clienteNombre}
+                    subtitulo={trabajoActivo.oficio.nombre}
+                    direccion={trabajoActivo.direccion}
+                    tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
+                    onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
+                    left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
+                    badgeContent={""}
+                    unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
+                    actionContent={
+                      <Button
+                        variant="primary"
+                        onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id)); }}
+                        className="text-xs px-2.5 py-1.5"
+                      >
+                        Ver trabajo
+                      </Button>
+                    }
+                  />
+                </div>
               </section>
             )}
 
             {/* Mudanzas pendientes */}
             {mudanzasPendientes.length > 0 && (
               <section>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center gap-2.5">
                   <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                     Mudanzas pendientes
                   </h2>
@@ -433,20 +436,20 @@ export function ProviderDashboard() {
             {/* Mudanzas confirmadas (cola) */}
             {mudanzasConfirmadas.length > 0 && (
               <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                    Mudanzas confirmadas
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowAgenda(true)}
-                      className={`flex items-center gap-1 text-xs font-medium cursor-pointer transition ${tw.text.brand} hover:opacity-70`}
-                    >
-                      <Calendar className="h-3 w-3" />
-                      Ver agenda
-                    </button>
+                <div className="mb-3 flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                      Mudanzas confirmadas
+                    </h2>
                     <Badge variant="queue">{mudanzasConfirmadas.length} agendada{mudanzasConfirmadas.length > 1 ? 's' : ''}</Badge>
                   </div>
+                  <button
+                    onClick={() => setShowAgenda(true)}
+                    className={`flex items-center gap-1 text-xs font-medium cursor-pointer transition ${tw.text.brand} hover:opacity-70`}
+                  >
+                    <Calendar className="h-3 w-3" />
+                    Ver agenda
+                  </button>
                 </div>
                 <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {mudanzasConfirmadas.map((m: any) => (
@@ -485,39 +488,41 @@ export function ProviderDashboard() {
             {/* Mudanza activa */}
             {mudanzaActiva && (
               <section>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center gap-2.5">
                   <h2 className={`text-xs min-[375px]:text-sm font-semibold uppercase tracking-wider ${tw.text.muted}`}>
                     Mudanza activa
                   </h2>
                   <Badge variant="info" showPulse>En curso</Badge>
                 </div>
-                <Card hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}>
-                  <div className="flex items-center gap-2 min-[375px]:gap-3">
-                    <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
-                      <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                  <Card hover onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}>
+                    <div className="flex items-center gap-2 min-[375px]:gap-3">
+                      <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand`}>
+                        <Truck className="h-4 w-4 min-[375px]:h-5 min-[375px]:w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
+                          {mudanzaActiva.tierEmoji} {mudanzaActiva.tierNombre} — {mudanzaActiva.clienteNombre}
+                        </p>
+                        <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
+                          {mudanzaActiva.direccionOrigen.split(',')[0]} → {mudanzaActiva.direccionDestino.split(',')[0]}
+                        </p>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        {mudanzaActiva.conversacionId != null && (
+                          <UnreadBadge count={noLeidosPorConversacion[mudanzaActiva.conversacionId] ?? 0} />
+                        )}
+                        <Button
+                          variant="primary"
+                          onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}
+                          className="text-xs px-2.5 py-1.5"
+                        >
+                          Ver trabajo
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${tw.text.primary}`}>
-                        {mudanzaActiva.tierEmoji} {mudanzaActiva.tierNombre} — {mudanzaActiva.clienteNombre}
-                      </p>
-                      <p className={`mt-0.5 text-xs truncate ${tw.text.secondary}`}>
-                        {mudanzaActiva.direccionOrigen.split(',')[0]} → {mudanzaActiva.direccionDestino.split(',')[0]}
-                      </p>
-                    </div>
-                    <div className="shrink-0 flex flex-col items-end gap-1">
-                      {mudanzaActiva.conversacionId != null && (
-                        <UnreadBadge count={noLeidosPorConversacion[mudanzaActiva.conversacionId] ?? 0} />
-                      )}
-                      <Button
-                        variant="primary"
-                        onClick={() => navigate(ROUTES.PROVIDER.MUDANZA_DETAIL(mudanzaActiva.id))}
-                        className="text-xs px-2.5 py-1.5"
-                      >
-                        Ver trabajo
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               </section>
             )}
 
