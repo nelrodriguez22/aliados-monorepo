@@ -23,7 +23,7 @@ import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
 import { UnreadBadge } from "@/shared/components/chat/UnreadBadge";
 import {
   Bell, Clock, CheckCircle,
-  Star, ClipboardList, ZapOff, Users, Truck, X, Calendar, ChevronDown,
+  Star, ClipboardList, ZapOff, Users, Truck, X, Calendar, ChevronDown, IdCard,
 } from "lucide-react";
 
 export function ProviderDashboard() {
@@ -215,8 +215,9 @@ export function ProviderDashboard() {
           </div>
         )}
 
-        {/* Welcome card */}
-        <Card className="mb-6">
+        {/* Welcome card — capada y centrada (misma lógica que las cards únicas). */}
+        <div className="mb-6 mx-auto w-full max-w-xl">
+        <Card>
           <div className="flex items-center gap-2 min-[375px]:gap-3">
             {/* Avatar */}
             <div className={`flex h-9 w-9 min-[375px]:h-11 min-[375px]:w-11 shrink-0 items-center justify-center rounded-xl ${tw.iconBg.brand} text-brand-600 dark:text-dark-brand font-bold text-xs min-[375px]:text-sm`}>
@@ -258,7 +259,18 @@ export function ProviderDashboard() {
               </div>
             </div>
           </div>
+          {/* Acceso directo a la credencial — también sigue en el menú de usuario. */}
+          <button
+            onClick={() => navigate(ROUTES.PROVIDER.CREDENCIAL)}
+            className={`mt-4 mx-auto flex w-fit items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium cursor-pointer transition
+              border-slate-300 dark:border-dark-border-strong ${tw.text.secondary}
+              hover:border-brand-600 hover:text-brand-600 dark:hover:border-dark-brand dark:hover:text-dark-brand`}
+          >
+            <IdCard className="h-3.5 w-3.5" />
+            Ver credencial
+          </button>
         </Card>
+        </div>
 
         {isMainLoading ? (
           <div className="space-y-3">
@@ -277,6 +289,7 @@ export function ProviderDashboard() {
 
               {colaLlena ? (
                 <EmptyState
+                  compact
                   icon={Users}
                   title="Tu agenda está completa"
                   desc="Completá los trabajos actuales para recibir nuevas solicitudes"
@@ -312,6 +325,7 @@ export function ProviderDashboard() {
                   </div>
                 ) : (
                   <EmptyState
+                    compact
                     icon={CheckCircle}
                     title="No hay trabajos disponibles"
                     desc="Recibirás una notificación cuando haya uno nuevo"
@@ -319,6 +333,7 @@ export function ProviderDashboard() {
                 )
               ) : (
                 <EmptyState
+                  compact
                   icon={ZapOff}
                   title="Estás desconectado"
                   desc="Activá el toggle para recibir trabajos"
@@ -346,6 +361,7 @@ export function ProviderDashboard() {
                       direccion={trabajoActivo.direccion}
                       tiempoEstimadoMinutos={trabajoActivo.tiempoEstimadoMinutos}
                       onClick={() => navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajoActivo.id))}
+                      className="border-2 !border-brand-200 dark:!border-dark-brand/40"
                       left={<Initials name={trabajoActivo.clienteNombre} bg={tw.iconBg.brand} color="text-brand-600 dark:text-dark-brand" />}
                       badgeContent={""}
                       unreadCount={trabajoActivo.conversacionId != null ? noLeidosPorConversacion[trabajoActivo.conversacionId] : 0}
@@ -388,6 +404,15 @@ export function ProviderDashboard() {
                             }
                             badgeContent={""}
                             unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
+                            actionContent={
+                              <Button
+                                variant="outline"
+                                onClick={() => { navigate(ROUTES.PROVIDER.ACTIVE_JOB(trabajo.id)); }}
+                                className="text-xs px-2.5 py-1.5"
+                              >
+                                Ver trabajo
+                              </Button>
+                            }
                           />
                         ))}
                       </div>

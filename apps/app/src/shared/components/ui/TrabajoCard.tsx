@@ -19,6 +19,8 @@ interface Props {
   tiempoEstimadoMinutos?: number | null;
   unreadCount?: number;
   onClick?: () => void;
+  /** Clases extra para el contenedor (ej. un borde de color que distinga la card activa). */
+  className?: string;
 }
 
 /**
@@ -42,9 +44,10 @@ export function TrabajoCard({
   tiempoEstimadoMinutos,
   unreadCount,
   onClick,
+  className = "",
 }: Props) {
   return (
-    <Card hover={!!onClick} onClick={onClick}>
+    <Card hover={!!onClick} onClick={onClick} className={className}>
       {/* Fila principal: avatar | nombre + oficio | badge + tiempo */}
       <div className="flex items-center gap-2 min-[375px]:gap-3">
         {left}
