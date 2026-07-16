@@ -33,5 +33,6 @@ export default defineConfig({
     environment: "node",
     env: envFalsas,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
