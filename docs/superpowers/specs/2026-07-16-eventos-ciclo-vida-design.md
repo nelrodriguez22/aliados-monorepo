@@ -89,7 +89,7 @@ antes del `setEstado` y pasa todo resuelto. Corre en la transacción del caller
 | `proponerTrabajo` | PENDIENTE → PROPUESTO, **después** del `tomarTrabajoSiPendiente` exitoso | PROVEEDOR |
 | `aceptarPropuesta` | PROPUESTO → EN_CURSO ó EN_COLA | CLIENTE |
 | `rechazarPropuesta` | PROPUESTO → PENDIENTE | CLIENTE |
-| `presupuestarTrabajo` | EN_CURSO → PRESUPUESTADO | PROVEEDOR |
+| `presupuestarTrabajo` | dos eventos: `CAMBIO_ESTADO` (EN_CURSO → PRESUPUESTADO) y `CAMBIO_ESTADO_PAGO` (∅ → PENDIENTE_PAGO) | PROVEEDOR |
 | `responderPresupuesto` | dos eventos: `CAMBIO_ESTADO_PAGO` (PENDIENTE_PAGO → PAGADO) y luego el cierre | CLIENTE |
 | `cerrarTrabajoCompletado` | → COMPLETADO (actor lo pasa el caller como parámetro nuevo) y EN_COLA → EN_CURSO de la promoción de cola (SISTEMA) | según caller / SISTEMA |
 | `cancelarTrabajo` / `escalarUnTrabajo` | → CANCELADO vía `aplicarCancelacion` (recibe actor); `detalle` = motivo | CLIENTE ó SISTEMA |

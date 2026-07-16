@@ -81,8 +81,13 @@ class TrabajoEventoCierreTest {
 
         trabajoService.presupuestarTrabajo(10L, "prov", new BigDecimal("90000"), "cambio de térmica");
 
-        verify(eventoService).registrarTrabajo(any(Trabajo.class), eq(TipoEvento.CAMBIO_ESTADO),
+        // Verifica que se emiten DOS eventos en orden: CAMBIO_ESTADO (EN_CURSO→PRESUPUESTADO)
+        // seguido de CAMBIO_ESTADO_PAGO (∅→PENDIENTE_PAGO), que inaugura el eje de pago.
+        InOrder orden = inOrder(eventoService);
+        orden.verify(eventoService).registrarTrabajo(any(Trabajo.class), eq(TipoEvento.CAMBIO_ESTADO),
                 eq("EN_CURSO"), eq("PRESUPUESTADO"), eq(ActorTipo.PROVEEDOR), eq(prov), isNull());
+        orden.verify(eventoService).registrarTrabajo(any(Trabajo.class), eq(TipoEvento.CAMBIO_ESTADO_PAGO),
+                isNull(), eq("PENDIENTE_PAGO"), eq(ActorTipo.PROVEEDOR), eq(prov), isNull());
     }
 
     @Test

@@ -268,6 +268,12 @@ public class TrabajoService {
                 TrabajoEstado.EN_CURSO.name(), TrabajoEstado.PRESUPUESTADO.name(),
                 ActorTipo.PROVEEDOR, proveedor, null);
 
+        // Nace el eje de pago: sin este evento, el timeline de pago arrancaría
+        // abrupto en PENDIENTE_PAGO→PAGADO (hueco detectado en el review final).
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO_PAGO,
+                null, EstadoPago.PENDIENTE_PAGO.name(),
+                ActorTipo.PROVEEDOR, proveedor, null);
+
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
                 TipoNotificacion.PRESUPUESTO_RECIBIDO,

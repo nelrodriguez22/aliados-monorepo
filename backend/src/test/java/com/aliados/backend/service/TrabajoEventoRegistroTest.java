@@ -156,6 +156,28 @@ class TrabajoEventoRegistroTest {
     }
 
     @Test
+    void aceptarPropuesta_registraEnColaCuandoHayTrabajoEnCurso() {
+        User cliente = user(1L, "cli", UserRole.CLIENT);
+        User prov = user(2L, "prov", UserRole.PROVIDER);
+        Trabajo t = trabajo(10L, cliente, TrabajoEstado.PROPUESTO);
+        t.setProveedor(prov);
+        Trabajo trabajoEnCurso = trabajo(9L, cliente, TrabajoEstado.EN_CURSO); // existe trabajo en curso
+        trabajoEnCurso.setProveedor(prov);
+        when(userRepository.findByFirebaseUid("cli")).thenReturn(Optional.of(cliente));
+        when(trabajoRepository.findById(10L)).thenReturn(Optional.of(t));
+        when(trabajoRepository.countTrabajosActivosYCola(2L)).thenReturn(1);
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), any(Double.class))).thenReturn(3.0);
+        when(trabajoRepository.findTrabajoEnCursoByProveedorId(2L)).thenReturn(trabajoEnCurso); // hay trabajo en curso → EN_COLA
+        when(trabajoRepository.save(any(Trabajo.class))).thenAnswer(i -> i.getArgument(0));
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(anyLong(), any())).thenReturn(List.of());
+
+        trabajoService.aceptarPropuesta(10L, "cli");
+
+        verify(eventoService).registrarTrabajo(any(Trabajo.class), eq(TipoEvento.CAMBIO_ESTADO),
+                eq("PROPUESTO"), eq("EN_COLA"), eq(ActorTipo.CLIENTE), eq(cliente), isNull());
+    }
+
+    @Test
     void rechazarPropuesta_registraVueltaAPendiente() {
         User cliente = user(1L, "cli", UserRole.CLIENT);
         User prov = user(2L, "prov", UserRole.PROVIDER);
