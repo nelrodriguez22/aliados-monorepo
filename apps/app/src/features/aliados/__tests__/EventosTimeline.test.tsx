@@ -35,7 +35,20 @@ const evento = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('EventosTimeline', () => {
-  beforeEach(() => getMock.mockReset());
+  // OJO con el cuerpo de bloque: `mockReset()` devuelve el propio mock (para
+  // poder encadenar). Con return implícito (`() => getMock.mockReset()`),
+  // ese mock queda como valor de retorno del hook, y vitest interpreta
+  // "beforeEach devolvió una función" como su convención de cleanup
+  // al-estilo-Jest: registra esa función devuelta (el mock mismo) para
+  // invocarla de nuevo, sin argumentos, al terminar el test. Con la mock
+  // implementation que dejó armado el test de error, esa llamada fantasma
+  // repite el mismo rechazo — y como es la propia vitest quien espera ese
+  // cleanup, lo reporta como test fallido (no como unhandled rejection de
+  // Node: por eso ningún handler global lo detectaba). El bloque `{ }` corta
+  // el valor de retorno y el fantasma desaparece.
+  beforeEach(() => {
+    getMock.mockReset();
+  });
   afterEach(() => cleanup());
 
   it('pega al endpoint de trabajos para tipo TRABAJO', async () => {
