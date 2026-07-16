@@ -47,6 +47,7 @@ class ResponderPresupuestoTest {
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
     @Mock ConversacionService conversacionService;
     @Mock ConversacionRepository conversacionRepository;
+    @Mock EventoService eventoService;
 
     @InjectMocks TrabajoService trabajoService;
 

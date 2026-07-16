@@ -56,6 +56,9 @@ public class MudanzaService {
     @Autowired
     private ConversacionRepository conversacionRepository;
 
+    @Autowired
+    private EventoService eventoService;
+
     private static final int MAX_MUDANZAS_POR_DIA = 2;
 
     // ════════════════════════════════════════════
@@ -121,6 +124,9 @@ public class MudanzaService {
 
         mudanza = mudanzaRepository.save(mudanza);
 
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                null, MudanzaEstado.PENDIENTE.name(), ActorTipo.CLIENTE, cliente, null);
+
         logger.info("Mudanza {} creada por cliente {} - Tier: {} (${}) ",
                 mudanza.getId(), cliente.getNombre(), tier.getNombre(), tier.getPrecioBase());
 
@@ -147,9 +153,13 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no está en estado pendiente");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.RESERVADO);
         mudanza.setReservadoAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.RESERVADO.name(), ActorTipo.CLIENTE, cliente, null);
 
         // Notificar al proveedor de fletes (Ricky Bay por ahora es fijo)
         notificarProveedorFletes(mudanza);
@@ -184,6 +194,7 @@ public class MudanzaService {
             throw new ConflictException("El " + turnoLabel + " del " + fechaAgendar + " ya está ocupado.");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setProveedor(proveedor);
         mudanza.setFechaConfirmada(fechaAgendar);
@@ -198,6 +209,9 @@ public class MudanzaService {
             String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya está ocupado.");
         }
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.ACEPTADO.name(), ActorTipo.PROVEEDOR, proveedor, null);
 
         // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
         // que un reintento no duplica.
@@ -276,8 +290,12 @@ public class MudanzaService {
             mensajeParts.append("Fecha: ").append(dto.getFechaSugerida());
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.CONTRAPROPUESTO);
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.CONTRAPROPUESTO.name(), ActorTipo.PROVEEDOR, proveedor, null);
 
         String mensaje = String.format("Fletes Bay sugiere cambios: %s. Motivo: %s",
                 mensajeParts, dto.getMotivo());
@@ -330,6 +348,7 @@ public class MudanzaService {
             throw new ConflictException("El " + turnoLabel + " del " + fechaAgendar + " ya no está disponible.");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.ACEPTADO);
         mudanza.setFechaConfirmada(fechaAgendar);
         mudanza.setAcceptedAt(LocalDateTime.now());
@@ -341,6 +360,9 @@ public class MudanzaService {
             String turnoLabelConflict = turno == MudanzaTurno.PRIMERO ? "1er turno (6:30hs)" : "2do turno (~11:00hs)";
             throw new ConflictException("El " + turnoLabelConflict + " del " + fechaAgendar + " ya no está disponible.");
         }
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.ACEPTADO.name(), ActorTipo.CLIENTE, cliente, null);
 
         // El chat nace acá: el vínculo cliente-proveedor queda confirmado. Idempotente, así
         // que un reintento no duplica.
@@ -381,10 +403,15 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no tiene una contrapropuesta activa");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.CANCELADO);
         mudanza.setCancelledAt(LocalDateTime.now());
         mudanza.setMotivoCancelacion("Cliente rechazó contrapropuesta de tier");
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.CANCELADO.name(), ActorTipo.CLIENTE, cliente,
+                "Contrapropuesta rechazada");
 
         // Notificar proveedor
         notificacionService.enviarNotificacion(
@@ -421,9 +448,13 @@ public class MudanzaService {
             throw new ForbiddenException("No autorizado");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.EN_CURSO);
         mudanza.setIniciadoAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.EN_CURSO.name(), ActorTipo.PROVEEDOR, proveedor, null);
 
         // Notificar al cliente
         notificacionService.enviarNotificacion(
@@ -460,6 +491,7 @@ public class MudanzaService {
             throw new ForbiddenException("No autorizado");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         LocalDateTime ahora = LocalDateTime.now();
         mudanza.setFinalizadoAt(ahora);
 
@@ -501,6 +533,11 @@ public class MudanzaService {
         mudanza.setMontoProveedor(mudanza.getMontoFinal().subtract(comision));
 
         mudanza = mudanzaRepository.save(mudanza);
+
+        // Una sola registración: cubre las dos salidas posibles (FINALIZADO o
+        // PENDIENTE_PAGO_EXTRA), leyendo el estado ya resuelto por el if/else de arriba.
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), mudanza.getEstado().name(), ActorTipo.PROVEEDOR, proveedor, null);
 
         // Notificar al cliente
         String mensajeCliente;
@@ -554,8 +591,12 @@ public class MudanzaService {
 
         // Acá en el futuro se integra MercadoPago
         // Por ahora simplemente avanzamos el estado
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.FINALIZADO);
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.FINALIZADO.name(), ActorTipo.CLIENTE, cliente, null);
 
         logger.info("Mudanza {} - Extra de ${} pagado por cliente", mudanza.getId(), mudanza.getMontoExtra());
 
@@ -582,9 +623,13 @@ public class MudanzaService {
             throw new RuntimeException("La mudanza no está finalizada");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.COMPLETADO);
         mudanza.setCompletedAt(LocalDateTime.now());
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.COMPLETADO.name(), ActorTipo.CLIENTE, cliente, null);
 
         // Notificar proveedor
         notificacionService.enviarNotificacion(
@@ -624,10 +669,14 @@ public class MudanzaService {
             throw new RuntimeException("Solo se pueden cancelar mudanzas pendientes o reservadas");
         }
 
+        MudanzaEstado estadoAnterior = mudanza.getEstado(); // antes de mutar
         mudanza.setEstado(MudanzaEstado.CANCELADO);
         mudanza.setCancelledAt(LocalDateTime.now());
         mudanza.setMotivoCancelacion(motivo);
         mudanza = mudanzaRepository.save(mudanza);
+
+        eventoService.registrarMudanza(mudanza, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), MudanzaEstado.CANCELADO.name(), ActorTipo.CLIENTE, cliente, motivo);
 
         cloudinaryService.borrarFotos(mudanza.getFotos());
 

@@ -76,6 +76,9 @@ public class TrabajoService {
     @Autowired
     private ConversacionRepository conversacionRepository;
 
+    @Autowired
+    private EventoService eventoService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     // package-private para test; lee los límites de feature flags.
@@ -117,6 +120,9 @@ public class TrabajoService {
         }
 
         trabajo = trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO, null,
+                TrabajoEstado.PENDIENTE.name(), ActorTipo.CLIENTE, cliente, null);
 
         ofrecerSiguienteGrupo(trabajo);
 
@@ -213,7 +219,7 @@ public class TrabajoService {
             throw new ForbiddenException("No autorizado");
         }
 
-        cerrarTrabajoCompletado(trabajo, proveedor);
+        cerrarTrabajoCompletado(trabajo, proveedor, ActorTipo.PROVEEDOR, proveedor);
 
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
@@ -258,6 +264,16 @@ public class TrabajoService {
         trabajo.setEstadoPago(EstadoPago.PENDIENTE_PAGO);
         trabajo = trabajoRepository.save(trabajo);
 
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.EN_CURSO.name(), TrabajoEstado.PRESUPUESTADO.name(),
+                ActorTipo.PROVEEDOR, proveedor, null);
+
+        // Nace el eje de pago: sin este evento, el timeline de pago arrancaría
+        // abrupto en PENDIENTE_PAGO→PAGADO (hueco detectado en el review final).
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO_PAGO,
+                null, EstadoPago.PENDIENTE_PAGO.name(),
+                ActorTipo.PROVEEDOR, proveedor, null);
+
         notificacionService.enviarNotificacion(
                 trabajo.getCliente().getFirebaseUid(),
                 TipoNotificacion.PRESUPUESTO_RECIBIDO,
@@ -292,7 +308,12 @@ public class TrabajoService {
         trabajo.setEstadoPago(EstadoPago.PAGADO);
         trabajo.setPagadoAt(LocalDateTime.now());
 
-        cerrarTrabajoCompletado(trabajo, proveedor);
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO_PAGO,
+                EstadoPago.PENDIENTE_PAGO.name(), EstadoPago.PAGADO.name(),
+                ActorTipo.CLIENTE, cliente,
+                aceptar ? "Presupuesto aceptado" : "Presupuesto rechazado; se cobra solo la visita");
+
+        cerrarTrabajoCompletado(trabajo, proveedor, ActorTipo.CLIENTE, cliente);
 
         notificacionService.enviarNotificacion(
                 proveedor.getFirebaseUid(),
@@ -310,11 +331,17 @@ public class TrabajoService {
 
     /** Cierre compartido de un trabajo: pasa a COMPLETADO, promueve la cola o libera al
      *  proveedor. NO emite las notificaciones "completado" del trabajo actual (las pone
-     *  el caller, porque el texto difiere entre completar y responder-presupuesto). */
-    private void cerrarTrabajoCompletado(Trabajo trabajo, User proveedor) {
+     *  el caller, porque el texto difiere entre completar y responder-presupuesto).
+     *  El actor del cierre también lo pasa el caller (proveedor al completar, cliente
+     *  al responder presupuesto); la promoción de cola es siempre SISTEMA. */
+    private void cerrarTrabajoCompletado(Trabajo trabajo, User proveedor, ActorTipo actorTipo, User actor) {
+        TrabajoEstado estadoAnterior = trabajo.getEstado(); // capturar ANTES de mutar
         trabajo.setEstado(TrabajoEstado.COMPLETADO);
         trabajo.setCompletedAt(LocalDateTime.now());
         trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), TrabajoEstado.COMPLETADO.name(), actorTipo, actor, null);
 
         List<Trabajo> trabajosEnCola = trabajoRepository.findTrabajosEnCola(proveedor.getId());
 
@@ -322,6 +349,10 @@ public class TrabajoService {
             Trabajo siguiente = trabajosEnCola.get(0);
             siguiente.setEstado(TrabajoEstado.EN_CURSO);
             trabajoRepository.save(siguiente);
+
+            eventoService.registrarTrabajo(siguiente, TipoEvento.CAMBIO_ESTADO,
+                    TrabajoEstado.EN_COLA.name(), TrabajoEstado.EN_CURSO.name(),
+                    ActorTipo.SISTEMA, null, "Promoción automática de cola");
 
             notificacionService.enviarNotificacion(
                     proveedor.getFirebaseUid(),
@@ -709,15 +740,19 @@ public class TrabajoService {
             throw new RuntimeException("Solo se pueden cancelar trabajos pendientes");
         }
 
-        aplicarCancelacion(trabajo, motivo);
+        aplicarCancelacion(trabajo, motivo, ActorTipo.CLIENTE, cliente);
         return mapToDTO(trabajo);
     }
 
-    // Core de cancelación reusable (cliente y escalado automático).
-    private void aplicarCancelacion(Trabajo trabajo, String motivo) {
+    // Core de cancelación reusable (cliente y escalado automático). El actor viene
+    // del caller: CLIENTE en cancelarTrabajo, SISTEMA (sin User) en escalarUnTrabajo.
+    private void aplicarCancelacion(Trabajo trabajo, String motivo, ActorTipo actorTipo, User actor) {
+        TrabajoEstado estadoAnterior = trabajo.getEstado(); // capturar ANTES de mutar
         trabajo.setEstado(TrabajoEstado.CANCELADO);
         trabajo.setMotivoCancelacion(motivo);
         trabajoRepository.save(trabajo);
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                estadoAnterior.name(), TrabajoEstado.CANCELADO.name(), actorTipo, actor, motivo);
         cloudinaryService.borrarFotos(trabajo.getFotos());
     }
 
@@ -749,6 +784,12 @@ public class TrabajoService {
             trabajo.setLongitudProveedor(longitud);
         }
         trabajoRepository.save(trabajo);
+
+        // Después del flip atómico ganado: si dos proveedores compiten, solo el
+        // ganador de tomarTrabajoSiPendiente llega acá y registra el evento.
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PENDIENTE.name(), TrabajoEstado.PROPUESTO.name(),
+                ActorTipo.PROVEEDOR, proveedor, null);
 
         oferta.setResultado(ResultadoOferta.PROPUSO);
         oferta.setRespondioAt(LocalDateTime.now());
@@ -801,6 +842,10 @@ public class TrabajoService {
 
         trabajo.setAcceptedAt(LocalDateTime.now());
         trabajo = trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PROPUESTO.name(), trabajo.getEstado().name(),
+                ActorTipo.CLIENTE, cliente, null);
 
         // El chat nace acá: es el momento en que el vínculo cliente-proveedor queda confirmado
         // (tanto EN_CURSO como EN_COLA tienen chat). Idempotente, así que un reintento no duplica.
@@ -873,6 +918,10 @@ public class TrabajoService {
         trabajo.setLatitudProveedor(null);
         trabajo.setLongitudProveedor(null);
         trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PROPUESTO.name(), TrabajoEstado.PENDIENTE.name(),
+                ActorTipo.CLIENTE, cliente, null);
 
         // Reabrir al resto del grupo actual (OFRECIDA); si no queda nadie, avanzar de grupo.
         List<TrabajoOferta> resto = trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA);
@@ -950,7 +999,7 @@ public class TrabajoService {
                     "Seguimos buscando",
                     "Seguimos buscando un profesional para tu pedido de " + fresco.getOficio().getNombre() + ".");
         } else {
-            aplicarCancelacion(fresco, "No encontramos un profesional disponible");
+            aplicarCancelacion(fresco, "No encontramos un profesional disponible", ActorTipo.SISTEMA, null);
             notificarCliente(fresco, TipoNotificacion.TRABAJO_CANCELADO_SIN_PROVEEDOR,
                     "Pedido cancelado",
                     "No encontramos un profesional disponible. Cancelamos tu pedido de "
