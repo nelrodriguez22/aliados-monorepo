@@ -76,6 +76,9 @@ public class TrabajoService {
     @Autowired
     private ConversacionRepository conversacionRepository;
 
+    @Autowired
+    private EventoService eventoService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     // package-private para test; lee los límites de feature flags.
@@ -117,6 +120,9 @@ public class TrabajoService {
         }
 
         trabajo = trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO, null,
+                TrabajoEstado.PENDIENTE.name(), ActorTipo.CLIENTE, cliente, null);
 
         ofrecerSiguienteGrupo(trabajo);
 
@@ -750,6 +756,12 @@ public class TrabajoService {
         }
         trabajoRepository.save(trabajo);
 
+        // Después del flip atómico ganado: si dos proveedores compiten, solo el
+        // ganador de tomarTrabajoSiPendiente llega acá y registra el evento.
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PENDIENTE.name(), TrabajoEstado.PROPUESTO.name(),
+                ActorTipo.PROVEEDOR, proveedor, null);
+
         oferta.setResultado(ResultadoOferta.PROPUSO);
         oferta.setRespondioAt(LocalDateTime.now());
         trabajoOfertaRepository.save(oferta);
@@ -801,6 +813,10 @@ public class TrabajoService {
 
         trabajo.setAcceptedAt(LocalDateTime.now());
         trabajo = trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PROPUESTO.name(), trabajo.getEstado().name(),
+                ActorTipo.CLIENTE, cliente, null);
 
         // El chat nace acá: es el momento en que el vínculo cliente-proveedor queda confirmado
         // (tanto EN_CURSO como EN_COLA tienen chat). Idempotente, así que un reintento no duplica.
@@ -873,6 +889,10 @@ public class TrabajoService {
         trabajo.setLatitudProveedor(null);
         trabajo.setLongitudProveedor(null);
         trabajoRepository.save(trabajo);
+
+        eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO,
+                TrabajoEstado.PROPUESTO.name(), TrabajoEstado.PENDIENTE.name(),
+                ActorTipo.CLIENTE, cliente, null);
 
         // Reabrir al resto del grupo actual (OFRECIDA); si no queda nadie, avanzar de grupo.
         List<TrabajoOferta> resto = trabajoOfertaRepository.findByTrabajoIdAndResultado(trabajo.getId(), ResultadoOferta.OFRECIDA);

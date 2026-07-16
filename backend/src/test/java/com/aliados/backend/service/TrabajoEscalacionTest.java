@@ -41,6 +41,7 @@ class TrabajoEscalacionTest {
     @Mock com.aliados.backend.service.FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
     @Mock ConversacionRepository conversacionRepository;
+    @Mock EventoService eventoService;
 
     @InjectMocks TrabajoService trabajoService;
 

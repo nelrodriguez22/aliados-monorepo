@@ -47,6 +47,7 @@ class TrabajoAutorizacionTest {
     @Mock FeatureFlagService featureFlagService;
     @Mock TrabajoOfertaRepository trabajoOfertaRepository;
     @Mock ConversacionRepository conversacionRepository;
+    @Mock EventoService eventoService;
 
     @InjectMocks TrabajoService trabajoService;
 
