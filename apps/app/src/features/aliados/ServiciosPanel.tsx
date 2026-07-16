@@ -6,6 +6,7 @@ import { formatDateTime } from '@/shared/lib/dayjs';
 import { formatServicioId, type TipoServicio } from '@/shared/lib/servicioId';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { ESTADO_CHIP } from './estadoChips';
+import { EventosTimeline } from './EventosTimeline';
 
 interface ServicioAdminItem {
   tipo: TipoServicio;
@@ -160,18 +161,24 @@ export function ServiciosPanel() {
                     {abierto ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" /> : <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />}
                   </button>
                   {abierto && (
-                    <dl className="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-slate-50 p-3 text-xs dark:bg-dark-bg sm:grid-cols-2">
-                      <div><dt className="inline font-medium text-slate-500">Cliente: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.clienteNombre ?? '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Proveedor: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.proveedorNombre ?? '—'}</dd></div>
-                      <div className="sm:col-span-2"><dt className="inline font-medium text-slate-500">Dirección: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.direccion}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Creado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{formatDateTime(s.createdAt)}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Aceptado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.acceptedAt ? formatDateTime(s.acceptedAt) : '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Completado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.completedAt ? formatDateTime(s.completedAt) : '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Precio: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.precio != null ? `$${Number(s.precio).toLocaleString('es-AR')}` : '—'}</dd></div>
-                      {s.motivoCancelacion && (
-                        <div className="sm:col-span-2"><dt className="inline font-medium text-red-500">Motivo cancelación: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.motivoCancelacion}</dd></div>
-                      )}
-                    </dl>
+                    <>
+                      <dl className="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-slate-50 p-3 text-xs dark:bg-dark-bg sm:grid-cols-2">
+                        <div><dt className="inline font-medium text-slate-500">Cliente: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.clienteNombre ?? '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Proveedor: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.proveedorNombre ?? '—'}</dd></div>
+                        <div className="sm:col-span-2"><dt className="inline font-medium text-slate-500">Dirección: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.direccion}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Creado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{formatDateTime(s.createdAt)}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Aceptado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.acceptedAt ? formatDateTime(s.acceptedAt) : '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Completado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.completedAt ? formatDateTime(s.completedAt) : '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Precio: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.precio != null ? `$${Number(s.precio).toLocaleString('es-AR')}` : '—'}</dd></div>
+                        {s.motivoCancelacion && (
+                          <div className="sm:col-span-2"><dt className="inline font-medium text-red-500">Motivo cancelación: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.motivoCancelacion}</dd></div>
+                        )}
+                      </dl>
+                      <div className="mt-2 rounded-lg bg-slate-50 p-3 dark:bg-dark-bg">
+                        <h3 className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Historial</h3>
+                        <EventosTimeline tipo={s.tipo} id={s.id} />
+                      </div>
+                    </>
                   )}
                 </div>
               );
