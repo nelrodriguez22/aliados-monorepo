@@ -28,4 +28,8 @@ public class CrearTrabajoDTO {
     private Double longitudDestino;
 
     private String fotos; // JSON array de URLs
+
+    // Favoritos: priorizar (grupo 0) — opción 1 (toggle) o pedido directo (opción 2).
+    private Boolean priorizarFavoritos;
+    private Long proveedorDirectoId;
 }
