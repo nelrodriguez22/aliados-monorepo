@@ -1,6 +1,8 @@
 # Auditoría de seguridad — Aliados (front + back)
 
-> Documento vivo. Fecha de la auditoría: **2026-07-04**. Rama: `ci/docs-no-disparan-build`.
+> Documento vivo. Última auditoría: **2026-07-16** (backend, superficie nueva desde la del
+> 2026-07-04: chat, presupuestos, eventos de ciclo de vida, código QR, MdcLoggingFilter).
+> Hallazgos A1–A5 más abajo. Auditoría original: **2026-07-04**, rama `ci/docs-no-disparan-build`.
 > Metodología: revisión manual de código (SecurityConfig, filtros, controllers, servicios,
 > WebSocket, store del front y manejo de secretos). **No** se ejecutaron exploits contra el
 > entorno; los PoC descritos son teóricos y deben validarse en un entorno controlado.
@@ -243,6 +245,32 @@ El proveedor finalmente asignado ya está cubierto por la rama `trabajo.getProve
 > Detectado por la revisión de seguridad automática del PR #6. ✅ Resuelto en `fix/seguridad-sec5-a-sec8`.
 
 ---
+
+## Auditoría 2026-07-16 — superficie nueva del backend
+
+Re-verificado y sólido: SEC-1 sigue cerrado (`UserService` rechaza `role=ADMIN` en el registro);
+SEC-3 sigue cerrado (CONNECT del WS rechaza tokens ausentes/inválidos); chat con IDOR cubierto
+(`ChatService.autorizar()` en los 4 paths, `SecurityException`→403 con handler dedicado; contenido
+capado a 2000, imagenUrl con prefijo Cloudinary + 500 chars, paginación capada a 100, log inmutable);
+presupuestos con `@Valid` + `@Positive` + authz de dueño; actuator expone solo `health,info`;
+`/api/admin/**` (incl. eventos #45) bajo `hasRole(ADMIN)`; firma de Cloudinary pinnea el folder.
+
+- [x] **A1** (MEDIO-BAJO) — `MdcLoggingFilter` reflejaba `X-Request-Id` sin sanitizar (input del
+  cliente → cada línea de log + response header, sin límite de largo ni charset) — ✅ resuelto:
+  allowlist `[A-Za-z0-9_-]{1,64}`, lo que no matchea se descarta y se genera UUID propio.
+- [x] **A2** (BAJO) — `POST /api/uploads/signature` sin `tipo` hacía `valueOf(null)` → NPE: el
+  handler devolvía 400 pero lo reportaba a Sentry como bug y con mensaje opaco — ✅ resuelto:
+  null-check explícito → `IllegalArgumentException` con mensaje claro, sin ruido en Sentry.
+- [ ] **A3** (BAJO) — Sin rate limiting en ningún endpoint (envío de chat, firma de uploads
+  → costo Cloudinary, registro). Aceptado en pre-launch; **item obligatorio del checklist de
+  lanzamiento** (bucket4j o rate limit del edge).
+- [x] **A4** (INFO) — `permitAll` fantasma en `SecurityConfig`: `/app/**`, `/topic/**`,
+  `/queue/**`, `/user/**` son destinos STOMP, no rutas HTTP; no hacían nada hoy pero un
+  controller futuro mapeado ahí nacería público — ✅ resuelto: removidos (queda solo `/ws/**`,
+  el handshake real; la auth del WS vive en el interceptor de CONNECT).
+- [x] **A5** (INFO) — Spring Security imprimía el password generado del usuario default en cada
+  arranque (inutilizable acá, pero un secreto-que-no-es-secreto en los logs de Railway) —
+  ✅ resuelto: `@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)`.
 
 ## Cosas que se revisaron y están OK (para no re-auditar)
 

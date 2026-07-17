@@ -89,6 +89,32 @@ class MdcLoggingFilterTest {
         assertThat(uid.get()).isNull();
     }
 
+    // A1 (auditoría 2026-07-16): el header es input del cliente y termina en CADA línea
+    // de log y en la respuesta. Sin allowlist, 8KB de basura por request contaminan el
+    // log entero. Un id que no matchea el formato esperado se descarta y se genera uno.
+
+    @Test
+    void unRequestIdConCaracteresRarosSeDescarta() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Request-Id", "abc\t123 {inyección}");
+        AtomicReference<String> visto = new AtomicReference<>();
+
+        filter.doFilter(request, new MockHttpServletResponse(), capturaMdc(visto, new AtomicReference<>()));
+
+        assertThat(visto.get()).isNotBlank().doesNotContain("inyección");
+    }
+
+    @Test
+    void unRequestIdKilometricoSeDescarta() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Request-Id", "a".repeat(65));
+        AtomicReference<String> visto = new AtomicReference<>();
+
+        filter.doFilter(request, new MockHttpServletResponse(), capturaMdc(visto, new AtomicReference<>()));
+
+        assertThat(visto.get()).isNotBlank().hasSizeLessThan(65);
+    }
+
     @Test
     void elMdcQuedaLimpioAunSiElDownstreamLanza() {
         FilterChain explota = (req, res) -> { throw new RuntimeException("boom"); };

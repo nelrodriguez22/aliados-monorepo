@@ -23,8 +23,16 @@ public class UploadController {
 
     @PostMapping("/signature")
     public ResponseEntity<SignatureResponse> firmar(@RequestBody Map<String, String> body) {
+        // A2 (auditoría 2026-07-16): sin el null-check, un body sin "tipo" hacía
+        // valueOf(null) → NPE, que el handler convertía en 400 PERO reportaba a Sentry
+        // como bug (es subclase de RuntimeException) y con mensaje opaco. Es error del
+        // cliente: IllegalArgumentException → 400 limpio, sin ruido.
+        String tipoRaw = body.get("tipo");
+        if (tipoRaw == null || tipoRaw.isBlank()) {
+            throw new IllegalArgumentException("El campo 'tipo' es requerido");
+        }
         // valueOf lanza IllegalArgumentException si el tipo es inválido → 400 (GlobalExceptionHandler)
-        TipoUpload tipo = TipoUpload.valueOf(body.get("tipo"));
+        TipoUpload tipo = TipoUpload.valueOf(tipoRaw);
         return ResponseEntity.ok(cloudinaryService.firmar(tipo));
     }
 }
