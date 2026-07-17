@@ -101,4 +101,9 @@ public class Trabajo {
 
     @Column(nullable = false)
     private Integer reintentos = 0;
+
+    // true mientras el trabajo está en la ventana exclusiva de su favorito (grupo 0).
+    // Al escalar, se foldea al favorito en el pool normal (en vez de excluirlo) y pasa a false.
+    @Column(nullable = false)
+    private boolean esperandoFavorito = false;
 }
