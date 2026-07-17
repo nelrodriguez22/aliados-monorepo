@@ -79,6 +79,9 @@ public class TrabajoService {
     @Autowired
     private EventoService eventoService;
 
+    @Autowired
+    private FavoritoService favoritoService;
+
     private static final Logger logger = LoggerFactory.getLogger(TrabajoService.class);
 
     // package-private para test; lee los límites de feature flags.
@@ -124,7 +127,14 @@ public class TrabajoService {
         eventoService.registrarTrabajo(trabajo, TipoEvento.CAMBIO_ESTADO, null,
                 TrabajoEstado.PENDIENTE.name(), ActorTipo.CLIENTE, cliente, null);
 
-        ofrecerSiguienteGrupo(trabajo);
+        // Favoritos como "grupo 0": se ofrecen primero. Si no aceptan, el scheduler
+        // escala al dispatch normal por score (mismo intervalo/fallback, sin tocar la escalación).
+        List<Long> favoritosPrioritarios = resolverGrupoCero(dto, cliente.getId(), oficio.getId());
+        if (!favoritosPrioritarios.isEmpty()) {
+            ofrecerAFavoritos(trabajo, favoritosPrioritarios);
+        } else {
+            ofrecerSiguienteGrupo(trabajo);
+        }
 
         return mapToDTO(trabajo);
     }
@@ -464,6 +474,47 @@ public class TrabajoService {
                     "/proveedor/trabajo/" + trabajo.getId());
         }
         return true;
+    }
+
+    /** Set de prioridad (grupo 0): el pedido directo tiene prioridad sobre el toggle.
+     *  Valida que el proveedor directo sea favorito del cliente y del oficio pedido. */
+    private List<Long> resolverGrupoCero(CrearTrabajoDTO dto, Long clienteId, Long oficioId) {
+        if (dto.getProveedorDirectoId() != null) {
+            List<Long> favsOficio = favoritoService.idsFavoritosPorOficio(clienteId, oficioId);
+            if (!favsOficio.contains(dto.getProveedorDirectoId())) {
+                throw new RuntimeException("El proveedor no es un favorito válido para este oficio.");
+            }
+            return List.of(dto.getProveedorDirectoId());
+        }
+        if (Boolean.TRUE.equals(dto.getPriorizarFavoritos())) {
+            return favoritoService.idsFavoritosPorOficio(clienteId, oficioId);
+        }
+        return List.of();
+    }
+
+    /** Ofrece el trabajo como grupo 1 SOLO a los favoritos dados, con notificación especial.
+     *  El scheduler existente escala a grupos por score si no aceptan (mismo intervalo/fallback). */
+    void ofrecerAFavoritos(Trabajo trabajo, List<Long> proveedorIds) {
+        int grupo = 1;
+        for (Long pid : proveedorIds) {
+            User p = userRepository.findById(pid).orElse(null);
+            if (p == null) continue;
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo);
+            of.setProveedor(p);
+            of.setGrupo(grupo);
+            of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
+
+            notificacionService.enviarNotificacion(
+                    p.getFirebaseUid(),
+                    TipoNotificacion.NUEVO_TRABAJO_FAVORITO,
+                    "Un favorito te está pidiendo",
+                    "Un cliente que te tiene de favorito te pidió un trabajo de "
+                            + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                    trabajo.getId(),
+                    "/proveedor/trabajo/" + trabajo.getId());
+        }
     }
 
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {

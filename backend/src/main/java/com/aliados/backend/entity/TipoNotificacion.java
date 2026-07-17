@@ -2,6 +2,7 @@ package com.aliados.backend.entity;
 
 public enum TipoNotificacion {
     NUEVO_TRABAJO,
+    NUEVO_TRABAJO_FAVORITO,
     PROPUESTA_RECIBIDA,
     PROPUESTA_ACEPTADA,
     PROPUESTA_RECHAZADA,
