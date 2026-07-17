@@ -27,7 +27,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${tw.btn[normalizedVariant]} ${fullWidth ? 'w-full' : ''} ${className} ${
+      className={`${tw.btn[normalizedVariant]} whitespace-nowrap ${fullWidth ? 'w-full' : ''} ${className} ${
         disabled ? 'opacity-50 cursor-not-allowed' : ''
       }`}
     >
