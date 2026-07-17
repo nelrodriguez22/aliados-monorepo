@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
@@ -12,6 +13,7 @@ import { Star, Heart, Users } from 'lucide-react';
 export function Favoritos() {
   const navigate = useNavigate();
   const { favoritos, isLoading, toggle } = useFavoritos();
+  const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
 
   const dispo = (d: string) =>
     d === 'ONLINE' ? { txt: 'Disponible', cls: 'text-green-600 dark:text-green-400' }
@@ -52,23 +54,40 @@ export function Favoritos() {
                     </div>
                     <button
                       aria-label="Quitar de favoritos"
-                      onClick={() => toggle.mutate({ proveedorId: f.proveedorId, yaEs: true })}
+                      onClick={() => setConfirmandoId(f.proveedorId)}
                       className="shrink-0 p-1"
                     >
                       <Heart className="h-5 w-5 fill-red-500 text-red-500" />
                     </button>
                   </div>
-                  <div className="mt-3">
-                    <Button
-                      variant="primary"
-                      fullWidth
-                      onClick={() =>
-                        navigate(`${ROUTES.CLIENT.SERVICE_REQUEST}?oficioId=${f.oficioId}&proveedorDirectoId=${f.proveedorId}`)
-                      }
-                    >
-                      Pedir servicio
-                    </Button>
-                  </div>
+                  {confirmandoId === f.proveedorId ? (
+                    <div className={`mt-3 flex flex-col gap-2 rounded-xl border p-3 ${tw.dividerLight}`}>
+                      <span className={`text-sm ${tw.text.secondary}`}>
+                        ¿Quitar a <span className="font-semibold">{f.nombre}</span> de favoritos?
+                      </span>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setConfirmandoId(null)}>Cancelar</Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => { toggle.mutate({ proveedorId: f.proveedorId, yaEs: true }); setConfirmandoId(null); }}
+                        >
+                          Sí, quitar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        onClick={() =>
+                          navigate(`${ROUTES.CLIENT.SERVICE_REQUEST}?oficioId=${f.oficioId}&proveedorDirectoId=${f.proveedorId}`)
+                        }
+                      >
+                        Pedir servicio
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               );
             })}
