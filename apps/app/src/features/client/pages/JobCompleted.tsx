@@ -11,8 +11,9 @@ import { ChatPanel } from "@/shared/components/chat/ChatPanel";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
 import { useStore } from "@/shared/store/useStore";
-import { Loader2, CheckCircle, Star } from "lucide-react";
+import { Loader2, CheckCircle, Star, Heart } from "lucide-react";
 import { formatDateTime } from "@/shared/lib/dayjs";
+import { useFavoritos } from "@/shared/hooks/useFavoritos";
 import toast from "react-hot-toast";
 
 export function JobCompleted() {
@@ -25,6 +26,7 @@ export function JobCompleted() {
   const [review, setReview]   = useState("");
 
   const { data: trabajo, isLoading } = useTrabajo(jobId);
+  const { esFavorito, toggle: toggleFav } = useFavoritos();
 
   const calificarMutation = useMutation({
     mutationFn: async () => {
@@ -39,6 +41,22 @@ export function JobCompleted() {
       queryClient.invalidateQueries({ queryKey: ['trabajos-cliente'] });
       queryClient.invalidateQueries({ queryKey: ['trabajos-historial'] });
       toast.success('¡Gracias por tu calificación!');
+      // Tras una buena calificación, ofrecer sumarlo a favoritos (si aún no lo es).
+      const pid = trabajo?.proveedorId;
+      if (rating >= 4 && pid != null && !esFavorito(pid)) {
+        const nombre = trabajo?.proveedorNombre;
+        toast((t) => (
+          <span className="flex items-center gap-2">
+            ¿Agregar a {nombre} a favoritos?
+            <button
+              className="font-semibold text-brand-600 dark:text-dark-brand"
+              onClick={() => { toggleFav.mutate({ proveedorId: pid, yaEs: false }); toast.dismiss(t.id); }}
+            >
+              Sí
+            </button>
+          </span>
+        ), { duration: 6000 });
+      }
       navigate(ROUTES.CLIENT.DASHBOARD);
     },
     onError: (error: Error) => toast.error(error.message),
@@ -168,6 +186,15 @@ export function JobCompleted() {
                     <p className={`text-xs ${tw.text.secondary}`}>{trabajo.oficio.nombre}</p>
                     <CodigoProveedorChip codigo={trabajo.codigoProveedor} className="mt-1" />
                   </div>
+                  {trabajo.proveedorId != null && (
+                    <button
+                      aria-label={esFavorito(trabajo.proveedorId) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                      onClick={() => toggleFav.mutate({ proveedorId: trabajo.proveedorId, yaEs: esFavorito(trabajo.proveedorId) })}
+                      className="ml-auto shrink-0 self-start p-1"
+                    >
+                      <Heart className={`h-5 w-5 ${esFavorito(trabajo.proveedorId) ? 'fill-red-500 text-red-500' : tw.text.muted}`} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Estrellas */}

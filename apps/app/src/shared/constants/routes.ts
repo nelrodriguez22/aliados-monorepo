@@ -18,6 +18,7 @@ export const ROUTES = {
     DASHBOARD: '/cliente/dashboard',
     SEARCH: '/cliente/busqueda',
     SERVICE_REQUEST: '/cliente/pedido-de-servicio',
+    FAVORITOS: '/cliente/favoritos',
     TRACKING: (jobId: string | number = ':jobId') => `/cliente/seguimiento/${jobId}`,
     PROPOSAL: (jobId: string | number = ':jobId') => `/cliente/propuesta/${jobId}`,
     COMPLETED: (jobId: string | number = ':jobId') => `/cliente/completado/${jobId}`,

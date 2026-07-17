@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, type JSX } from "react";
 import { usePushNotifications } from "@/shared/hooks/usePushNotifications";
 import { ROUTES } from "@/shared/constants/routes";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { Search, Bell, CheckCircle, ClipboardList, Truck, FileText, ChevronDown } from "lucide-react";
+import { Search, Bell, CheckCircle, ClipboardList, Truck, FileText, ChevronDown, Heart } from "lucide-react";
 import { useStore } from "@/shared/store/useStore";
 import { apiClient } from "@/shared/lib/apiClient";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
@@ -20,6 +20,7 @@ import { useUnreadCounts } from "@/shared/hooks/useUnreadCounts";
 import { UnreadBadge } from "@/shared/components/chat/UnreadBadge";
 import { OnboardingTour } from "@/shared/components/OnboardingTour";
 import { ONBOARDING_KEYS, CLIENT_TOUR_STEPS } from "@/shared/lib/onboarding";
+import { useFavoritos } from "@/shared/hooks/useFavoritos";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number | string, JSX.Element> = {
@@ -153,6 +154,7 @@ export function ClientDashboard() {
   const { isConnected: wsConnected } = useWebSocketContext();
   const [searchParams] = useSearchParams();
   const { user } = useStore();
+  const { esFavorito, toggle: toggleFav } = useFavoritos();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -583,6 +585,15 @@ export function ClientDashboard() {
                       // dos lugares distintos según de qué lado de la app estuvieras parado.
                       badgeContent={
                         <div className="flex flex-col items-end gap-1">
+                          {trabajo.proveedorId != null && (
+                            <button
+                              aria-label={esFavorito(trabajo.proveedorId) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                              onClick={(e) => { e.stopPropagation(); toggleFav.mutate({ proveedorId: trabajo.proveedorId, yaEs: esFavorito(trabajo.proveedorId) }); }}
+                              className="p-0.5"
+                            >
+                              <Heart className={`h-4 w-4 ${esFavorito(trabajo.proveedorId) ? 'fill-red-500 text-red-500' : tw.text.muted}`} />
+                            </button>
+                          )}
                           {trabajo.calificado
                             ? <Badge variant="success">Completado</Badge>
                             : <Badge variant="neutral">Sin calificar</Badge>}

@@ -34,6 +34,7 @@ const ClientProfile       = lazy(() => import("@/features/client/pages/ClientPro
 const ClientSettings      = lazy(() => import("@/features/client/pages/ClientSettings").then(m => ({ default: m.ClientSettings })));
 const PaymentMethods      = lazy(() => import("@/features/client/pages/PaymentMethods").then(m => ({ default: m.PaymentMethods })));
 const ClientProposal      = lazy(() => import("@/features/client/pages/ClientProposal").then(m => ({ default: m.ClientProposal })));
+const Favoritos           = lazy(() => import("@/features/client/pages/Favoritos").then(m => ({ default: m.Favoritos })));
 const ProviderDashboard   = lazy(() => import("@/features/provider/pages/ProviderDashboard").then(m => ({ default: m.ProviderDashboard })));
 const ServiceDetail       = lazy(() => import("@/features/provider/pages/ServiceDetail").then(m => ({ default: m.ServiceDetail })));
 const ActiveJob           = lazy(() => import("@/features/provider/pages/ActiveJob").then(m => ({ default: m.ActiveJob })));
@@ -101,6 +102,7 @@ export function AppRouter() {
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard"         element={<ClientDashboard />} />
                 <Route path="pedido-de-servicio" element={<ServiceRequest />} />
+                <Route path="favoritos"          element={<Favoritos />} />
                 <Route path="seguimiento/:jobId" element={<JobTracking />} />
                 <Route path="completado/:jobId"  element={<JobCompleted />} />
                 <Route path="propuesta/:jobId"   element={<ClientProposal />} />
