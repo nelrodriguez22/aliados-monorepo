@@ -92,41 +92,66 @@ export function JobTracking() {
   if (trabajo.estado === 'PRESUPUESTADO') {
     const montoTrabajo = Number(trabajo.montoPresupuesto ?? 0);
     const visita = Number(trabajo.tarifaVisita ?? 15000);
+    // El chat va también acá: el backend habilita ESCRITURA en PRESUPUESTADO
+    // justamente para discutir el presupuesto antes de decidir. Sin esto, los
+    // mensajes del proveedor quedaban inaccesibles (el dashboard mostraba el
+    // badge de no-leídos pero esta vista no montaba el ChatPanel).
+    const hayChat = trabajo.conversacionId != null && trabajo.chatModo != null;
     return (
       <div className={tw.pageBg}>
         <div className={tw.container}>
-          <div className="mx-auto max-w-lg space-y-4">
-            <div className="flex justify-end">
+          <div className={`mx-auto ${hayChat ? 'max-w-4xl' : 'max-w-lg'}`}>
+            <div className="mb-4 flex justify-end">
               <Button variant="outline" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>← Volver</Button>
             </div>
-            <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
-            <Card>
-              <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio?.nombre}</p>
-              {trabajo.notaResumen && (
-                <p className={`mt-2 text-sm ${tw.text.primary}`}>{trabajo.notaResumen}</p>
+            <div className={hayChat ? 'grid gap-4 lg:grid-cols-2' : ''}>
+              <div className="space-y-4">
+                <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
+                <Card>
+                  <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio?.nombre}</p>
+                  {trabajo.notaResumen && (
+                    <p className={`mt-2 text-sm ${tw.text.primary}`}>{trabajo.notaResumen}</p>
+                  )}
+                  <p className={`mt-4 text-3xl font-bold ${tw.text.primary}`}>
+                    ${montoTrabajo.toLocaleString('es-AR')}
+                  </p>
+                  <p className={`mt-1 text-xs ${tw.text.muted}`}>
+                    Si no aceptás, pagás solo la visita (${visita.toLocaleString('es-AR')}).
+                  </p>
+                </Card>
+                <Button
+                  onClick={() => responderMutation.mutate(true)}
+                  disabled={responderMutation.isPending}
+                  className="w-full"
+                >
+                  Aceptar y pagar ${montoTrabajo.toLocaleString('es-AR')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => responderMutation.mutate(false)}
+                  disabled={responderMutation.isPending}
+                  className="w-full"
+                >
+                  Rechazar (pagás solo la visita ${visita.toLocaleString('es-AR')})
+                </Button>
+              </div>
+              {/* Sidebar del chat en desktop (mismo truco del return principal:
+                  absolute inset-0 para que el chat no estire la fila del grid);
+                  en mobile cae debajo de los botones con su altura natural. */}
+              {hayChat && (
+                <div className="relative flex flex-col">
+                  <div className="flex-1 min-h-0 lg:absolute lg:inset-0">
+                    <ChatPanel
+                      conversacionId={trabajo.conversacionId ?? null}
+                      modo={trabajo.chatModo}
+                      usuarioId={user.id}
+                      titulo="Chat con tu aliado"
+                      expandido
+                    />
+                  </div>
+                </div>
               )}
-              <p className={`mt-4 text-3xl font-bold ${tw.text.primary}`}>
-                ${montoTrabajo.toLocaleString('es-AR')}
-              </p>
-              <p className={`mt-1 text-xs ${tw.text.muted}`}>
-                Si no aceptás, pagás solo la visita (${visita.toLocaleString('es-AR')}).
-              </p>
-            </Card>
-            <Button
-              onClick={() => responderMutation.mutate(true)}
-              disabled={responderMutation.isPending}
-              className="w-full"
-            >
-              Aceptar y pagar ${montoTrabajo.toLocaleString('es-AR')}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => responderMutation.mutate(false)}
-              disabled={responderMutation.isPending}
-              className="w-full"
-            >
-              Rechazar (pagás solo la visita ${visita.toLocaleString('es-AR')})
-            </Button>
+            </div>
           </div>
         </div>
       </div>
