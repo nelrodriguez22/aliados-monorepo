@@ -290,6 +290,12 @@ Tests con **k6** (`/loadtest/`) contra prod (Railway + Neon pooled), tras las me
 - **Activación (2026-06-19):** el DSN del front se inyecta en el build de CI vía `deploy.yml` (estaba fallando porque `.env.production` está gitignoreado y el CI buildea con secrets, no con ese archivo). Proyectos Sentry: `convivir/<react>` (front, DSN ...4511298063761408) y `convivir/java-backend` (back, DSN ...4511595138777088 → env `SENTRY_DSN` en Railway). ⚠️ **NO usar** el agente OTel (`-javaagent`) — usamos el starter de Spring; **`send-default-pii=false`** (no el `true` que sugiere el wizard).
 - ⚠️ **Source context de Java descartado:** el plugin `io.sentry.jvm.gradle` 6.12.0 rompe el build con Gradle 8.x del proyecto (`Could not create task ':sentryUploadSourceBundleJava' … SentryCliExecTask.setIgnoreExitValue`). Se removió. Error monitoring funciona igual (vía starter); los stacktraces de Java van sin snippets de fuente. Revisar una versión compatible del plugin a futuro si se quiere source context.
 
+- **Structured logging (2026-07-16):** `MdcLoggingFilter` puebla `requestId` (header
+  `X-Request-Id` respetado o UUID corto; se devuelve en la respuesta) y `uid` en el MDC.
+  El JSON se activa SOLO por env var en Railway: `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`
+  (structured logging nativo de Boot 3.4, incluye MDC; rollback = borrar la var).
+  Limitación: scheduler y STOMP no llevan MDC. Spec: 2026-07-16-structured-logging-design.md.
+
 ### Decisión: ELK (Elasticsearch + Kibana) — NO por ahora (2026-07-16)
 
 Se evaluó sumar ELK "porque el backend creció". **Descartado en pre-launch**: el problema
