@@ -5,6 +5,8 @@ import { apiClient } from '@/shared/lib/apiClient';
 import { formatDateTime } from '@/shared/lib/dayjs';
 import { formatServicioId, type TipoServicio } from '@/shared/lib/servicioId';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
+import { ESTADO_CHIP } from './estadoChips';
+import { EventosTimeline } from './EventosTimeline';
 
 interface ServicioAdminItem {
   tipo: TipoServicio;
@@ -37,21 +39,6 @@ const TIPOS: { key: TipoFiltro; label: string }[] = [
 const ESTADOS_TRABAJO = ['PENDIENTE', 'PROPUESTO', 'EN_CURSO', 'PRESUPUESTADO', 'EN_COLA', 'COMPLETADO', 'CANCELADO'];
 const ESTADOS_MUDANZA = ['PENDIENTE', 'RESERVADO', 'CONTRAPROPUESTO', 'ACEPTADO', 'EN_CURSO', 'FINALIZADO', 'PENDIENTE_PAGO_EXTRA', 'COMPLETADO', 'CANCELADO'];
 const ESTADOS_COMUNES = ['PENDIENTE', 'EN_CURSO', 'COMPLETADO', 'CANCELADO'];
-
-const ESTADO_CHIP: Record<string, string> = {
-  PENDIENTE: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
-  PROPUESTO: 'bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-dark-brand',
-  RESERVADO: 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400',
-  CONTRAPROPUESTO: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
-  ACEPTADO: 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400',
-  EN_CURSO: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
-  PRESUPUESTADO: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
-  EN_COLA: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  FINALIZADO: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
-  PENDIENTE_PAGO_EXTRA: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
-  COMPLETADO: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400',
-  CANCELADO: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
-};
 
 const PAGE_SIZE = 10;
 
@@ -162,7 +149,7 @@ export function ServiciosPanel() {
                     <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                       {s.oficio}
                     </span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[s.estado] ?? 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[s.estado] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
                       {s.estado.replaceAll('_', ' ')}
                     </span>
                     <span className="hidden min-w-0 flex-1 truncate text-xs text-slate-500 sm:block">
@@ -174,18 +161,24 @@ export function ServiciosPanel() {
                     {abierto ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" /> : <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />}
                   </button>
                   {abierto && (
-                    <dl className="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-slate-50 p-3 text-xs dark:bg-dark-bg sm:grid-cols-2">
-                      <div><dt className="inline font-medium text-slate-500">Cliente: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.clienteNombre ?? '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Proveedor: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.proveedorNombre ?? '—'}</dd></div>
-                      <div className="sm:col-span-2"><dt className="inline font-medium text-slate-500">Dirección: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.direccion}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Creado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{formatDateTime(s.createdAt)}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Aceptado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.acceptedAt ? formatDateTime(s.acceptedAt) : '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Completado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.completedAt ? formatDateTime(s.completedAt) : '—'}</dd></div>
-                      <div><dt className="inline font-medium text-slate-500">Precio: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.precio != null ? `$${Number(s.precio).toLocaleString('es-AR')}` : '—'}</dd></div>
-                      {s.motivoCancelacion && (
-                        <div className="sm:col-span-2"><dt className="inline font-medium text-red-500">Motivo cancelación: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.motivoCancelacion}</dd></div>
-                      )}
-                    </dl>
+                    <>
+                      <dl className="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-slate-50 p-3 text-xs dark:bg-dark-bg sm:grid-cols-2">
+                        <div><dt className="inline font-medium text-slate-500">Cliente: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.clienteNombre ?? '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Proveedor: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.proveedorNombre ?? '—'}</dd></div>
+                        <div className="sm:col-span-2"><dt className="inline font-medium text-slate-500">Dirección: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.direccion}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Creado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{formatDateTime(s.createdAt)}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Aceptado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.acceptedAt ? formatDateTime(s.acceptedAt) : '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Completado: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.completedAt ? formatDateTime(s.completedAt) : '—'}</dd></div>
+                        <div><dt className="inline font-medium text-slate-500">Precio: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.precio != null ? `$${Number(s.precio).toLocaleString('es-AR')}` : '—'}</dd></div>
+                        {s.motivoCancelacion && (
+                          <div className="sm:col-span-2"><dt className="inline font-medium text-red-500">Motivo cancelación: </dt><dd className="inline text-slate-700 dark:text-slate-300">{s.motivoCancelacion}</dd></div>
+                        )}
+                      </dl>
+                      <div className="mt-2 rounded-lg bg-slate-50 p-3 dark:bg-dark-bg">
+                        <h3 className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Historial</h3>
+                        <EventosTimeline tipo={s.tipo} id={s.id} />
+                      </div>
+                    </>
                   )}
                 </div>
               );
