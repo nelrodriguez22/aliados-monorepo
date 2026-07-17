@@ -15,9 +15,11 @@ import org.springframework.security.web.header.writers.StaticHeadersWriter;
 public class SecurityConfig {
 
     private final FirebaseAuthFilter firebaseAuthFilter;
+    private final MdcLoggingFilter mdcLoggingFilter;
 
-    public SecurityConfig(FirebaseAuthFilter firebaseAuthFilter) {
+    public SecurityConfig(FirebaseAuthFilter firebaseAuthFilter, MdcLoggingFilter mdcLoggingFilter) {
         this.firebaseAuthFilter = firebaseAuthFilter;
+        this.mdcLoggingFilter = mdcLoggingFilter;
     }
 
     @Bean
@@ -54,7 +56,9 @@ public class SecurityConfig {
                         .addHeaderWriter(new StaticHeadersWriter(
                                 "Strict-Transport-Security", "max-age=31536000; includeSubDomains")))
                 .addFilterBefore(firebaseAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                // El MDC necesita el SecurityContext ya poblado (uid) → después del auth.
+                .addFilterAfter(mdcLoggingFilter, FirebaseAuthFilter.class);
 
         return http.build();
     }
