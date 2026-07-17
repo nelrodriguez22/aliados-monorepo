@@ -8,9 +8,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useOficios } from "@/shared/hooks/useOficios";
 import { apiClient } from "@/shared/lib/apiClient";
 import { useGeocode } from "@/shared/hooks/useGeocode";
-import { MapPin, Loader2, Plus, X, CheckCircle } from "lucide-react";
+import { MapPin, Loader2, Plus, X, CheckCircle, Heart } from "lucide-react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/shared/constants/routes";
+import { useFavoritos } from "@/shared/hooks/useFavoritos";
 
 // ── SVG icons por oficio ──
 const OFICIO_ICONS: Record<number, JSX.Element> = {
@@ -48,6 +49,7 @@ export function ServiceRequest() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const oficioIdParam = searchParams.get('oficioId');
+  const proveedorDirectoIdParam = searchParams.get('proveedorDirectoId');
   const queryClient = useQueryClient();
 
   const [selectedOficio, setSelectedOficio] = useState<number | null>(
@@ -61,8 +63,13 @@ export function ServiceRequest() {
   const geoDestino = useGeocode();
 
   const { data: oficios = [] } = useOficios();
+  const { favoritos } = useFavoritos();
 
   const isFlete = oficios.find((o: any) => o.id === selectedOficio)?.nombre === 'Flete';
+
+  // Favoritos del oficio elegido → habilitan el toggle de priorización (opción 1).
+  const favsDelOficio = favoritos.filter((f) => f.oficioId === selectedOficio);
+  const [priorizar, setPriorizar] = useState(true);
 
   const crearTrabajoMutation = useMutation({
     mutationFn: async () => {
@@ -109,6 +116,8 @@ export function ServiceRequest() {
         longitudCliente: finalCoords.lng,
         ...destinoData,
         fotos: imagenes.length > 0 ? JSON.stringify(imagenes) : null,
+        priorizarFavoritos: proveedorDirectoIdParam ? false : (favsDelOficio.length > 0 && priorizar),
+        proveedorDirectoId: proveedorDirectoIdParam ? Number(proveedorDirectoIdParam) : undefined,
       });
     },
     onSuccess: (trabajo) => {
@@ -241,6 +250,36 @@ export function ServiceRequest() {
                   ))}
                 </select>
               </div>
+
+              {/* Pedido directo a un favorito (opción 2): viene de la sección Favoritos. */}
+              {proveedorDirectoIdParam && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm dark:border-dark-brand/30 dark:bg-dark-brand/10">
+                  <Heart className="h-4 w-4 shrink-0 fill-red-500 text-red-500" />
+                  <span className={tw.text.secondary}>
+                    Pedido directo a{' '}
+                    <span className="font-semibold">
+                      {favoritos.find((f) => f.proveedorId === Number(proveedorDirectoIdParam))?.nombre ?? 'tu favorito'}
+                    </span>
+                    . Si no responde, buscamos otro profesional.
+                  </span>
+                </div>
+              )}
+
+              {/* Priorizar favoritos (opción 1): solo si hay favoritos del oficio y no es pedido directo. */}
+              {!proveedorDirectoIdParam && favsDelOficio.length > 0 && (
+                <label className="mb-4 flex items-start gap-2.5 rounded-xl border border-brand-200 bg-brand-50 p-3 cursor-pointer dark:border-dark-brand/30 dark:bg-dark-brand/10">
+                  <input
+                    type="checkbox"
+                    checked={priorizar}
+                    onChange={(e) => setPriorizar(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+                  />
+                  <span className={`text-sm ${tw.text.secondary}`}>
+                    Tenés {favsDelOficio.length} favorito{favsDelOficio.length > 1 ? 's' : ''} de este oficio.{' '}
+                    <span className="font-semibold">Priorizarlos en este pedido.</span>
+                  </span>
+                </label>
+              )}
 
               {/* Dirección */}
               <div className="mb-4">
