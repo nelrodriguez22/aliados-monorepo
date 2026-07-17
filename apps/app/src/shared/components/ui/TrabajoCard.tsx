@@ -74,7 +74,7 @@ export function TrabajoCard({
       {direccion && (
         <div className={`mt-2.5 flex items-center gap-1.5 pt-2.5 border-t text-xs ${tw.text.faint} ${tw.dividerLight}`}>
           <MapPin className="h-3 w-3 shrink-0" />
-          <span className="truncate">{direccion}</span>
+          <span className="min-w-0 truncate">{direccion}</span>
           {actionContent && tiempoEstimadoMinutos ? (
             <>
               <span className="shrink-0">·</span>

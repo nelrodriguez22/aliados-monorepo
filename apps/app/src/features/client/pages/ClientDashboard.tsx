@@ -104,7 +104,7 @@ function SkeletonServicios() {
 
 function SkeletonTrabajos() {
   return (
-    <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
       {[...Array(2)].map((_, i) => (
         <Card key={i}>
           <div className="flex items-center gap-2 min-[375px]:gap-3">
@@ -126,7 +126,7 @@ function SkeletonTrabajos() {
 
 function SkeletonHistorial() {
   return (
-    <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
       {[...Array(2)].map((_, i) => (
         <Card key={i}>
           <div className="flex items-center gap-2 min-[375px]:gap-3">
@@ -421,7 +421,7 @@ export function ClientDashboard() {
                     ? 'Tenés un presupuesto para responder'
                     : `Tenés ${presupuestosPendientes.length} presupuestos para responder`}
                 </h2>
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {presupuestosPendientes.map((trabajo: any) => (
                     <div
                       key={trabajo.id}
@@ -466,7 +466,7 @@ export function ClientDashboard() {
               {trabajosError ? (
                 <Card><ErrorState compact message="No pudimos cargar tus trabajos activos." onRetry={() => refetchTrabajos()} /></Card>
               ) : trabajosActivos.length > 0 ? (
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {trabajosActivos.map((trabajo: any) => {
                     const estadoBadge = getEstadoBadge(trabajo.estado);
                     return (
@@ -512,7 +512,7 @@ export function ClientDashboard() {
                 <h2 className={`mb-3 text-base min-[375px]:text-lg font-semibold ${tw.text.primary}`}>
                   Mudanzas activas
                 </h2>
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {mudanzasActivas.map((m: any) => {
                     const badge = getMudanzaEstadoBadge(m.estado);
                     return (
@@ -567,7 +567,7 @@ export function ClientDashboard() {
               ) : historialError ? (
                 <Card><ErrorState compact message="No pudimos cargar tu historial." onRetry={() => refetchHistorial()} /></Card>
               ) : trabajosCompletados.length > 0 ? (
-                <div className="grid gap-2 min-[375px]:gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[375px]:gap-3 lg:grid-cols-2">
                   {trabajosCompletados.map((trabajo: any) => (
                     <TrabajoCard
                       key={trabajo.id}
