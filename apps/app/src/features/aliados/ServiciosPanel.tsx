@@ -149,7 +149,7 @@ export function ServiciosPanel() {
                     <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                       {s.oficio}
                     </span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[s.estado] ?? 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[s.estado] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
                       {s.estado.replaceAll('_', ' ')}
                     </span>
                     <span className="hidden min-w-0 flex-1 truncate text-xs text-slate-500 sm:block">

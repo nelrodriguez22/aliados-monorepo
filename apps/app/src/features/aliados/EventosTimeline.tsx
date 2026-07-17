@@ -32,7 +32,7 @@ function labelActor(e: EventoAdmin): string {
 function Chip({ valor }: { valor: string }) {
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[valor] ?? 'bg-slate-100 text-slate-600'}`}
+      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${ESTADO_CHIP[valor] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
     >
       {valor.replaceAll('_', ' ')}
     </span>
@@ -51,6 +51,9 @@ export function EventosTimeline({ tipo, id }: { tipo: TipoServicio; id: number }
   const { data, isFetching, isError, refetch } = useQuery<EventoAdmin[]>({
     queryKey: ['admin-eventos', tipo, id],
     queryFn: () => apiClient.get(`/api/admin/${base}/${id}/eventos`),
+    // Sin retry de react-query a propósito: apiClient ya reintenta GETs (2 veces
+    // con backoff ante 502/503/504); duplicarlo acá multiplicaría requests y
+    // demoraría el ErrorState ante errores no transitorios (403/404).
     retry: false,
   });
 
@@ -91,7 +94,7 @@ export function EventosTimeline({ tipo, id }: { tipo: TipoServicio; id: number }
                 <span className="text-[10px] text-slate-400">{formatDateTime(e.createdAt)}</span>
               </div>
               {e.detalle && (
-                <p className="mt-0.5 text-[11px] italic text-slate-500 dark:text-slate-400">{e.detalle}</p>
+                <p className="mt-0.5 break-words text-[11px] italic text-slate-500 dark:text-slate-400">{e.detalle}</p>
               )}
             </div>
           </li>
