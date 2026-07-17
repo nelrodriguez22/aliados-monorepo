@@ -38,11 +38,18 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
 
     static final String HEADER = "X-Request-Id";
 
+    // A1 (auditoría 2026-07-16): el header es input del cliente y termina en CADA línea de
+    // log y reflejado en la respuesta. Allowlist estricta: un id que no sea corto y
+    // alfanumérico se descarta y se genera uno propio — nadie pierde correlación legítima
+    // (los proxies mandan UUIDs) y nadie puede empapelar los logs con basura arbitraria.
+    private static final java.util.regex.Pattern ID_VALIDO =
+            java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,64}");
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String requestId = request.getHeader(HEADER);
-        if (requestId == null || requestId.isBlank()) {
+        if (requestId == null || !ID_VALIDO.matcher(requestId).matches()) {
             requestId = UUID.randomUUID().toString().substring(0, 8);
         }
 

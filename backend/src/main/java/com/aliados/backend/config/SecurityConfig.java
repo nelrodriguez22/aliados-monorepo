@@ -36,11 +36,12 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/actuator/**",
                                 "/api/oficios",
-                                "/ws/**",           // WebSocket endpoint
-                                "/app/**",          // Mensajes de aplicación WebSocket
-                                "/topic/**",        // Suscripciones a topics
-                                "/queue/**",        // Suscripciones a queues
-                                "/user/**",          // Mensajes a usuarios específicos
+                                // A4 (auditoría 2026-07-16): /ws/** es la ÚNICA ruta HTTP real del
+                                // WebSocket (el handshake). /app, /topic, /queue y /user son destinos
+                                // STOMP, no rutas HTTP: tenerlos acá no hacía nada hoy y era una
+                                // trampa futura (un controller mapeado en /user/... nacería público).
+                                // La auth del WS vive en WebSocketAuthInterceptor (CONNECT).
+                                "/ws/**",
                                 "/api/mudanzas/tiers",
                                 "/api/users/resend-verification",
                                 "/api/users/forgot-password"
