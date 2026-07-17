@@ -98,4 +98,18 @@ class TrabajoFavoritoDispatchTest {
         // no se ofreció a nadie (falló en la validación del grupo 0)
         verify(trabajoOfertaRepository, never()).save(any());
     }
+
+    @Test
+    void favoritosDisponibles_filtraLosLlenosUOffline() {
+        User cliente = new User(); cliente.setId(1L); cliente.setLocalidad("Rosario");
+        Trabajo t = new Trabajo(); t.setId(100L); t.setCliente(cliente); t.setOficio(oficioPlomeria());
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        // Solo el 10 está disponible; el 11 (lleno/offline) no aparece en findProveedoresDisponibles.
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(List.of(proveedor(10L)));
+
+        List<Long> res = trabajoService.favoritosDisponibles(t, List.of(10L, 11L));
+
+        assertThat(res).containsExactly(10L);
+    }
 }

@@ -129,7 +129,10 @@ public class TrabajoService {
 
         // Favoritos como "grupo 0": se ofrecen primero. Si no aceptan, el scheduler
         // escala al dispatch normal por score (mismo intervalo/fallback, sin tocar la escalación).
-        List<Long> favoritosPrioritarios = resolverGrupoCero(dto, cliente.getId(), oficio.getId());
+        // Solo se ofrece a los favoritos disponibles ahora (mismos criterios que el dispatch
+        // normal: ONLINE/BUSY + localidad + capacidad); los llenos/offline caen al dispatch normal.
+        List<Long> favoritosPrioritarios = favoritosDisponibles(
+                trabajo, resolverGrupoCero(dto, cliente.getId(), oficio.getId()));
         if (!favoritosPrioritarios.isEmpty()) {
             ofrecerAFavoritos(trabajo, favoritosPrioritarios);
         } else {
@@ -490,6 +493,19 @@ public class TrabajoService {
             return favoritoService.idsFavoritosPorOficio(clienteId, oficioId);
         }
         return List.of();
+    }
+
+    /** Filtra los favoritos a los que están disponibles ahora: mismos criterios que el dispatch
+     *  normal (ONLINE/BUSY + localidad + oficio + capacidad de cola). Un favorito con la agenda
+     *  llena u offline se saltea y el pedido cae al dispatch normal por score. */
+    List<Long> favoritosDisponibles(Trabajo trabajo, List<Long> favoritoIds) {
+        if (favoritoIds.isEmpty()) return favoritoIds;
+        String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
+        int limite = getLimiteTrabajos(trabajo.getOficio());
+        Set<Long> disponibles = userRepository
+                .findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite)
+                .stream().map(User::getId).collect(Collectors.toSet());
+        return favoritoIds.stream().filter(disponibles::contains).toList();
     }
 
     /** Ofrece el trabajo como grupo 1 SOLO a los favoritos dados, con notificación especial.
