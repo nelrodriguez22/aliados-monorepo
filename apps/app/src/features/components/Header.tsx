@@ -70,7 +70,13 @@ export function Header() {
             className="flex items-center gap-1.5 cursor-pointer"
             onClick={handleLogoClick}
           >
-            <img src={logoConTexto} alt="Aliados" className="h-10 w-auto" width={160} height={40} />
+            <span className="relative">
+              <img src={logoConTexto} alt="Aliados" className="h-10 w-auto" width={160} height={40} />
+              {/* Superíndice "beta" sobre el wordmark; no compite con el pill Pro (que va al costado). */}
+              <span className="absolute -top-0.5 right-0 text-[9px] font-bold uppercase leading-none tracking-wide text-brand-500 dark:text-dark-brand">
+                beta
+              </span>
+            </span>
             {isProvider && (
               <span className="rounded-full bg-brand-100 dark:bg-dark-brand/15 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:text-dark-brand">
                 Pro
