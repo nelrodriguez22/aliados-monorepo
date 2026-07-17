@@ -104,9 +104,12 @@ export function JobTracking() {
             <div className="mb-4 flex justify-end">
               <Button variant="outline" onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}>← Volver</Button>
             </div>
+            {/* El título va FUERA del grid: así las dos columnas (presupuesto y
+                chat) arrancan a la misma altura y el chat queda alineado con la
+                card, no con el título. */}
+            <h1 className={`mb-4 text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
             <div className={hayChat ? 'grid gap-4 lg:grid-cols-2' : ''}>
               <div className="space-y-4">
-                <h1 className={`text-xl font-bold ${tw.text.primary}`}>Presupuesto del trabajo</h1>
                 <Card>
                   <p className={`text-sm ${tw.text.secondary}`}>{trabajo.oficio?.nombre}</p>
                   {trabajo.notaResumen && (
@@ -137,9 +140,11 @@ export function JobTracking() {
               </div>
               {/* Sidebar del chat en desktop (mismo truco del return principal:
                   absolute inset-0 para que el chat no estire la fila del grid);
-                  en mobile cae debajo de los botones con su altura natural. */}
+                  en mobile cae debajo de los botones con su altura natural.
+                  El min-h le da al chat una altura útil: la columna del
+                  presupuesto es corta y sin esto el chat quedaba apretado. */}
               {hayChat && (
-                <div className="relative flex flex-col">
+                <div className="relative flex flex-col lg:min-h-[calc(90vh-12rem)]">
                   <div className="flex-1 min-h-0 lg:absolute lg:inset-0">
                     <ChatPanel
                       conversacionId={trabajo.conversacionId ?? null}
