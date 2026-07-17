@@ -290,6 +290,28 @@ Tests con **k6** (`/loadtest/`) contra prod (Railway + Neon pooled), tras las me
 - **Activación (2026-06-19):** el DSN del front se inyecta en el build de CI vía `deploy.yml` (estaba fallando porque `.env.production` está gitignoreado y el CI buildea con secrets, no con ese archivo). Proyectos Sentry: `convivir/<react>` (front, DSN ...4511298063761408) y `convivir/java-backend` (back, DSN ...4511595138777088 → env `SENTRY_DSN` en Railway). ⚠️ **NO usar** el agente OTel (`-javaagent`) — usamos el starter de Spring; **`send-default-pii=false`** (no el `true` que sugiere el wizard).
 - ⚠️ **Source context de Java descartado:** el plugin `io.sentry.jvm.gradle` 6.12.0 rompe el build con Gradle 8.x del proyecto (`Could not create task ':sentryUploadSourceBundleJava' … SentryCliExecTask.setIgnoreExitValue`). Se removió. Error monitoring funciona igual (vía starter); los stacktraces de Java van sin snippets de fuente. Revisar una versión compatible del plugin a futuro si se quiere source context.
 
+### Decisión: ELK (Elasticsearch + Kibana) — NO por ahora (2026-07-16)
+
+Se evaluó sumar ELK "porque el backend creció". **Descartado en pre-launch**: el problema
+que ELK resuelve (volumen de logs ingrepeable, múltiples instancias, varios devs buscando)
+no existe hoy — una instancia, dev + 2 testers, y lo que sí importa ya está cubierto:
+errores/tracing por Sentry, auditoría de negocio por `trabajo_evento`/`mudanza_evento`
+(PR #45, visible en el panel admin), logs crudos en Railway. El costo de ELK es real:
+2-4GB de RAM solo para Elasticsearch (más que el backend entero), ~USD 80-100/mes en
+Elastic Cloud o ser SRE de índices/retention/upgrades self-hosted, más el cableado de
+shippers.
+
+**Escalera acordada** (cada paso recién cuando el anterior duela):
+1. **Structured logging JSON** (logstash-logback-encoder + correlation ID por MDC).
+   Barato, y es prerequisito de CUALQUIER destino futuro — trabajo que no se tira.
+2. **Hosted liviano** si hace falta retención/búsqueda: Axiom / Better Stack (drain de
+   Railway, cero infra) o Grafana Loki (free tier).
+3. **ELK** recién con: lanzamiento + tráfico real, más de una instancia, o equipo que
+   necesite dashboards de logs.
+
+Señales de "llegó el momento del paso 2/3": buscar en logs > 1 vez/semana y tardar,
+Railway rotó logs que se necesitaban, correlacionar entre instancias a mano.
+
 ## Orden sugerido de impacto/esfuerzo
 1. #1, #3 (fix rápido, alto impacto)
 2. #5 (refactor acotado, gran ganancia)
