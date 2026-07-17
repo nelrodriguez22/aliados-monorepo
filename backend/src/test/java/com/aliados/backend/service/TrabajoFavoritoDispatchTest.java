@@ -112,4 +112,54 @@ class TrabajoFavoritoDispatchTest {
 
         assertThat(res).containsExactly(10L);
     }
+
+    private Trabajo trabajoConFavoritoDurmio() {
+        User cliente = new User(); cliente.setId(1L); cliente.setLocalidad("Rosario");
+        Trabajo t = new Trabajo();
+        t.setId(100L); t.setCliente(cliente); t.setOficio(oficioPlomeria());
+        t.setDireccion("Córdoba 1234, Rosario");
+        TrabajoOferta durmio = new TrabajoOferta();
+        durmio.setProveedor(proveedor(10L)); durmio.setTrabajo(t); durmio.setGrupo(1);
+        durmio.setResultado(ResultadoOferta.DURMIO);
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of(durmio));
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        when(featureFlagService.getNumber(eq("trabajo_oferta_grupo_tamano"), anyDouble())).thenReturn(10.0);
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        return t;
+    }
+
+    @Test
+    void ofrecerPoolNormalIncluyendoFavorito_reincluyeAlFavoritoYNotificaSegunCorresponda() {
+        Trabajo t = trabajoConFavoritoDurmio();
+        // El favorito (10) sigue disponible + otro (11).
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>(List.of(proveedor(10L), proveedor(11L))));
+        when(favoritoService.esFavorito(1L, 10L)).thenReturn(true);
+        when(favoritoService.esFavorito(1L, 11L)).thenReturn(false);
+
+        boolean ofrecio = trabajoService.ofrecerPoolNormalIncluyendoFavorito(t);
+
+        assertThat(ofrecio).isTrue();
+        verify(trabajoOfertaRepository, times(2)).save(any(TrabajoOferta.class)); // favorito re-incluido
+        verify(notificacionService).enviarNotificacion(eq("uid-10"), eq(TipoNotificacion.NUEVO_TRABAJO_FAVORITO),
+                anyString(), anyString(), eq(100L), anyString());
+        verify(notificacionService).enviarNotificacion(eq("uid-11"), eq(TipoNotificacion.NUEVO_TRABAJO),
+                anyString(), anyString(), eq(100L), anyString());
+    }
+
+    @Test
+    void ofrecerPoolNormalIncluyendoFavorito_conSoloElFavoritoDisponible_loReofreceNoCancela() {
+        Trabajo t = trabajoConFavoritoDurmio();
+        // El favorito (10) es el ÚNICO disponible: igual se lo re-ofrece (no cancela).
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>(List.of(proveedor(10L))));
+        when(favoritoService.esFavorito(1L, 10L)).thenReturn(true);
+
+        boolean ofrecio = trabajoService.ofrecerPoolNormalIncluyendoFavorito(t);
+
+        assertThat(ofrecio).isTrue();
+        verify(trabajoOfertaRepository).save(any(TrabajoOferta.class));
+        verify(notificacionService).enviarNotificacion(eq("uid-10"), eq(TipoNotificacion.NUEVO_TRABAJO_FAVORITO),
+                anyString(), anyString(), eq(100L), anyString());
+    }
 }

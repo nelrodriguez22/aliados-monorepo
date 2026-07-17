@@ -134,6 +134,10 @@ public class TrabajoService {
         List<Long> favoritosPrioritarios = favoritosDisponibles(
                 trabajo, resolverGrupoCero(dto, cliente.getId(), oficio.getId()));
         if (!favoritosPrioritarios.isEmpty()) {
+            // Toggle "priorizar": al escalar se foldea al favorito en el pool normal (no se lo excluye).
+            // Directo: exclusivo + fallback normal (se lo excluye al escalar), así que no marca el flag.
+            boolean esToggle = dto.getProveedorDirectoId() == null && Boolean.TRUE.equals(dto.getPriorizarFavoritos());
+            trabajo.setEsperandoFavorito(esToggle);
             ofrecerAFavoritos(trabajo, favoritosPrioritarios);
         } else {
             ofrecerSiguienteGrupo(trabajo);
@@ -473,6 +477,57 @@ public class TrabajoService {
                     TipoNotificacion.NUEVO_TRABAJO,
                     "Nueva Solicitud de Trabajo",
                     "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
+                    trabajo.getId(),
+                    "/proveedor/trabajo/" + trabajo.getId());
+        }
+        return true;
+    }
+
+    /** Tras la ventana exclusiva del favorito (toggle): lo foldea al pool normal junto al resto
+     *  de disponibles. A diferencia de {@link #ofrecerSiguienteGrupo}, NO excluye al favorito por
+     *  su oferta previa (que durmió) — solo evita duplicar ofertas OFRECIDA vivas. El favorito
+     *  recibe la notificación destacada; el resto, la normal. */
+    boolean ofrecerPoolNormalIncluyendoFavorito(Trabajo trabajo) {
+        String localidad = trabajo.getCliente().getLocalidad() != null ? trabajo.getCliente().getLocalidad() : "Rosario";
+        int limite = getLimiteTrabajos(trabajo.getOficio());
+        int tamano = (int) featureFlagService.getNumber("trabajo_oferta_grupo_tamano", 10);
+        Long clienteId = trabajo.getCliente().getId();
+
+        List<TrabajoOferta> previas = trabajoOfertaRepository.findByTrabajoId(trabajo.getId());
+        // Solo excluimos a quienes tienen una oferta OFRECIDA viva (evita duplicados); los que
+        // durmieron (el favorito que ya tuvo su ventana) se re-incluyen.
+        Set<Long> conOfertaViva = previas.stream()
+                .filter(o -> o.getResultado() == ResultadoOferta.OFRECIDA)
+                .map(o -> o.getProveedor().getId())
+                .collect(Collectors.toSet());
+        int grupo = previas.stream().map(TrabajoOferta::getGrupo).max(Integer::compareTo).orElse(0) + 1;
+
+        List<User> candidatos = new ArrayList<>(
+                userRepository.findProveedoresDisponibles(localidad, trabajo.getOficio().getId(), limite));
+        candidatos.removeIf(p -> conOfertaViva.contains(p.getId()));
+        if (candidatos.isEmpty()) {
+            return false;
+        }
+        providerScoreService.ordenarPorScore(candidatos);
+        List<User> grupoProveedores = candidatos.stream().limit(tamano).toList();
+
+        for (User p : grupoProveedores) {
+            TrabajoOferta of = new TrabajoOferta();
+            of.setTrabajo(trabajo);
+            of.setProveedor(p);
+            of.setGrupo(grupo);
+            of.setResultado(ResultadoOferta.OFRECIDA);
+            trabajoOfertaRepository.save(of);
+
+            boolean esFav = favoritoService.esFavorito(clienteId, p.getId());
+            notificacionService.enviarNotificacion(
+                    p.getFirebaseUid(),
+                    esFav ? TipoNotificacion.NUEVO_TRABAJO_FAVORITO : TipoNotificacion.NUEVO_TRABAJO,
+                    esFav ? "Un favorito te está pidiendo" : "Nueva Solicitud de Trabajo",
+                    esFav
+                        ? "Un cliente que te tiene de favorito te pidió un trabajo de "
+                            + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion()
+                        : "Nuevo trabajo de " + trabajo.getOficio().getNombre() + " en " + trabajo.getDireccion(),
                     trabajo.getId(),
                     "/proveedor/trabajo/" + trabajo.getId());
         }
@@ -1060,7 +1115,15 @@ public class TrabajoService {
         if (fresco == null || fresco.getEstado() != TrabajoEstado.PENDIENTE) {
             return; // un propose ganó la carrera; ese flujo ya gestiona las ofertas
         }
-        boolean ofrecio = ofrecerSiguienteGrupo(fresco);
+        boolean ofrecio;
+        if (fresco.isEsperandoFavorito()) {
+            // Terminó la ventana exclusiva del favorito: lo foldeamos al pool normal (junto al
+            // resto de disponibles) en vez de excluirlo. De acá en más el trabajo escala normal.
+            fresco.setEsperandoFavorito(false);
+            ofrecio = ofrecerPoolNormalIncluyendoFavorito(fresco);
+        } else {
+            ofrecio = ofrecerSiguienteGrupo(fresco);
+        }
         if (ofrecio) {
             notificarCliente(fresco, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
                     "Seguimos buscando",
