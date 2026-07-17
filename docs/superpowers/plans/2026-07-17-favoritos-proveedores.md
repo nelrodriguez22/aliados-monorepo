@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Backend package base: `com.aliados.backend`. Auth: `Authentication.getName()` devuelve el `firebaseUid` del usuario.
-- Migraciones Flyway en `backend/src/main/resources/db/migration/`, próximo número: **V10**.
+- Migraciones Flyway en `backend/src/main/resources/db/migration/`, próximo número: **V13**.
 - Entidades con Lombok `@Data`, FKs `@ManyToOne(fetch = FetchType.LAZY)`, timestamps con `@CreationTimestamp`.
 - Frontend en `apps/app`. HTTP vía `apiClient` (`apiClient.get/post/delete`). Rutas en `apps/app/src/shared/constants/routes.ts`. Mutaciones con TanStack Query + `toast` (`react-hot-toast`) + `queryClient.invalidateQueries`.
 - Comandos: backend `cd backend && ./gradlew test`; frontend `cd apps/app && pnpm test` y `pnpm exec tsc -b`.
@@ -25,7 +25,7 @@
 ### Task 1.1: Migración + entidad `FavoritoProveedor`
 
 **Files:**
-- Create: `backend/src/main/resources/db/migration/V10__favoritos_proveedores.sql`
+- Create: `backend/src/main/resources/db/migration/V13__favoritos_proveedores.sql`
 - Create: `backend/src/main/java/com/aliados/backend/entity/FavoritoProveedor.java`
 
 **Interfaces:**
@@ -33,7 +33,7 @@
 
 - [ ] **Step 1: Escribir la migración**
 
-`V10__favoritos_proveedores.sql`:
+`V13__favoritos_proveedores.sql`:
 ```sql
 CREATE TABLE favoritos_proveedores (
     id           BIGSERIAL PRIMARY KEY,
@@ -91,8 +91,8 @@ Expected: BUILD SUCCESSFUL
 - [ ] **Step 4: Commit**
 
 ```bash
-git add backend/src/main/resources/db/migration/V10__favoritos_proveedores.sql backend/src/main/java/com/aliados/backend/entity/FavoritoProveedor.java
-git commit -m "feat(favoritos): entidad FavoritoProveedor + migración V10"
+git add backend/src/main/resources/db/migration/V13__favoritos_proveedores.sql backend/src/main/java/com/aliados/backend/entity/FavoritoProveedor.java
+git commit -m "feat(favoritos): entidad FavoritoProveedor + migración V13"
 ```
 
 ---
