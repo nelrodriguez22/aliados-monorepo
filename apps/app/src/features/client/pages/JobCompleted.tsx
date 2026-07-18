@@ -123,12 +123,9 @@ export function JobCompleted() {
               <CheckCircle className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex flex-wrap items-baseline gap-2">
-                <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                  ¡Trabajo terminado!
-                </p>
-                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
-              </div>
+              <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                ¡Trabajo terminado!
+              </p>
               <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
                 El servicio se completó exitosamente
               </p>
@@ -137,9 +134,12 @@ export function JobCompleted() {
 
           {/* Resumen */}
           <Card>
-            <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-              Resumen del servicio
-            </h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                Resumen del servicio
+              </h2>
+              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+            </div>
             <div>
               {rows.map(({ label, value }) => (
                 <div key={label} className={`flex items-start justify-between gap-4 py-3 border-b last:border-0 ${tw.dividerLight}`}>

@@ -106,10 +106,7 @@ export function ClientProposal() {
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
-                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
-              </div>
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Propuesta recibida</h1>
               <div className="mt-1.5">
                 <Badge variant="info">Pendiente de respuesta</Badge>
               </div>
@@ -123,9 +120,12 @@ export function ClientProposal() {
 
             {/* Servicio */}
             <Card>
-              <h3 className={`mb-3 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                Tu solicitud
-              </h3>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                  Tu solicitud
+                </h3>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tw.iconBg.slate}`}>

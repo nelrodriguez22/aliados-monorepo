@@ -211,7 +211,6 @@ export function ProviderMudanzaDetail() {
                 <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>
                   Mudanza {mudanza.tierNombre}
                 </h1>
-                <ServicioIdBadge tipo="MUDANZA" id={mudanza.id} />
               </div>
               <p className={`text-sm ${tw.text.secondary}`}>Cliente: {mudanza.clienteNombre}</p>
             </div>
@@ -391,7 +390,10 @@ export function ProviderMudanzaDetail() {
 
           {/* ═══ Detalles ═══ */}
           <Card className="mb-4">
-            <h3 className={`text-sm font-semibold mb-3 ${tw.text.primary}`}>Detalles de la mudanza</h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className={`text-sm font-semibold ${tw.text.primary}`}>Detalles de la mudanza</h3>
+              <ServicioIdBadge tipo="MUDANZA" id={mudanza.id} />
+            </div>
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold mt-0.5">A</div>

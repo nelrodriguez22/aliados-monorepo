@@ -127,10 +127,7 @@ export function ServiceDetail() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Detalle del trabajo</h1>
-              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
-            </div>
+            <h1 className={`text-2xl font-bold ${tw.text.primary}`}>Detalle del trabajo</h1>
             <div className="mt-1.5">
               <Badge variant="warning">Pendiente de respuesta</Badge>
             </div>
@@ -143,9 +140,12 @@ export function ServiceDetail() {
           {/* Info principal */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
-              <h3 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                Información del cliente
-              </h3>
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                  Información del cliente
+                </h3>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               <div className="space-y-4">
 
                 <div className="flex items-start gap-3">
