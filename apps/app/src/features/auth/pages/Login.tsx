@@ -164,6 +164,7 @@ export function Login() {
                 <label htmlFor="password" className={tw.label + ' mb-0'}>Contraseña</label>
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => navigate(ROUTES.RECOVER_PASSWORD)}
                   className={`text-xs font-medium cursor-pointer transition ${tw.text.brand} hover:opacity-70`}
                 >
