@@ -5,6 +5,7 @@ import com.aliados.backend.entity.Oficio;
 import com.aliados.backend.entity.ResultadoOferta;
 import com.aliados.backend.entity.TipoNotificacion;
 import com.aliados.backend.entity.Trabajo;
+import com.aliados.backend.entity.TrabajoEstado;
 import com.aliados.backend.entity.TrabajoOferta;
 import com.aliados.backend.entity.User;
 import com.aliados.backend.repository.CalificacionRepository;
@@ -161,5 +162,65 @@ class TrabajoFavoritoDispatchTest {
         verify(trabajoOfertaRepository).save(any(TrabajoOferta.class));
         verify(notificacionService).enviarNotificacion(eq("uid-10"), eq(TipoNotificacion.NUEVO_TRABAJO_FAVORITO),
                 anyString(), anyString(), eq(100L), anyString());
+    }
+
+    private Trabajo trabajoPendienteConCliente() {
+        User cliente = new User(); cliente.setId(1L); cliente.setFirebaseUid("cli"); cliente.setLocalidad("Rosario");
+        Trabajo t = new Trabajo();
+        t.setId(100L); t.setEstado(TrabajoEstado.PENDIENTE);
+        t.setCliente(cliente); t.setOficio(oficioPlomeria()); t.setDireccion("Córdoba 1234, Rosario");
+        return t;
+    }
+
+    @Test
+    void rechazarTrabajo_eraElUnico_reofreceAlPoolExcluyendoAlQueRechazo() {
+        User rechazador = proveedor(10L);
+        when(userRepository.findByFirebaseUid("uid-10")).thenReturn(Optional.of(rechazador));
+        Trabajo t = trabajoPendienteConCliente();
+        when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        TrabajoOferta ofertaRechazador = new TrabajoOferta();
+        ofertaRechazador.setProveedor(rechazador); ofertaRechazador.setTrabajo(t);
+        ofertaRechazador.setGrupo(1); ofertaRechazador.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(100L, 10L)).thenReturn(Optional.of(ofertaRechazador));
+        // Tras marcar DURMIO, no quedan ofertas vivas → re-dispatch inmediato.
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA)).thenReturn(List.of());
+        // ofrecerSiguienteGrupo: excluye al 10 (ya ofertado), ofrece al 11.
+        when(trabajoOfertaRepository.findByTrabajoId(100L)).thenReturn(List.of(ofertaRechazador));
+        when(featureFlagService.getNumber(eq("trabajo_oferta_grupo_tamano"), anyDouble())).thenReturn(10.0);
+        when(featureFlagService.getNumber(eq("limite_trabajos_default"), anyDouble())).thenReturn(3.0);
+        when(userRepository.findProveedoresDisponibles(anyString(), anyLong(), anyInt()))
+                .thenReturn(new java.util.ArrayList<>(List.of(rechazador, proveedor(11L))));
+        when(providerScoreService.ordenarPorScore(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+        trabajoService.rechazarTrabajo(100L, "uid-10");
+
+        assertThat(ofertaRechazador.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        // re-ofreció al 11 (NO al 10, que rechazó)
+        verify(trabajoOfertaRepository).save(argThat(o -> o.getProveedor().getId().equals(11L)
+                && o.getResultado() == ResultadoOferta.OFRECIDA));
+        verify(notificacionService).enviarNotificacion(eq("uid-11"), any(),
+                anyString(), anyString(), eq(100L), anyString());
+    }
+
+    @Test
+    void rechazarTrabajo_conOtrasOfertasVivas_noReofrece() {
+        User rechazador = proveedor(10L);
+        when(userRepository.findByFirebaseUid("uid-10")).thenReturn(Optional.of(rechazador));
+        Trabajo t = trabajoPendienteConCliente();
+        when(trabajoRepository.findById(100L)).thenReturn(Optional.of(t));
+        TrabajoOferta ofertaRechazador = new TrabajoOferta();
+        ofertaRechazador.setProveedor(rechazador); ofertaRechazador.setTrabajo(t);
+        ofertaRechazador.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndProveedorId(100L, 10L)).thenReturn(Optional.of(ofertaRechazador));
+        // Quedan otras ofertas vivas (grupo de varios) → NO re-dispatch.
+        TrabajoOferta otraViva = new TrabajoOferta();
+        otraViva.setProveedor(proveedor(11L)); otraViva.setTrabajo(t); otraViva.setResultado(ResultadoOferta.OFRECIDA);
+        when(trabajoOfertaRepository.findByTrabajoIdAndResultado(100L, ResultadoOferta.OFRECIDA)).thenReturn(List.of(otraViva));
+
+        trabajoService.rechazarTrabajo(100L, "uid-10");
+
+        assertThat(ofertaRechazador.getResultado()).isEqualTo(ResultadoOferta.DURMIO);
+        verify(trabajoOfertaRepository).save(ofertaRechazador); // solo el DURMIO
+        verify(userRepository, never()).findProveedoresDisponibles(anyString(), anyLong(), anyInt());
     }
 }

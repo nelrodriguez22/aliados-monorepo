@@ -223,7 +223,25 @@ public class TrabajoService {
 
         trabajoOfertaRepository.findByTrabajoIdAndProveedorId(trabajoId, proveedor.getId())
                 .ifPresent(o -> { o.setResultado(ResultadoOferta.DURMIO); trabajoOfertaRepository.save(o); });
-        // El trabajo sigue PENDIENTE con el resto del grupo; el scheduler avanza si nadie responde.
+
+        // Si NO quedan ofertas vivas (el que rechazó era el único / el favorito exclusivo del
+        // grupo 0), avanzamos al pool general enseguida — sin esperar los ~5 min del scheduler.
+        // El que rechazó queda excluido (ofrecerSiguienteGrupo salta a los ya ofertados), y si
+        // era el favorito exclusivo, deja de foldearse (rechazó, no lo re-ofrecemos).
+        // Si quedan otras ofertas vivas (grupo normal de varios), no tocamos nada: el scheduler
+        // avanza cuando toda la ventana venció.
+        boolean quedanVivas = !trabajoOfertaRepository
+                .findByTrabajoIdAndResultado(trabajoId, ResultadoOferta.OFRECIDA).isEmpty();
+        if (!quedanVivas) {
+            trabajo.setEsperandoFavorito(false);
+            if (ofrecerSiguienteGrupo(trabajo)) {
+                notificarCliente(trabajo, TipoNotificacion.TRABAJO_BUSCANDO_PROVEEDOR,
+                        "Seguimos buscando",
+                        "Seguimos buscando un profesional para tu pedido de " + trabajo.getOficio().getNombre() + ".");
+            }
+            // Si ofrecerSiguienteGrupo no encontró a nadie, el trabajo queda PENDIENTE y el
+            // scheduler decide la cancelación por "sin proveedor" (misma lógica de siempre).
+        }
     }
 
     @Transactional
