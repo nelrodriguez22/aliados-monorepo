@@ -70,10 +70,7 @@ export function ProviderCompletedJob() {
 
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
-                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
-              </div>
+              <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>Trabajo completado</h1>
               {trabajo.completedAt && (
                 <p className={`mt-0.5 text-sm ${tw.text.secondary}`}>{formatDateTime(trabajo.completedAt)}</p>
               )}
@@ -97,9 +94,12 @@ export function ProviderCompletedJob() {
 
           {/* Resumen */}
           <Card>
-            <h2 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-              Resumen del servicio
-            </h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                Resumen del servicio
+              </h2>
+              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+            </div>
             <div className="space-y-0">
               {rows.map(({ label, value }) => (
                 <div key={label} className={`flex items-start justify-between gap-4 py-3 border-b last:border-0 ${tw.dividerLight}`}>

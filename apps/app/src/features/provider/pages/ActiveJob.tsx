@@ -73,12 +73,9 @@ export function ActiveJob() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h1 className={`text-2xl font-bold ${tw.text.primary}`}>
-                {puedePresupuestar ? "Trabajo en curso" : "Presupuesto enviado"}
-              </h1>
-              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
-            </div>
+            <h1 className={`text-2xl font-bold ${tw.text.primary}`}>
+              {puedePresupuestar ? "Trabajo en curso" : "Presupuesto enviado"}
+            </h1>
             <div className="mt-1.5">
               {puedePresupuestar
                 ? <Badge variant="info" showPulse>En curso</Badge>
@@ -93,9 +90,12 @@ export function ActiveJob() {
 
             {/* Info trabajo */}
             <Card>
-              <h3 className={`mb-4 text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
-                Información del servicio
-              </h3>
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className={`text-xs font-semibold uppercase tracking-wider ${tw.text.muted}`}>
+                  Información del servicio
+                </h3>
+                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+              </div>
               <div className="space-y-4">
 
                 <div className="flex items-start gap-3">

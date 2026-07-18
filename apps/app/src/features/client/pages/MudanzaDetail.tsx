@@ -201,7 +201,6 @@ export function MudanzaDetail() {
                 <h1 className={`text-xl min-[375px]:text-2xl font-bold ${tw.text.primary}`}>
                   Mudanza {mudanza.tierNombre}
                 </h1>
-                <ServicioIdBadge tipo="MUDANZA" id={mudanza.id} />
               </div>
               <div className={estado.badge}>
                 <EstadoIcon className="h-3 w-3" />
@@ -331,7 +330,10 @@ export function MudanzaDetail() {
 
           {/* ═══ Info general ═══ */}
           <Card>
-            <h3 className={`text-sm font-semibold mb-3 ${tw.text.primary}`}>Detalles</h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className={`text-sm font-semibold ${tw.text.primary}`}>Detalles</h3>
+              <ServicioIdBadge tipo="MUDANZA" id={mudanza.id} />
+            </div>
             <div className="space-y-3">
               {/* Fecha */}
               <div>
