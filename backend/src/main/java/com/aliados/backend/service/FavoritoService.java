@@ -10,7 +10,9 @@ import com.aliados.backend.util.CodigoProveedor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class FavoritoService {
@@ -80,5 +82,11 @@ public class FavoritoService {
     @Transactional(readOnly = true)
     public boolean esFavorito(Long clienteId, Long proveedorId) {
         return favoritoRepository.existsByCliente_IdAndProveedor_Id(clienteId, proveedorId);
+    }
+
+    /** Ids de los clientes que tienen a este proveedor como favorito (para destacar sus pedidos). */
+    @Transactional(readOnly = true)
+    public Set<Long> clientesQueTienenDeFavorito(Long proveedorId) {
+        return new HashSet<>(favoritoRepository.clientesIdsQueFavoritan(proveedorId));
     }
 }

@@ -48,6 +48,7 @@ class TrabajoOfertaGrupoTest {
     @Mock ConversacionService conversacionService;
     @Mock ConversacionRepository conversacionRepository;
     @Mock EventoService eventoService;
+    @Mock FavoritoService favoritoService;
 
     @InjectMocks TrabajoService trabajoService;
 

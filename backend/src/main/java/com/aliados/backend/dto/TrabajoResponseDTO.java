@@ -49,4 +49,8 @@ public class TrabajoResponseDTO {
     // lista de estados viviera también en el frontend, agregar un estado nuevo y olvidarse de un
     // lado dejaría el input habilitado contra un backend que responde 409 al enviar.
     private ModoChat chatModo;
+
+    // true si el cliente de este trabajo tiene al proveedor que lo mira como favorito.
+    // Solo se completa en la lista de pendientes del proveedor (para destacar la card).
+    private boolean favoritoDelCliente;
 }
