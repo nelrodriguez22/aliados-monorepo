@@ -161,9 +161,15 @@ public class TrabajoService {
         Map<Long, Calificacion> calificacionPorTrabajo = calificacionesPorTrabajo(trabajos);
         Map<Long, Double> promediosPorProveedor = promediosPorProveedor(trabajos);
         Map<Long, Conversacion> conversacionPorTrabajo = conversacionesPorTrabajo(trabajos);
+        // Clientes que tienen a este proveedor de favorito → destacamos sus pedidos en la card.
+        Set<Long> clientesQueMeFavoritan = favoritoService.clientesQueTienenDeFavorito(proveedor.getId());
 
         return trabajos.stream()
-                .map(trabajo -> mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo))
+                .map(trabajo -> {
+                    TrabajoResponseDTO dto = mapToDTOOptimized(trabajo, calificacionPorTrabajo, promediosPorProveedor, conversacionPorTrabajo);
+                    dto.setFavoritoDelCliente(clientesQueMeFavoritan.contains(trabajo.getCliente().getId()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 

@@ -22,4 +22,8 @@ public interface FavoritoProveedorRepository extends JpaRepository<FavoritoProve
            "WHERE t.cliente.id = :clienteId AND t.proveedor.id = :proveedorId " +
            "AND t.estado = com.aliados.backend.entity.TrabajoEstado.COMPLETADO")
     boolean existeTrabajoCompletado(@Param("clienteId") Long clienteId, @Param("proveedorId") Long proveedorId);
+
+    // Ids de los clientes que tienen a este proveedor como favorito (para destacar sus pedidos).
+    @Query("SELECT f.cliente.id FROM FavoritoProveedor f WHERE f.proveedor.id = :proveedorId")
+    List<Long> clientesIdsQueFavoritan(@Param("proveedorId") Long proveedorId);
 }

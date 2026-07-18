@@ -311,13 +311,20 @@ export function ProviderDashboard() {
                         onClick={() => navigate(ROUTES.PROVIDER.JOB(trabajo.id))}
                         left={<Initials name={trabajo.clienteNombre} bg={tw.iconBg.slate} color={tw.text.secondary} />}
                         badgeContent={
-                          <Button
-                            variant="success"
-                            onClick={() => { navigate(ROUTES.PROVIDER.JOB(trabajo.id)); }}
-                            className="text-xs px-2.5 py-1.5"
-                          >
-                            Ver detalle
-                          </Button>
+                          <div className="flex flex-col items-end gap-1">
+                            {trabajo.favoritoDelCliente && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> Te tiene de favorito
+                              </span>
+                            )}
+                            <Button
+                              variant="success"
+                              onClick={() => { navigate(ROUTES.PROVIDER.JOB(trabajo.id)); }}
+                              className="text-xs px-2.5 py-1.5"
+                            >
+                              Ver detalle
+                            </Button>
+                          </div>
                         }
                         unreadCount={trabajo.conversacionId != null ? noLeidosPorConversacion[trabajo.conversacionId] : 0}
                       />
