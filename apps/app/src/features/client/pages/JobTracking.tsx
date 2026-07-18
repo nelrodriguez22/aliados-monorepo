@@ -294,10 +294,7 @@ export function JobTracking() {
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-baseline gap-2 min-w-0">
-                <h1 className={`min-w-0 text-xl min-[375px]:text-2xl font-bold truncate ${tw.text.primary}`}>{title}</h1>
-                <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} className="shrink-0" />
-              </div>
+              <h1 className={`min-w-0 text-xl min-[375px]:text-2xl font-bold truncate ${tw.text.primary}`}>{title}</h1>
               <p className={`mt-0.5 text-xs min-[375px]:text-sm ${tw.text.secondary}`}>{subtitle}</p>
             </div>
             <Button
@@ -312,6 +309,9 @@ export function JobTracking() {
           {/* Progreso — franja horizontal a todo el ancho. Un stepper de 3 pasos se lee
               mejor en fila; en mobile no hay ancho para eso y cae a columna. */}
           <Card className="mb-4">
+            <div className="mb-3 flex justify-end">
+              <ServicioIdBadge tipo="TRABAJO" id={trabajo.id} />
+            </div>
             <ol className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0">
               {steps.map((step, i) => (
                 <li key={step.id} className="flex items-center gap-2 sm:flex-1 sm:last:flex-none">
