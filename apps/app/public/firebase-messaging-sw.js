@@ -13,8 +13,9 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const { title, body } = payload.notification || {};
-  const { actionUrl } = payload.data || {};
+  // Data-only: título/cuerpo/actionUrl vienen en `data` (no `notification`), así el SW es el
+  // único que muestra la notif y no se duplica (el navegador no auto-muestra los data messages).
+  const { title, body, actionUrl } = payload.data || {};
 
   self.registration.showNotification(title || 'Aliados', {
     body: body || '',

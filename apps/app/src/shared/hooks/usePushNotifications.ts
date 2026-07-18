@@ -30,7 +30,8 @@ export function usePushNotifications() {
       if (!messaging || !active) return;
       const { onMessage } = await import('firebase/messaging');
       unsubscribe = onMessage(messaging, (payload) => {
-        const { title, body } = payload.notification || {};
+        // Data-only: título/cuerpo vienen en `data` (ver PushNotificationService).
+        const { title, body } = payload.data || {};
         if (title) toast(body || title, { duration: 5000 });
       });
     })();
