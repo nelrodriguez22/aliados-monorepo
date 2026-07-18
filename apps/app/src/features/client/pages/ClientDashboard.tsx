@@ -500,11 +500,14 @@ export function ClientDashboard() {
                   })}
                 </div>
               ) : (
-                <EmptyState
-                  icon={Search}
-                  title="No tenés trabajos activos"
-                  desc="Solicitá un servicio para comenzar"
-                />
+                // Capada y centrada, igual que las cards únicas del proveedor (no a ancho completo).
+                <div className="mx-auto w-full max-w-xl">
+                  <EmptyState
+                    icon={Search}
+                    title="No tenés trabajos activos"
+                    desc="Solicitá un servicio para comenzar"
+                  />
+                </div>
               )}
             </div>
 
