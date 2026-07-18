@@ -6,7 +6,6 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.MessagingErrorCode;
-import com.google.firebase.messaging.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -28,12 +27,13 @@ public class PushNotificationService {
         if (usuario.getFcmToken() == null || usuario.getFcmToken().isEmpty()) return;
 
         try {
+            // Data-only (sin `notification`): en web/PWA un mensaje con `notification` lo muestra
+            // el navegador solo Y además el onBackgroundMessage del SW → notificación duplicada.
+            // Mandando solo `data`, el SW es el único que la muestra (via showNotification).
             Message message = Message.builder()
                     .setToken(usuario.getFcmToken())
-                    .setNotification(Notification.builder()
-                            .setTitle(titulo)
-                            .setBody(mensaje)
-                            .build())
+                    .putData("title", titulo != null ? titulo : "Aliados")
+                    .putData("body", mensaje != null ? mensaje : "")
                     .putData("actionUrl", actionUrl != null ? actionUrl : "/")
                     .build();
 
