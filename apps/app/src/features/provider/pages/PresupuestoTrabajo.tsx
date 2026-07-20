@@ -81,11 +81,13 @@ export function PresupuestoTrabajo() {
 
           <Card>
             <label className={tw.label}>Monto del trabajo</label>
+            {/* `monto` guarda solo los dígitos; se muestra con $ y separador de miles (es-AR). */}
             <Input
-              type="number"
-              placeholder="Ej: 100000"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              placeholder="$100.000"
+              value={monto === "" ? "$" : `$${Number(monto).toLocaleString("es-AR")}`}
+              onChange={(e) => setMonto(e.target.value.replace(/\D/g, ""))}
               required
             />
             <label className={`${tw.label} mt-4`}>Nota (opcional)</label>

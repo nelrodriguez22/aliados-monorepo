@@ -8,6 +8,7 @@ interface InputProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   className?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }
 
 export function Input({
@@ -17,7 +18,8 @@ export function Input({
   value,
   onChange,
   required = false,
-  className = ''
+  className = '',
+  inputMode
 }: InputProps) {
   return (
     <div className="w-full">
@@ -28,6 +30,7 @@ export function Input({
       )}
       <input
         type={type}
+        inputMode={inputMode}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
