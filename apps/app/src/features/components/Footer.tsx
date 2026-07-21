@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
+import { openCookieSettings } from "@/shared/consent/cookieSettingsBus";
 
 export function Footer() {
   const linkClass = "cursor-pointer transition hover:text-brand-600 dark:hover:text-dark-brand";
@@ -16,6 +17,7 @@ export function Footer() {
         </a>
         <Link to={ROUTES.TERMS} className={linkClass}>Términos</Link>
         <Link to={ROUTES.PRIVACY} className={linkClass}>Privacidad</Link>
+        <button type="button" onClick={openCookieSettings} className={linkClass}>Cookies</button>
       </div>
     </footer>
   );

@@ -64,9 +64,13 @@ Versionada para poder re-preguntar si cambian las categorías. Se usa localStora
 ## Gating de GA
 
 - Se elimina `initGtag()` de `main.tsx`.
-- Efecto en `App.tsx`: `if (consent.analytics) initGtag()`. `initGtag` ya es idempotente.
-- Pasar de ON→OFF no puede "descargar" GA en caliente: al rechazar tras haber aceptado
-  se limpia el consentimiento y se recarga la página (caso borde, simple y correcto).
+- El banner (montado en `App`) corre `applyAnalyticsConsent(analyticsEnabled)` en un efecto:
+  - `true` → baja la flag `ga-disable` y carga gtag (idempotente).
+  - `false` → activa `window['ga-disable-<GA_ID>'] = true` (GA deja de enviar hits **en
+    caliente, sin recargar**) y limpia las cookies `_ga`/`_ga_<container>`.
+- Revocación en la misma sesión: efectiva al instante vía la flag `ga-disable`, no por
+  recarga. Esto evita procesar analíticas tras revocar el consentimiento (requisito legal:
+  el consentimiento debe poder revocarse en cualquier momento y ser efectivo).
 
 ## Texto legal
 
