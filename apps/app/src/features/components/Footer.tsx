@@ -12,12 +12,12 @@ export function Footer() {
         © 2026 Aliados. Todos los derechos reservados.
       </p>
       <div className={`flex gap-5 text-xs font-medium ${tw.text.muted}`}>
+        <button type="button" onClick={openCookieSettings} className={linkClass}>Cookies</button>
         <a href="mailto:aliados@convivirtech.com.ar?subject=Consulta%20desde%20Aliados" className={linkClass}>
           Contacto
         </a>
         <Link to={ROUTES.TERMS} className={linkClass}>Términos</Link>
         <Link to={ROUTES.PRIVACY} className={linkClass}>Privacidad</Link>
-        <button type="button" onClick={openCookieSettings} className={linkClass}>Cookies</button>
       </div>
     </footer>
   );
