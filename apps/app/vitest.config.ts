@@ -31,6 +31,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // happy-dom@20 no provee `localStorage` bajo algunas versiones de Node (ej. Node 26, con
+    // el que corre el hook pre-push vía pnpm): deja `window`/`document` pero no el storage, y
+    // los tests que lo usan fallan con "Cannot read properties of undefined". El setup instala
+    // un polyfill en memoria SOLO si falta, dejando los tests independientes de la versión de Node.
+    setupFiles: ["./src/test/setup.ts"],
     env: envFalsas,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },

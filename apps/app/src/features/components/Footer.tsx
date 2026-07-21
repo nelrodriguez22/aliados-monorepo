@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { tw } from "@/shared/styles/design-system";
 import { ROUTES } from "@/shared/constants/routes";
+import { openCookieSettings } from "@/shared/consent/cookieSettingsBus";
 
 export function Footer() {
   const linkClass = "cursor-pointer transition hover:text-brand-600 dark:hover:text-dark-brand";
@@ -11,6 +12,7 @@ export function Footer() {
         © 2026 Aliados. Todos los derechos reservados.
       </p>
       <div className={`flex gap-5 text-xs font-medium ${tw.text.muted}`}>
+        <button type="button" onClick={openCookieSettings} className={linkClass}>Cookies</button>
         <a href="mailto:aliados@convivirtech.com.ar?subject=Consulta%20desde%20Aliados" className={linkClass}>
           Contacto
         </a>

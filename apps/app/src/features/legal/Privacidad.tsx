@@ -155,14 +155,18 @@ export function Privacidad() {
 
       <H2>9. Cookies y tecnologías de seguimiento</H2>
       <P>
-        La Plataforma utiliza cookies y tecnologías similares para mejorar la experiencia del usuario, analizar el uso de
-        la aplicación y gestionar sesiones. Las cookies utilizadas son:
+        La Plataforma utiliza cookies y tecnologías similares para gestionar sesiones y, con su consentimiento, medir el
+        uso de la aplicación. Las categorías utilizadas son:
       </P>
       <UL>
-        <li><span className="font-semibold">Cookies esenciales:</span> necesarias para el funcionamiento de la Plataforma. No pueden desactivarse.</li>
-        <li><span className="font-semibold">Cookies analíticas:</span> permiten medir el uso de la Plataforma de forma anónima. El Usuario puede desactivarlas en la configuración de la aplicación.</li>
-        <li><span className="font-semibold">Cookies de personalización:</span> recuerdan preferencias del Usuario. Su uso requiere consentimiento.</li>
+        <li><span className="font-semibold">Cookies esenciales:</span> necesarias para iniciar sesión y para el funcionamiento de la Plataforma. No pueden desactivarse.</li>
+        <li><span className="font-semibold">Cookies analíticas:</span> permiten medir el uso de la Plataforma de forma anónima (Google Analytics). Solo se activan con su consentimiento previo y expreso: mientras no las acepte, no se cargan.</li>
       </UL>
+      <P>
+        Al ingresar por primera vez se muestra un aviso de cookies donde puede aceptarlas todas o configurar cada
+        categoría. Puede cambiar su elección en cualquier momento desde el enlace <span className="font-semibold">"Cookies"</span> ubicado
+        en el pie de página. La Plataforma no utiliza cookies de publicidad ni de seguimiento de terceros con fines comerciales.
+      </P>
 
       <H2>10. Conservación de los datos</H2>
       <P>

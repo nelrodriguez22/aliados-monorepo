@@ -7,11 +7,10 @@ import App from './App.tsx'
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { initGtag } from './shared/analytics/gtag'
 import { PWAUpdateProvider } from './shared/components/PWAUpdateProvider'
 
-// Google Analytics — carga gtag.js (no-op fuera de producción).
-initGtag()
+// Google Analytics ya NO se carga acá: la carga la gatea el consentimiento de cookies
+// (CookieConsentBanner). Sin consentimiento explícito de analíticas, gtag no se inyecta.
 
 // Purga el cache legacy de API: versiones previas cacheaban /api en el SW (Cache
 // Storage es por-origen) → riesgo de fuga de datos entre usuarios en el mismo
